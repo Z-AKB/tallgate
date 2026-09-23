@@ -1,19 +1,16 @@
-import LandingNavbar from "./sections/LandingCommons/Navbar";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
 
-
-
-
-export default function LandingPageLayout ({
-    children
-} : {children:React.ReactNode}){
-
-
-    return (
-        <div className="">
-            <LandingNavbar />
-            <main className="overflow-x-hidden overflow-y-scroll scrollbar scrollbar-track-textDark/20 scrollbar-thumb-textDark/60">
-            {children}
-            </main>
-        </div>
-    )
+export default function PublicLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="site-shell flex flex-col">
+      <Navbar />
+      <main className="flex-grow">{children}</main>
+      <Footer />
+    </div>
+  );
 }
