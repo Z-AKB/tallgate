@@ -117,7 +117,7 @@ export default function StartupApplyPage() {
 
             <div className="pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-center gap-3">
               <a
-                href={`https://wa.me/2349052440452?text=Hello%20TallGate%20Startup%20Hub%2C%20I%20just%20submitted%20an%20incubation%20application%20for%20${encodeURIComponent(formData.companyName)}`}
+                href={`https://wa.me/2349131898566?text=Hello%20TallGate%20Startup%20Hub%2C%20I%20just%20submitted%20an%20incubation%20application%20for%20${encodeURIComponent(formData.companyName)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn-primary w-full sm:w-auto inline-flex items-center justify-center gap-2"
@@ -143,7 +143,7 @@ export default function StartupApplyPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div>
                 <label htmlFor="companyName" className="form-label">
-                  Startup / Company Name *
+                  Startup / Company Name
                 </label>
                 <input
                   id="companyName"
@@ -159,7 +159,7 @@ export default function StartupApplyPage() {
 
               <div>
                 <label htmlFor="founderName" className="form-label">
-                  Lead Founder&apos;s Full Name *
+                  Lead Founder&apos;s Full Name
                 </label>
                 <input
                   id="founderName"
@@ -178,7 +178,7 @@ export default function StartupApplyPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div>
                 <label htmlFor="email" className="form-label">
-                  Founder Email Address *
+                  Founder Email Address
                 </label>
                 <input
                   id="email"
@@ -194,7 +194,7 @@ export default function StartupApplyPage() {
 
               <div>
                 <label htmlFor="phone" className="form-label">
-                  Phone (WhatsApp) *
+                  Phone (WhatsApp)
                 </label>
                 <input
                   id="phone"
@@ -213,7 +213,7 @@ export default function StartupApplyPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div>
                 <label htmlFor="industry" className="form-label">
-                  Primary Industry *
+                  Primary Industry
                 </label>
                 <select
                   id="industry"
@@ -232,7 +232,7 @@ export default function StartupApplyPage() {
 
               <div>
                 <label htmlFor="stage" className="form-label">
-                  Current Company Stage *
+                  Current Company Stage
                 </label>
                 <select
                   id="stage"
@@ -253,7 +253,7 @@ export default function StartupApplyPage() {
             {/* Problem Statement */}
             <div>
               <label htmlFor="problemStatement" className="form-label">
-                The Problem You Are Solving *
+                The Problem You Are Solving
               </label>
               <textarea
                 id="problemStatement"
@@ -270,7 +270,7 @@ export default function StartupApplyPage() {
             {/* Solution Description */}
             <div>
               <label htmlFor="solutionDescription" className="form-label">
-                Your Proposed Technology Solution *
+                Your Proposed Technology Solution
               </label>
               <textarea
                 id="solutionDescription"
@@ -303,7 +303,7 @@ export default function StartupApplyPage() {
             {/* Support Needed Checkboxes */}
             <div>
               <label className="form-label mb-2">
-                What Areas Do You Need Support In? *
+                What Areas Do You Need Support In?
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {supportCheckboxes.map((item) => (

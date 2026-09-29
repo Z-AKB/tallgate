@@ -18,7 +18,7 @@ export default function CourseEnrollAction({ course }: { course: CourseOffering 
           Apply for this Batch
         </button>
         <a
-          href={`https://wa.me/2349052440452?text=Hello%2C%20I%20have%20questions%20about%20the%20${encodeURIComponent(course.title)}%20course`}
+          href={`https://wa.me/2349131898566?text=Hello%2C%20I%20have%20questions%20about%20the%20${encodeURIComponent(course.title)}%20course`}
           target="_blank"
           rel="noopener noreferrer"
           className="btn-secondary w-full justify-center text-xs py-2.5 inline-flex items-center gap-2"

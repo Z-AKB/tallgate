@@ -1,9 +1,10 @@
 "use client"
 
-import React, { useState } from "react"
+import React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import Logo from "@/components/layout/Logo"
+import { useAdmin } from "@/components/admin/AdminContext"
 import {
   HiOutlineSquares2X2,
   HiOutlineInboxStack,
@@ -13,7 +14,6 @@ import {
   HiOutlineIdentification,
   HiOutlineChatBubbleLeftRight,
   HiOutlineArrowTopRightOnSquare,
-  HiOutlineBars3,
   HiOutlineXMark,
 } from "react-icons/hi2"
 
@@ -36,21 +36,10 @@ const navItems: NavItem[] = [
 
 export default function AdminSidebar() {
   const pathname = usePathname()
-  const [mobileOpen, setMobileOpen] = useState(false)
+  const { mobileOpen, setMobileOpen } = useAdmin()
 
   return (
     <>
-      {/* Mobile Toggle Button */}
-      <div className="lg:hidden fixed top-4 left-4 z-50">
-        <button
-          onClick={() => setMobileOpen(!mobileOpen)}
-          className="p-2.5 rounded-xl bg-slate-900 text-white shadow-lg border border-slate-700 focus:outline-none"
-          aria-label="Toggle Navigation"
-        >
-          {mobileOpen ? <HiOutlineXMark className="w-5 h-5" /> : <HiOutlineBars3 className="w-5 h-5" />}
-        </button>
-      </div>
-
       {/* Mobile Backdrop */}
       {mobileOpen && (
         <div
@@ -66,8 +55,15 @@ export default function AdminSidebar() {
         }`}
       >
         {/* Brand Header */}
-        <div className="h-20 pl-20 pr-6 lg:px-6 flex items-center justify-between border-b border-slate-800/60">
-          <Logo variant="light" width={180} height={48} className="h-auto" />
+        <div className="h-20 px-6 flex items-center justify-between border-b border-slate-800/60">
+          <Logo variant="light" width={180} height={48} className="h-auto" href="/admin" />
+          <button
+            onClick={() => setMobileOpen(false)}
+            className="lg:hidden p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/10"
+            aria-label="Close Sidebar"
+          >
+            <HiOutlineXMark className="w-5 h-5" />
+          </button>
         </div>
 
         {/* Navigation Links */}

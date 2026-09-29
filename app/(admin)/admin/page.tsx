@@ -92,10 +92,10 @@ export default async function AdminOverviewPage() {
         </div>
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-4 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-primary/30 border border-indigo-400/30 text-indigo-200 text-xs font-semibold">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-indigo-300 flex items-center gap-2">
               <HiOutlineSparkles className="w-4 h-4 text-indigo-300" />
               <span>Executive Command Center</span>
-            </div>
+            </p>
             <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">
               TallGate Operations & Delivery Triage
             </h1>

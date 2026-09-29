@@ -292,7 +292,7 @@ export default async function LessonPlayerPage({
                   </div>
 
                   <div className="space-y-2 max-w-md mx-auto">
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-300 border border-amber-500/20 mb-1">
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-medium bg-amber-500/10 text-amber-300 border border-amber-500/20 mb-1">
                       Enrollment Required
                     </div>
                     <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">

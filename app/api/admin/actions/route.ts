@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
+import { requireAdminApi } from "@/lib/auth/guards"
 
 export async function POST(req: NextRequest) {
   try {
+    const admin = await requireAdminApi()
+    if (admin.error) return admin.error
+
     const body = await req.json()
     const { action, payload } = body
 
@@ -15,7 +19,7 @@ export async function POST(req: NextRequest) {
     switch (action) {
       case "update_consultation_status": {
         const { id, status, admin_notes } = payload
-        const updateData: any = { status, updated_at: new Date().toISOString() }
+        const updateData: Record<string, unknown> = { status, updated_at: new Date().toISOString() }
         if (admin_notes !== undefined) updateData.admin_notes = admin_notes
 
         const { error } = await (supabase.from("consultation_requests") as any)
@@ -23,7 +27,7 @@ export async function POST(req: NextRequest) {
           .eq("id", id)
 
         if (error) {
-          console.warn("Supabase update error (fallback permitted):", error.message)
+          return NextResponse.json({ error: error.message }, { status: 400 })
         }
         return NextResponse.json({ success: true, message: "Consultation status updated" })
       }
@@ -35,7 +39,7 @@ export async function POST(req: NextRequest) {
           .eq("id", id)
 
         if (error) {
-          console.warn("Supabase startup status update error:", error.message)
+          return NextResponse.json({ error: error.message }, { status: 400 })
         }
         return NextResponse.json({ success: true, message: "Startup application status updated" })
       }
@@ -47,7 +51,7 @@ export async function POST(req: NextRequest) {
           .eq("id", id)
 
         if (error) {
-          console.warn("Supabase course update error:", error.message)
+          return NextResponse.json({ error: error.message }, { status: 400 })
         }
         return NextResponse.json({ success: true, message: "Course status updated" })
       }
@@ -59,7 +63,7 @@ export async function POST(req: NextRequest) {
           .eq("id", id)
 
         if (error) {
-          console.warn("Supabase course update error:", error.message)
+          return NextResponse.json({ error: error.message }, { status: 400 })
         }
         return NextResponse.json({ success: true, message: "Course popularity updated" })
       }
@@ -78,12 +82,12 @@ export async function POST(req: NextRequest) {
         const generatedCode =
           verification_code || `TG-2026-${Math.random().toString(36).substring(2, 8).toUpperCase()}`
 
-        const { data, error } = await (supabase.from("certificates") as any).insert([
+        const { error } = await (supabase.from("certificates") as any).insert([
           {
             recipient_name,
             course_title,
             course_id: course_id || null,
-            user_id: user_id || "00000000-0000-0000-0000-000000000000",
+            user_id: user_id || admin.user.id,
             verification_code: generatedCode,
             grade: grade || "Distinction",
             issue_date: issue_date || new Date().toISOString().split("T")[0],
@@ -92,7 +96,7 @@ export async function POST(req: NextRequest) {
         ])
 
         if (error) {
-          console.warn("Supabase certificate insert error:", error.message)
+          return NextResponse.json({ error: error.message }, { status: 400 })
         }
         return NextResponse.json({
           success: true,
@@ -108,7 +112,7 @@ export async function POST(req: NextRequest) {
           .eq("id", id)
 
         if (error) {
-          console.warn("Supabase certificate update error:", error.message)
+          return NextResponse.json({ error: error.message }, { status: 400 })
         }
         return NextResponse.json({ success: true, message: "Certificate validity toggled" })
       }
@@ -120,7 +124,7 @@ export async function POST(req: NextRequest) {
           .eq("id", id)
 
         if (error) {
-          console.warn("Supabase message update error:", error.message)
+          return NextResponse.json({ error: error.message }, { status: 400 })
         }
         return NextResponse.json({ success: true, message: "Message status updated" })
       }

@@ -4,6 +4,8 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
+import { fetchCurrentRoleNames } from "@/lib/auth/roles"
+import { getPostLoginPath } from "@/lib/auth/redirect"
 import { HiOutlineMail, HiOutlineLockClosed, HiOutlineUser, HiOutlineInformationCircle } from "react-icons/hi"
 
 export default function RegisterPage() {
@@ -44,7 +46,8 @@ export default function RegisterPage() {
         throw new Error(authError.message)
       }
 
-      router.push("/dashboard")
+      const roles = await fetchCurrentRoleNames(supabase)
+      router.push(getPostLoginPath(roles))
       router.refresh()
     } catch (err: any) {
       console.error("Registration error:", err)

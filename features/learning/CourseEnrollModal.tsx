@@ -91,7 +91,7 @@ export default function CourseEnrollModal({ isOpen, onClose, course }: CourseEnr
 
           <div className="pt-4 border-t border-slate-100 flex flex-col gap-2">
             <a
-              href={`https://wa.me/2349052440452?text=Hello%20Admissions%2C%20I%20just%20enrolled%20for%20${encodeURIComponent(course.title)}`}
+              href={`https://wa.me/2349131898566?text=Hello%20Admissions%2C%20I%20just%20enrolled%20for%20${encodeURIComponent(course.title)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="btn-primary w-full justify-center inline-flex items-center gap-2"
@@ -126,7 +126,7 @@ export default function CourseEnrollModal({ isOpen, onClose, course }: CourseEnr
 
           <div>
             <label htmlFor="fullName" className="form-label">
-              Full Name *
+              Full Name
             </label>
             <input
               id="fullName"
@@ -143,7 +143,7 @@ export default function CourseEnrollModal({ isOpen, onClose, course }: CourseEnr
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label htmlFor="email" className="form-label">
-                Email Address *
+                Email Address
               </label>
               <input
                 id="email"
@@ -159,7 +159,7 @@ export default function CourseEnrollModal({ isOpen, onClose, course }: CourseEnr
 
             <div>
               <label htmlFor="phone" className="form-label">
-                Phone (WhatsApp) *
+                Phone (WhatsApp)
               </label>
               <input
                 id="phone"
@@ -177,7 +177,7 @@ export default function CourseEnrollModal({ isOpen, onClose, course }: CourseEnr
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label htmlFor="schedulePreference" className="form-label">
-                Batch Schedule *
+                Batch Schedule
               </label>
               <select
                 id="schedulePreference"
@@ -195,7 +195,7 @@ export default function CourseEnrollModal({ isOpen, onClose, course }: CourseEnr
 
             <div>
               <label htmlFor="learningMode" className="form-label">
-                Learning Format *
+                Learning Format
               </label>
               <select
                 id="learningMode"

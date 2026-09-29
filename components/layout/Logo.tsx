@@ -6,6 +6,7 @@ interface LogoProps {
   width?: number
   height?: number
   showWordmark?: boolean
+  href?: string
 }
 
 export default function Logo({
@@ -14,6 +15,7 @@ export default function Logo({
   width = 180,
   height = 44,
   showWordmark = true,
+  href = "/",
 }: LogoProps) {
   const isLight = variant === "light"
   const primaryColor = isLight ? "#FFFFFF" : "#061A4F"
@@ -21,7 +23,7 @@ export default function Logo({
 
   return (
     <Link
-      href="/"
+      href={href}
       prefetch={true}
       className={`inline-flex items-center group select-none transition-opacity hover:opacity-95 ${className}`}
       aria-label="TallGate Limited Home"

@@ -47,7 +47,7 @@ export default function ConsultationPage() {
         </div>
 
         <div className="mt-12 text-center text-xs text-slate-400">
-          <p>Prefer direct chat? Reach us on WhatsApp at <a href="https://wa.me/2349052440452" target="_blank" rel="noopener noreferrer" className="font-semibold text-indigo-300 hover:text-white underline">+234 905 244 0452</a></p>
+          <p>Prefer direct chat? Reach us on WhatsApp at <a href="https://wa.me/2349131898566" target="_blank" rel="noopener noreferrer" className="font-semibold text-indigo-300 hover:text-white underline">+234 913 189 8566</a></p>
         </div>
       </div>
     </div>

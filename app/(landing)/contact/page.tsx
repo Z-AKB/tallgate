@@ -80,18 +80,18 @@ export default function ContactPage() {
 
                 <div className="flex items-center gap-2.5">
                   <HiOutlinePhone className="w-4 h-4 text-indigo-400 flex-shrink-0" />
-                  <span>+234 905 244 0452 / +234 705 286 9461</span>
+                  <a href="tel:+2349131898566" className="hover:text-white transition-colors">+234 913 189 8566</a>
                 </div>
 
                 <div className="flex items-center gap-2.5">
                   <HiOutlineMail className="w-4 h-4 text-indigo-400 flex-shrink-0" />
-                  <span>contact@tallgate.com / tallgatecomputingenterprise@gmail.com</span>
+                  <a href="mailto:tallgatecomputing@gmail.com" className="hover:text-white transition-colors">tallgatecomputing@gmail.com</a>
                 </div>
               </div>
 
               <div className="pt-3 border-t border-white/10">
                 <a
-                  href="https://wa.me/2349052440452"
+                  href="https://wa.me/2349131898566"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn-primary w-full justify-center text-xs py-2.5 inline-flex items-center gap-2"
@@ -165,7 +165,7 @@ export default function ContactPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label htmlFor="fullName" className="form-label">
-                      Full Name *
+                      Full Name
                     </label>
                     <input
                       id="fullName"
@@ -181,7 +181,7 @@ export default function ContactPage() {
 
                   <div>
                     <label htmlFor="email" className="form-label">
-                      Email Address *
+                      Email Address
                     </label>
                     <input
                       id="email"
@@ -214,7 +214,7 @@ export default function ContactPage() {
 
                   <div>
                     <label htmlFor="subject" className="form-label">
-                      Inquiry Category *
+                      Inquiry Category
                     </label>
                     <select
                       id="subject"
@@ -234,7 +234,7 @@ export default function ContactPage() {
 
                 <div>
                   <label htmlFor="message" className="form-label">
-                    Your Message *
+                    Your Message
                   </label>
                   <textarea
                     id="message"

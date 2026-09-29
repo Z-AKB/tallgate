@@ -4,6 +4,8 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
+import { fetchCurrentRoleNames } from "@/lib/auth/roles"
+import { getPostLoginPath } from "@/lib/auth/redirect"
 import { HiOutlineMail, HiOutlineLockClosed, HiOutlineInformationCircle } from "react-icons/hi"
 
 export default function LoginPage() {
@@ -29,7 +31,9 @@ export default function LoginPage() {
         throw new Error(authError.message)
       }
 
-      router.push("/dashboard")
+      const roles = await fetchCurrentRoleNames(supabase)
+      const next = new URLSearchParams(window.location.search).get("next")
+      router.push(getPostLoginPath(roles, next))
       router.refresh()
     } catch (err: any) {
       console.error("Login error:", err)

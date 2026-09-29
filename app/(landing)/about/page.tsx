@@ -1,125 +1,278 @@
 import Link from "next/link"
+import Image from "next/image"
 import SectionHeader from "@/components/ui/SectionHeader"
 import {
   HiOutlineLocationMarker,
-  HiOutlineOfficeBuilding,
-  HiOutlineCheckCircle,
-  HiOutlineShieldCheck,
+  HiOutlinePhone,
+  HiOutlineGlobeAlt,
+  HiOutlineSparkles,
+  HiOutlineBriefcase,
   HiOutlineAcademicCap,
-  HiOutlineLightBulb,
+  HiOutlineCheckCircle,
+  HiOutlineUserGroup,
+  HiOutlineChartBar,
 } from "react-icons/hi"
+import {
+  HiOutlineCodeBracket,
+  HiOutlineRocketLaunch,
+  HiOutlineDevicePhoneMobile,
+  HiOutlineMegaphone,
+  HiOutlinePaintBrush,
+  HiOutlineShieldCheck,
+} from "react-icons/hi2"
 
 export const metadata = {
-  title: "About TallGate | Technology Partner & Academy",
-  description: "Learn about TallGate's mission, engineering standards, and physical lab facilities in Abuja, Nigeria.",
+  title: "About Us | TallGate Limited",
+  description: "Learn about TallGate Limited's corporate statement, hybrid business model, executive leadership, and dedicated technology team.",
 }
 
 export default function AboutPage() {
-  const principles = [
+  const revenueStreams = [
+    { name: "Website Development", icon: HiOutlineCodeBracket },
+    { name: "Digital Business Setup Services", icon: HiOutlineRocketLaunch },
+    { name: "Branding and Design Services", icon: HiOutlinePaintBrush },
+    { name: "Social Media Management Retainers", icon: HiOutlineMegaphone },
+    { name: "Digital Marketing Campaigns", icon: HiOutlineChartBar },
+    { name: "Technology Consulting", icon: HiOutlineBriefcase },
+    { name: "Subscription-Based Digital Tools (Future)", icon: HiOutlineSparkles },
+    { name: "Training and Workforce Development Programs", icon: HiOutlineAcademicCap },
+  ]
+
+  const leadershipTeam = [
     {
-      title: "Clean, Maintainable Architecture",
-      description: "We don't cut corners. Every line of code, database schema, and cloud deployment is engineered for longevity, maintainability, and security.",
+      name: "Abdullahi Musa",
+      role: "Chief Technology Officer [CTO]",
+      image: "/assets/team/abdullahi.png",
+      bio: "Leading architecture and delivery across core software engineering, infrastructure resilience, and curriculum innovation.",
     },
     {
-      title: "Lab-First, Practical Tech Education",
-      description: "Our students learn by building production-grade software in our dedicated computer workstation lab in Kubwa, Abuja.",
+      name: "Zion Akanbi",
+      role: "ICT Officer",
+      image: "/assets/team/zion.png",
+      bio: "Managing computer workstation facilities, isolated lab environments, enterprise networking, and hardware systems.",
     },
     {
-      title: "Honest Scoping & Transparent Delivery",
-      description: "We give clear technical timelines, realistic cost projections, and continuous milestone visibility to our business clients and founders.",
+      name: "Ella Akanbi",
+      role: "Admin & HR",
+      image: "/assets/team/ella.png",
+      bio: "Driving talent operations, organizational culture, customer support triage, and seamless corporate administration.",
     },
-    {
-      title: "West African Ecosystem Empowerment",
-      description: "We are committed to building the technology infrastructure that powers African commerce, fintech, healthcare, and digital employment.",
-    },
+  ]
+
+  const teamMetrics = [
+    { label: "Teamwork Efficiency", score: "92%" },
+    { label: "Healthy Office Environment", score: "96%" },
+    { label: "Socialization Between Teams", score: "91%" },
   ]
 
   return (
     <div className="py-12 sm:py-20 space-y-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <SectionHeader
-          title="Building the Operating System for West African Technology"
-          description="TallGate is an integrated technology business providing enterprise software engineering, cloud infrastructure, cybersecurity audits, and high-impact digital skills training."
-        />
-
-        {/* Mission & Story */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          <div className="space-y-6">
-            <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-              Bridging the African Tech Execution Gap
-            </h2>
-            <p className="text-sm text-slate-300 leading-relaxed">
-              Founded in Abuja, Nigeria, TallGate was established to solve a critical market challenge: African businesses and startups often struggle to find reliable, senior software engineering partners who understand local operating conditions, while aspiring engineers lack access to rigorous, practical, lab-based technical training.
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-20">
+        
+        {/* ==================================================================== */}
+        {/* 1. CORPORATE STATEMENT & HERO                                        */}
+        {/* ==================================================================== */}
+        <div className="site-panel rounded-2xl p-6 sm:p-12 border border-white/10 relative overflow-hidden bg-[#061A4F]">
+          <div className="max-w-3xl space-y-6">
+            <p className="text-xs sm:text-sm font-bold uppercase tracking-[0.16em] text-indigo-300">
+              TallGate Limited • Company Profile
             </p>
-            <p className="text-sm text-slate-300 leading-relaxed">
-              We operate across three unified pillars:
-            </p>
-            <div className="space-y-3">
-              <div className="p-4 bg-white/[0.03] border border-white/10 rounded-xl">
-                <span className="font-bold text-sm text-indigo-300 block">1. Enterprise Services (Core Identity)</span>
-                <span className="text-xs text-slate-300">Bespoke software development, mobile engineering, cloud infrastructure, and security assessments.</span>
-              </div>
-              <div className="p-4 bg-white/[0.03] border border-white/10 rounded-xl">
-                <span className="font-bold text-sm text-indigo-300 block">2. The Learning Hub</span>
-                <span className="text-xs text-slate-300">Comprehensive, lab-first tech education in Web Development, Cybersecurity, Python AI, and Networking.</span>
-              </div>
-              <div className="p-4 bg-white/[0.03] border border-white/10 rounded-xl">
-                <span className="font-bold text-sm text-indigo-300 block">3. The Startup Hub</span>
-                <span className="text-xs text-slate-300">MVP rapid prototyping, fractional CTO advisory, and technical due diligence for African founders.</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Physical Campus Card */}
-          <div className="site-panel rounded-2xl p-8 sm:p-10 text-white border border-white/10 shadow-xl space-y-6">
-            <div className="flex items-center gap-3">
-              <HiOutlineOfficeBuilding className="w-8 h-8 text-indigo-400" />
-              <div>
-                <h3 className="text-xl font-bold text-white">The Abuja Campus & Labs</h3>
-                <p className="text-xs text-slate-400">Physical Training & Engineering Center</p>
-              </div>
-            </div>
-
-            <p className="text-xs text-slate-300 leading-relaxed">
-              Our campus in Kubwa, Abuja features dedicated computer workstations, high-speed fiber internet, and isolated cybersecurity and networking lab environments.
+            <h1 className="text-3xl sm:text-5xl font-bold text-white tracking-tight leading-[1.1]">
+              Opening Doors to Digital Growth.
+            </h1>
+            <p className="text-base sm:text-xl text-slate-200 leading-relaxed font-normal">
+              At <strong className="text-white">TALLGATE LIMITED</strong>, we believe that every business deserves the opportunity to grow, compete, and succeed in the digital economy. Through innovation, technology, and empowerment, we are building pathways that connect businesses to opportunities and people to possibilities.
             </p>
 
-            <div className="space-y-3 border-t border-white/10 pt-4 text-xs">
-              <div className="flex items-start gap-2 text-slate-300">
-                <HiOutlineLocationMarker className="w-4 h-4 text-indigo-400 flex-shrink-0 mt-0.5" />
-                <span>No. 2 F.O. Eburuche Close, Gbazango Extension, Kubwa, Abuja, Nigeria</span>
+            <div className="pt-4 flex flex-wrap items-center gap-6 text-xs text-slate-300 border-t border-white/10">
+              <div className="flex items-start gap-2">
+                <HiOutlineLocationMarker className="w-4 h-4 text-indigo-300 shrink-0 mt-0.5" />
+                <span>NO 2, F.O EBURUCHE CLOSE, GBAZANGO EXTENSION, FCT, NIGERIA</span>
               </div>
-              <div className="flex items-center gap-2 text-slate-300">
-                <span className="font-semibold text-white">Opening Hours:</span>
-                <span>Mon – Fri: 8:00 AM – 6:00 PM | Sat: 9:00 AM – 4:00 PM</span>
+              <div className="flex items-center gap-2">
+                <HiOutlinePhone className="w-4 h-4 text-indigo-300 shrink-0" />
+                <a href="tel:+2349131898566" className="hover:text-white transition-colors">+234 913 189 8566</a>
               </div>
-            </div>
-
-            <div className="pt-2">
-              <Link href="/contact" prefetch={true} className="btn-primary w-full justify-center text-xs py-2.5">
-                Visit Campus or Schedule Meeting
-              </Link>
+              <div className="flex items-center gap-2">
+                <HiOutlineGlobeAlt className="w-4 h-4 text-indigo-300 shrink-0" />
+                <span className="text-white font-medium">www.tallgateng.com</span>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Principles Grid */}
-        <div className="pt-16 border-t border-white/10">
+        {/* ==================================================================== */}
+        {/* 2. BUSINESS MODEL                                                   */}
+        {/* ==================================================================== */}
+        <div className="space-y-10">
           <SectionHeader
-            title="Our Core Operating Principles"
-            description="The values and standards that guide every software build, consulting engagement, and student cohort."
+            badge="Operational Framework"
+            title="Our Business Model"
+            description="TALLGATE operates through a hybrid model that combines service delivery, technology solutions, and talent development."
           />
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {principles.map((item, idx) => (
-              <div key={idx} className="card-base border-white/10 hover:border-white/20">
-                <HiOutlineCheckCircle className="w-6 h-6 text-indigo-400 mb-3" />
-                <h3 className="text-base font-bold text-white mb-1.5">{item.title}</h3>
-                <p className="text-xs text-slate-300 leading-relaxed">{item.description}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {revenueStreams.map((stream, idx) => {
+              const Icon = stream.icon
+              return (
+                <div
+                  key={idx}
+                  className="card-base bg-white/[0.03] border border-white/10 hover:border-white/20 p-5 flex flex-col justify-between transition-all"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-300 shrink-0">
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <h3 className="text-sm font-semibold text-white leading-snug">
+                      {stream.name}
+                    </h3>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* ==================================================================== */}
+        {/* 3. EXECUTIVE LEADERSHIP: ENGR. OGBONNA CHISOM                        */}
+        {/* ==================================================================== */}
+        <div className="site-panel rounded-2xl p-6 sm:p-12 border border-white/10 bg-[#061A4F]">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+            
+            {/* CEO Portrait */}
+            <div className="lg:col-span-5 flex justify-center">
+              <div className="relative w-full max-w-sm aspect-[4/3] sm:aspect-square rounded-2xl overflow-hidden border border-white/15 shadow-2xl bg-slate-900">
+                <Image
+                  src="/assets/team/chisom.png"
+                  alt="Engr. Ogbonna Chisom - Chief Executive Officer at TallGate Limited"
+                  fill
+                  className="object-cover object-top hover:scale-105 transition-transform duration-500"
+                />
+              </div>
+            </div>
+
+            {/* CEO Bio */}
+            <div className="lg:col-span-7 space-y-5">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-indigo-300 mb-1">
+                  Executive Leadership
+                </p>
+                <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+                  Engr. OGBONNA CHISOM
+                </h2>
+                <p className="text-xs font-bold uppercase tracking-wider text-indigo-200 mt-1">
+                  CHIEF EXECUTIVE OFFICER
+                </p>
+              </div>
+
+              <div className="space-y-4 text-xs sm:text-sm text-slate-300 leading-relaxed font-normal">
+                <p>
+                  Chisom is an ambitious builder who sits at the intersection of technology, entrepreneurship, education, and healthcare. He is a computer engineer and a progress-driven IT consultant with an extensive background of over 15 years in the industry. With a long-standing record of initiative and innovation, he has developed and executed strategies that bring enduring value to every client and partner organization.
+                </p>
+                <p>
+                  With a broad background in network administration and software development, along with several years of experience in branding, design, digital management, and marketing, Chisom has developed a strong grasp of data analytics, user behaviour, and the value of a seamless user experience. He is dedicated to creating high-performing organisations, structured training programmes, and digital solutions that generate lasting impact.
+                </p>
+                <p>
+                  His work consistently points toward building TallGate Limited into a platform that delivers robust management systems, technology-enabled healthcare services, professional training, and mission-critical enterprise solutions.
+                </p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        {/* ==================================================================== */}
+        {/* 4. MEET OUR TEAM & LEADERSHIP                                        */}
+        {/* ==================================================================== */}
+        <div className="space-y-10">
+          <SectionHeader
+            badge="Leadership & Culture"
+            title="Our Dedicated Team"
+            description="We deliver IT excellence rooted in integrity, transparency, and client satisfaction. Supported by an experienced and engaging leadership team, TallGate is uniquely positioned to build and nurture enduring client partnerships."
+          />
+
+          {/* Team Members Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            {leadershipTeam.map((member, idx) => (
+              <div
+                key={idx}
+                className="card-base bg-white/[0.03] border border-white/10 hover:border-white/20 p-5 flex flex-col justify-between"
+              >
+                <div className="space-y-4">
+                  <div className="relative w-full aspect-square rounded-xl overflow-hidden border border-white/10 bg-slate-900">
+                    <Image
+                      src={member.image}
+                      alt={`${member.name} - ${member.role}`}
+                      fill
+                      className="object-cover object-top hover:scale-105 transition-transform duration-300"
+                    />
+                  </div>
+
+                  <div>
+                    <h3 className="text-base font-bold text-white tracking-tight">
+                      {member.name}
+                    </h3>
+                    <p className="text-xs font-semibold text-indigo-300 mt-0.5">
+                      {member.role}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                      {member.bio}
+                    </p>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
+
+          {/* Team Culture & Performance Stats */}
+          <div className="site-panel rounded-2xl p-6 sm:p-10 border border-white/10 bg-[#061A4F] space-y-8">
+            <div className="max-w-3xl space-y-3">
+              <h3 className="text-xl sm:text-2xl font-bold text-white">
+                Culture of Dedication & Global Best Practices
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                At TallGate, our team possesses an abiding dedication to IT excellence and global best practices, a sincere commitment to making our clients happy, and a genuine respect for transparency and integrity. In addition to this, TallGate management is made up of engaging and experienced personalities who are easily able to build long-term relationships with both current and prospective clients.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-4 border-t border-white/10">
+              {teamMetrics.map((stat, idx) => (
+                <div
+                  key={idx}
+                  className="p-5 rounded-xl bg-white/[0.03] border border-white/10 text-center sm:text-left space-y-1"
+                >
+                  <p className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+                    {stat.score}
+                  </p>
+                  <p className="text-xs font-medium text-slate-400">
+                    {stat.label}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
+
+        {/* ==================================================================== */}
+        {/* 5. CALL TO ACTION                                                   */}
+        {/* ==================================================================== */}
+        <div className="text-center space-y-6 pt-6 border-t border-white/10">
+          <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+            Ready to Build With TallGate?
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-400 max-w-xl mx-auto">
+            Whether you need custom software, cloud engineering, or an accelerated technical training path for your team, we are ready to partner with you.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-4">
+            <Link href="/consultation" className="btn-primary text-xs px-6 py-3">
+              Schedule Consultation
+            </Link>
+            <Link href="/contact" className="btn-secondary text-xs px-6 py-3">
+              Contact Our Abuja Office
+            </Link>
+          </div>
+        </div>
+
       </div>
     </div>
   )

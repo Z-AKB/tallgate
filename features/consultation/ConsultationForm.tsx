@@ -98,7 +98,7 @@ function ConsultationFormContent({ preselectedService = "" }: { preselectedServi
 
         <div className="mt-6 pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-center gap-3">
           <a
-            href={`https://wa.me/2349052440452?text=Hello%20TallGate%2C%20I%20just%20submitted%20a%20consultation%20request%20for%20${encodeURIComponent(formData.serviceInterest)}`}
+            href={`https://wa.me/2349131898566?text=Hello%20TallGate%2C%20I%20just%20submitted%20a%20consultation%20request%20for%20${encodeURIComponent(formData.serviceInterest)}`}
             target="_blank"
             rel="noopener noreferrer"
             className="btn-primary w-full sm:w-auto inline-flex items-center justify-center gap-2"
@@ -141,7 +141,7 @@ function ConsultationFormContent({ preselectedService = "" }: { preselectedServi
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         <div>
           <label htmlFor="fullName" className="form-label">
-            Your Full Name *
+            Your Full Name
           </label>
           <input
             id="fullName"
@@ -157,7 +157,7 @@ function ConsultationFormContent({ preselectedService = "" }: { preselectedServi
 
         <div>
           <label htmlFor="email" className="form-label">
-            Work Email Address *
+            Work Email Address
           </label>
           <input
             id="email"
@@ -175,7 +175,7 @@ function ConsultationFormContent({ preselectedService = "" }: { preselectedServi
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         <div>
           <label htmlFor="phone" className="form-label">
-            Phone / WhatsApp Number *
+            Phone / WhatsApp Number
           </label>
           <input
             id="phone"
@@ -208,7 +208,7 @@ function ConsultationFormContent({ preselectedService = "" }: { preselectedServi
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
         <div className="sm:col-span-1">
           <label htmlFor="serviceInterest" className="form-label">
-            Primary Area of Interest *
+            Primary Area of Interest
           </label>
           <select
             id="serviceInterest"
@@ -227,7 +227,7 @@ function ConsultationFormContent({ preselectedService = "" }: { preselectedServi
 
         <div className="sm:col-span-1">
           <label htmlFor="budgetRange" className="form-label">
-            Estimated Budget (NGN) *
+            Estimated Budget (NGN)
           </label>
           <select
             id="budgetRange"
@@ -246,7 +246,7 @@ function ConsultationFormContent({ preselectedService = "" }: { preselectedServi
 
         <div className="sm:col-span-1">
           <label htmlFor="timeline" className="form-label">
-            Desired Timeline *
+            Desired Timeline
           </label>
           <select
             id="timeline"
@@ -266,7 +266,7 @@ function ConsultationFormContent({ preselectedService = "" }: { preselectedServi
 
       <div>
         <label htmlFor="projectScope" className="form-label">
-          Project Scope & Objectives *
+          Project Scope & Objectives
         </label>
         <textarea
           id="projectScope"

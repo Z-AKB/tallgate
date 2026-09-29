@@ -37,13 +37,13 @@ export default function Navbar() {
             </span>
             <span className="flex items-center gap-1.5">
               <HiOutlinePhone className="w-3.5 h-3.5 text-indigo-300" />
-              <span>+234 905 244 0452 / +234 705 286 9461</span>
+              <a href="tel:+2349131898566" className="hover:text-white transition-colors">+234 913 189 8566</a>
             </span>
           </div>
           <div className="flex items-center space-x-4">
             <span className="flex items-center gap-1.5">
               <HiOutlineMail className="w-3.5 h-3.5 text-indigo-300" />
-              <span>contact@tallgate.com</span>
+              <a href="mailto:tallgatecomputing@gmail.com" className="hover:text-white transition-colors">tallgatecomputing@gmail.com</a>
             </span>
             <span className="text-slate-700">|</span>
             <Link href="/verify" prefetch={true} className="hover:text-white transition-colors">
@@ -155,7 +155,7 @@ export default function Navbar() {
             </Link>
             <div className="pt-2 text-xs text-slate-400 space-y-1">
               <p>📍 Kubwa, Abuja, Nigeria</p>
-              <p>📞 +234 905 244 0452</p>
+              <p>📞 +234 913 189 8566</p>
             </div>
           </div>
         </div>

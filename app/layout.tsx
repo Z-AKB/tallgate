@@ -32,6 +32,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
+    creator: "@tallgate_ng",
+    site: "@tallgate_ng",
     title: "TallGate | Technology Partner & Academy",
     description: "Enterprise software, cybersecurity, and practical tech training in Abuja, Nigeria.",
   },
