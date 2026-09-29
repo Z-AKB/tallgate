@@ -51,7 +51,9 @@ npm run dev
 
 ## Status
 
-Foundation milestone — scaffold only. No database schema, auth flows, or
-pages beyond the placeholder homepage exist yet. Next: database schema +
-RLS policies, then Foundation milestone build-out per the development
-roadmap (Learning Hub before Startup Hub).
+The initial backend schema and row-level security policies are defined in
+`supabase/migrations/`. Apply them to the intended Supabase project using
+the instructions in `docs/database/README.md`. Auth, contact inquiry, and
+startup application flows are present; learning catalogue, enrollment,
+lesson progress, and certificate issuance still need their own schema and
+implementation.

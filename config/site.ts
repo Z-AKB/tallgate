@@ -1,6 +1,7 @@
 export const siteConfig = {
   name: "TallGate",
-  tagline: "Learn. Build. Grow.",
+  companyName: "TallGate Limited",
+  tagline: "Opening Doors to Digital Growth.",
   description:
     "The technology platform for Nigerian and West African tech careers and businesses.",
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",

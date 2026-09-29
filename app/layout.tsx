@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
+import { siteConfig } from "@/config/site";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "TallGate — Learn. Build. Grow.",
-    template: "%s | TallGate",
+    default: `${siteConfig.name} — ${siteConfig.tagline}`,
+    template: `%s | ${siteConfig.name}`,
   },
   description:
     "TallGate is the technology platform for Nigerian and West African tech careers and businesses — learn a skill, build a startup, and get technical help, all in one place.",
