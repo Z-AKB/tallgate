@@ -22,10 +22,16 @@ Apply migrations through the Supabase CLI so the migration is recorded in
 the project's migration history:
 
 ```text
+supabase init
 supabase login
 supabase link --project-ref <project-ref>
 supabase db push
 ```
+
+If the repository already has `supabase/config.toml`, skip `supabase init`.
+Run these commands from the repository root. Keep the migration file in
+place; do not paste it into the SQL Editor and then run `db push`, as the
+database schema and CLI migration history would become inconsistent.
 
 Confirm the linked project is the intended project before running `db push`.
 Do not put a database password, access token, or service-role key in source

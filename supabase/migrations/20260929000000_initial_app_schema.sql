@@ -128,10 +128,11 @@ create policy "Certificates are publicly verifiable"
   using (true);
 
 revoke all on public.user_roles from anon, authenticated;
-grant select on public.user_roles to authenticated;
+grant select, insert, update, delete on public.user_roles to authenticated;
 
 revoke all on public.contact_inquiries from anon, authenticated;
-grant insert on public.contact_inquiries to anon, authenticated;
+grant insert (name, email, phone, inquiry_type, message, status)
+  on public.contact_inquiries to anon, authenticated;
 grant select on public.contact_inquiries to authenticated;
 
 revoke all on public.startup_applications from anon, authenticated;
