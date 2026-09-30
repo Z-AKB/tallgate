@@ -20,6 +20,18 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
 
+## Backend Setup
+
+Copy `.env.example` to `.env.local` and set the Supabase project URL and publishable/anon key. Set `NEXT_PUBLIC_SITE_URL` to the public site origin; certificate QR links use this value. Do not use a service-role key in the browser or commit `.env.local`.
+
+Before using the database-backed forms, learning content, or certificate registry, apply the migrations in `supabase/migrations` to the intended Supabase project in this order:
+
+1. `20260828000000_phase3_schema.sql`
+2. `20260829000000_lesson_content_gating.sql`
+3. `20260930000000_certificate_registry.sql`
+
+When applying through the Supabase SQL Editor, run each file once, in order. The timestamped Phase 3 migrations are authoritative; do not apply the removed legacy `0001` / `0002` learning-hub migrations. The admin dashboard also requires the signed-in admin account to have the `admin` role in `user_roles`.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

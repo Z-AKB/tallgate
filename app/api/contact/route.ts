@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/server"
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,6 +10,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: "Please provide your name, email, and message." },
         { status: 400 }
+      )
+    }
+
+    if (!isSupabaseConfigured()) {
+      return NextResponse.json(
+        { error: "Message submission is temporarily unavailable." },
+        { status: 503 }
       )
     }
 
@@ -27,7 +34,11 @@ export async function POST(req: NextRequest) {
     ])
 
     if (dbError) {
-      console.warn("Contact database insert warning (fallback active):", dbError.message)
+      console.error("Contact database insert failed:", dbError)
+      return NextResponse.json(
+        { error: "Message could not be saved. Please try again." },
+        { status: 503 }
+      )
     }
 
     return NextResponse.json(

@@ -56,18 +56,24 @@ export default async function LessonPlayerPage({
   searchParams,
 }: LessonPlayerPageProps) {
   const supabase = await createClient()
+  let courseContentError = ""
 
   // 1. Fetch course details from database
-  const { data: dbCourse } = await supabase
+  const { data: dbCourse, error: courseError } = await supabase
     .from("courses")
-    .select("id, slug, title, overview, description")
+    .select("id, slug, title, overview")
     .eq("slug", params.slug)
     .maybeSingle()
+
+  if (courseError) {
+    console.error("Unable to load course:", courseError)
+    courseContentError = "Course details could not be loaded. Please try again later."
+  }
 
   // Fallback to static catalogue data if DB course is not yet seeded
   const staticCourse = coursesData.find((c) => c.slug === params.slug)
   const courseTitle = dbCourse?.title || staticCourse?.title
-  const courseOverview = dbCourse?.overview || dbCourse?.description || staticCourse?.overview
+  const courseOverview = dbCourse?.overview || staticCourse?.overview
 
   if (!dbCourse && !staticCourse) {
     notFound()
@@ -77,34 +83,53 @@ export default async function LessonPlayerPage({
   let modules: ModuleWithLessons[] = []
 
   if (dbCourse?.id) {
-    const { data: dbModules } = await supabase
-      .from("modules")
-      .select(`
-        id,
-        title,
-        sort_order,
-        lessons (
-          id,
-          title,
-          content_type,
-          duration_seconds,
-          sort_order,
-          is_preview
-        )
-      `)
+    const { data: dbModules, error: modulesError } = await supabase
+      .from("course_modules")
+      .select("id, title, order_index")
       .eq("course_id", dbCourse.id)
-      .order("sort_order", { ascending: true })
+      .order("order_index", { ascending: true })
 
-    if (dbModules && dbModules.length > 0) {
-      modules = (dbModules as unknown as ModuleWithLessons[]).map((mod) => ({
-        ...mod,
-        lessons: (mod.lessons || []).sort((a, b) => a.sort_order - b.sort_order),
-      }))
+    if (modulesError) {
+      console.error("Unable to load course modules:", modulesError)
+      courseContentError = "Course lessons could not be loaded. Please try again later."
+    } else if (dbModules?.length) {
+      const { data: dbLessons, error: lessonsError } = await supabase
+        .from("lessons")
+        .select("id, module_id, title, content_type, duration_minutes, order_index, is_preview")
+        .in("module_id", dbModules.map((module) => module.id))
+        .order("order_index", { ascending: true })
+
+      if (lessonsError) {
+        console.error("Unable to load course lessons:", lessonsError)
+        courseContentError = "Course lessons could not be loaded. Please try again later."
+      } else {
+        const lessonsByModule = new Map<string, ModuleWithLessons["lessons"]>()
+        for (const lesson of dbLessons ?? []) {
+          const moduleLessons = lessonsByModule.get(lesson.module_id) ?? []
+          moduleLessons.push({
+            id: lesson.id,
+            title: lesson.title,
+            content_type: lesson.content_type,
+            duration_seconds: null,
+            duration_minutes: lesson.duration_minutes,
+            sort_order: lesson.order_index,
+            is_preview: lesson.is_preview,
+          })
+          lessonsByModule.set(lesson.module_id, moduleLessons)
+        }
+
+        modules = dbModules.map((module) => ({
+          id: module.id,
+          title: module.title,
+          sort_order: module.order_index,
+          lessons: lessonsByModule.get(module.id) ?? [],
+        }))
+      }
     }
   }
 
   // Fallback structure if modules are not in DB yet
-  if (modules.length === 0 && staticCourse?.syllabus) {
+  if (modules.length === 0 && !courseContentError && staticCourse?.syllabus) {
     modules = staticCourse.syllabus.map((mod, modIdx) => ({
       id: `mod-${modIdx + 1}`,
       title: mod.moduleTitle,
@@ -192,6 +217,11 @@ export default async function LessonPlayerPage({
 
       {/* Main Learning Hub Layout */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 lg:py-8">
+        {courseContentError && (
+          <p role="alert" className="mb-5 rounded-xl border border-amber-500/30 bg-amber-950/40 p-4 text-sm text-amber-100">
+            {courseContentError}
+          </p>
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
           {/* Main Content Area (Player / Text / Access Denied) */}
           <section className="lg:col-span-8 space-y-6">

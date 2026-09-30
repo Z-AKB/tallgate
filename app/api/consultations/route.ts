@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/server"
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,9 +13,15 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    if (!isSupabaseConfigured()) {
+      return NextResponse.json(
+        { error: "Consultation requests are temporarily unavailable." },
+        { status: 503 }
+      )
+    }
+
     const supabase = createClient()
 
-    // Insert into consultation_requests table if Supabase is active
     const { error: dbError } = await (supabase.from("consultation_requests") as any).insert([
       {
         full_name: fullName,
@@ -31,7 +37,11 @@ export async function POST(req: NextRequest) {
     ])
 
     if (dbError) {
-      console.warn("Supabase insert consultation warning (fallback mode active):", dbError.message)
+      console.error("Consultation database insert failed:", dbError)
+      return NextResponse.json(
+        { error: "Consultation request could not be saved. Please try again." },
+        { status: 503 }
+      )
     }
 
     return NextResponse.json(

@@ -1,49 +1,59 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/server"
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const { fullName, email, phone, courseTitle, schedulePreference, learningMode } = body
 
-    if (!fullName || !email || !phone || !courseTitle) {
+    if (
+      typeof fullName !== "string" ||
+      !fullName.trim() ||
+      typeof email !== "string" ||
+      !email.trim() ||
+      typeof phone !== "string" ||
+      !phone.trim() ||
+      typeof courseTitle !== "string" ||
+      !courseTitle.trim()
+    ) {
       return NextResponse.json(
         { error: "Missing required enrollment information." },
         { status: 400 }
       )
     }
 
+    if (!isSupabaseConfigured()) {
+      return NextResponse.json(
+        { error: "Enrollment requests are temporarily unavailable." },
+        { status: 503 }
+      )
+    }
+
     const supabase = createClient()
-
-    // Find course if exists
-    const { data: courseData } = await supabase
-      .from("courses")
-      .select("id")
-      .ilike("title", `%${courseTitle}%`)
-      .limit(1)
-      .single()
-
-    // Record inquiry/enrollment
     const { error: dbError } = await (supabase.from("service_inquiries") as any).insert([
       {
-        full_name: fullName,
-        email,
-        phone,
-        company_name: `Enrollment: ${courseTitle} (${learningMode || 'Hybrid'}, ${schedulePreference || 'Standard'})`,
-        message: `Applicant enrolled for course ${courseTitle}. Schedule: ${schedulePreference}. Mode: ${learningMode}.`,
+        full_name: fullName.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        company_name: `Enrollment: ${courseTitle.trim()} (${learningMode || "Hybrid"}, ${schedulePreference || "Standard"})`,
+        message: `Applicant requested enrollment for course ${courseTitle.trim()}. Schedule: ${schedulePreference || "Standard"}. Mode: ${learningMode || "Hybrid"}.`,
         status: "new",
       },
     ])
 
     if (dbError) {
-      console.warn("Enrollment database record warning (fallback mode):", dbError.message)
+      console.error("Enrollment database insert failed:", dbError)
+      return NextResponse.json(
+        { error: "Enrollment request could not be saved. Please try again." },
+        { status: 503 }
+      )
     }
 
     return NextResponse.json(
       { success: true, message: "Enrollment application received." },
       { status: 200 }
     )
-  } catch (error: any) {
+  } catch (error) {
     console.error("Enrollment API error:", error)
     return NextResponse.json(
       { error: "Internal server error." },

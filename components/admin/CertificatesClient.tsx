@@ -2,46 +2,40 @@
 
 import React, { useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { MockCertificate } from "@/lib/data/adminMockData"
 import {
   HiOutlineMagnifyingGlass,
   HiOutlineIdentification,
   HiOutlinePlus,
-  HiOutlineCheckBadge,
   HiOutlineArrowTopRightOnSquare,
   HiOutlineXMark,
-  HiOutlineArrowPath,
-  HiOutlineShieldCheck,
 } from "react-icons/hi2"
-
-const generateVerificationCode = () => {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-  let code = "TG-2026-"
-  for (let i = 0; i < 5; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length))
-  }
-  return code
-}
 
 export default function CertificatesClient({
   initialCertificates,
+  dataWarning,
   prefilledRecipient,
   prefilledCourse,
 }: {
   initialCertificates: MockCertificate[]
+  dataWarning: string
   prefilledRecipient?: string
   prefilledCourse?: string
 }) {
   const [certificates, setCertificates] = useState<MockCertificate[]>(initialCertificates)
   const [searchQuery, setSearchQuery] = useState("")
   const [isModalOpen, setIsModalOpen] = useState(Boolean(prefilledRecipient))
+  const [issueResult, setIssueResult] = useState<{
+    verificationUrl: string
+    qrCode: string
+  } | null>(null)
+  const [requestError, setRequestError] = useState("")
 
-  // Form State
   const [recipientName, setRecipientName] = useState(prefilledRecipient || "")
   const [courseTitle, setCourseTitle] = useState(
     prefilledCourse || "Full-Stack Enterprise Cloud Engineering"
   )
-  const [verificationCode, setVerificationCode] = useState(generateVerificationCode())
   const [grade, setGrade] = useState("Distinction")
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split("T")[0])
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -56,26 +50,13 @@ export default function CertificatesClient({
 
   const handleIssueCertificate = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!recipientName || !courseTitle || !verificationCode) return
+    if (!recipientName.trim() || !courseTitle) return
 
     setIsSubmitting(true)
-
-    const newCert: MockCertificate = {
-      id: `cert-${Date.now()}`,
-      verification_code: verificationCode.toUpperCase(),
-      recipient_name: recipientName,
-      course_title: courseTitle,
-      issue_date: issueDate,
-      grade,
-      is_valid: true,
-      created_at: new Date().toISOString(),
-    }
-
-    // Optimistic UI update
-    setCertificates((prev) => [newCert, ...prev])
+    setRequestError("")
 
     try {
-      await fetch("/api/admin/actions", {
+      const response = await fetch("/api/admin/actions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -83,30 +64,48 @@ export default function CertificatesClient({
           payload: {
             recipient_name: recipientName,
             course_title: courseTitle,
-            verification_code: verificationCode.toUpperCase(),
             grade,
             issue_date: issueDate,
           },
         }),
       })
-    } catch (err) {
-      console.error("Error issuing certificate:", err)
-    } finally {
+      const result = (await response.json()) as {
+        success?: boolean
+        certificate?: MockCertificate
+        verification_url?: string
+        qr_code?: string
+        error?: string
+      }
+
+      const issuedCertificate = result.certificate
+      if (!response.ok || !issuedCertificate || !result.verification_url || !result.qr_code) {
+        throw new Error(result.error || "Certificate could not be issued.")
+      }
+
+      setCertificates((previous) => [issuedCertificate, ...previous])
+      setIssueResult({
+        verificationUrl: result.verification_url,
+        qrCode: result.qr_code,
+      })
       setIsSubmitting(false)
       setIsModalOpen(false)
       setRecipientName("")
-      setVerificationCode(generateVerificationCode())
+    } catch (error) {
+      console.error("Error issuing certificate:", error)
+      setRequestError(
+        error instanceof Error ? error.message : "Certificate could not be issued."
+      )
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
   const toggleValidity = async (cert: MockCertificate) => {
     const nextState = !cert.is_valid
-    setCertificates((prev) =>
-      prev.map((c) => (c.id === cert.id ? { ...c, is_valid: nextState } : c))
-    )
+    setRequestError("")
 
     try {
-      await fetch("/api/admin/actions", {
+      const response = await fetch("/api/admin/actions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -114,13 +113,66 @@ export default function CertificatesClient({
           payload: { id: cert.id, is_valid: nextState },
         }),
       })
-    } catch (err) {
-      console.error("Error toggling validity:", err)
+      const result = (await response.json()) as { error?: string }
+      if (!response.ok) {
+        throw new Error(result.error || "Certificate status could not be updated.")
+      }
+      setCertificates((previous) =>
+        previous.map((item) =>
+          item.id === cert.id ? { ...item, is_valid: nextState } : item
+        )
+      )
+    } catch (error) {
+      console.error("Error toggling validity:", error)
+      setRequestError(
+        error instanceof Error ? error.message : "Certificate status could not be updated."
+      )
     }
   }
 
   return (
     <div className="space-y-6">
+      {dataWarning && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
+          {dataWarning}
+        </div>
+      )}
+      {requestError && (
+        <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-800">
+          {requestError}
+        </div>
+      )}
+      {issueResult && (
+        <div className="flex flex-col items-center gap-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-center sm:flex-row sm:text-left">
+          <Image
+            src={issueResult.qrCode}
+            alt="Certificate verification QR code"
+            width={128}
+            height={128}
+            unoptimized
+            className="h-32 w-32"
+          />
+          <div className="space-y-2">
+            <h2 className="font-bold text-emerald-900">Certificate issued successfully</h2>
+            <p className="text-xs text-emerald-800">Scan the QR code or open the verification link.</p>
+            <Link
+              href={issueResult.verificationUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="break-all text-xs font-semibold text-brand-primary underline"
+            >
+              {issueResult.verificationUrl}
+            </Link>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIssueResult(null)}
+            className="ml-auto text-xs font-semibold text-slate-600 underline"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
       {/* Control Header */}
       <div className="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-card space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -134,7 +186,7 @@ export default function CertificatesClient({
           </div>
           <button
             onClick={() => {
-              setVerificationCode(generateVerificationCode())
+              setRequestError("")
               setIsModalOpen(true)
             }}
             className="inline-flex items-center gap-2 px-4 py-2 bg-brand-primary hover:bg-brand-primary-hover text-white rounded-xl text-xs font-bold shadow-md transition-all self-start sm:self-auto"
@@ -328,28 +380,9 @@ export default function CertificatesClient({
                 </div>
               </div>
 
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                    Verification Code (Hash):
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setVerificationCode(generateVerificationCode())}
-                    className="text-[11px] font-bold text-brand-primary hover:underline flex items-center gap-1"
-                  >
-                    <HiOutlineArrowPath className="w-3 h-3" />
-                    <span>Regenerate</span>
-                  </button>
-                </div>
-                <input
-                  type="text"
-                  required
-                  value={verificationCode}
-                  onChange={(e) => setVerificationCode(e.target.value)}
-                  className="w-full p-2.5 text-xs font-mono font-bold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-brand-primary focus:outline-none uppercase"
-                />
-              </div>
+              <p className="rounded-lg bg-slate-50 p-3 text-xs text-slate-600">
+                A unique verification code and QR link will be generated securely when the certificate is issued.
+              </p>
 
               <div className="pt-4 border-t border-slate-200 flex items-center justify-end gap-3">
                 <button

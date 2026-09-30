@@ -1,6 +1,5 @@
-import React from "react"
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/server"
-import { mockCertificates, MockCertificate } from "@/lib/data/adminMockData"
+import { mockCertificates, type MockCertificate } from "@/lib/data/adminMockData"
 import CertificatesClient from "@/components/admin/CertificatesClient"
 
 export const metadata = {
@@ -13,24 +12,37 @@ export default async function AdminCertificatesPage({
 }: {
   searchParams: { recipient?: string; course?: string }
 }) {
-  const supabase = createClient()
-  let certificates: MockCertificate[] = mockCertificates
+  let certificates: MockCertificate[] = []
+  let dataWarning = ""
 
-  if (isSupabaseConfigured()) try {
-    const { data, error } = await (supabase.from("certificates") as any)
-      .select("*")
-      .order("created_at", { ascending: false })
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = createClient()
+      const { data, error } = await (supabase.from("certificates") as any)
+        .select("*")
+        .order("created_at", { ascending: false })
 
-    if (data && data.length > 0) {
-      certificates = data
+      if (error) {
+        console.error("Unable to load certificate registry:", error)
+        dataWarning = "Certificate records could not be loaded from Supabase."
+      } else {
+        certificates = data ?? []
+      }
+    } catch (error) {
+      console.error("Unable to load certificate registry:", error)
+      dataWarning = "Certificate records could not be loaded from Supabase."
     }
-  } catch (err) {
-    console.warn("Supabase certificates fallback:", err)
+  } else if (process.env.NODE_ENV === "development") {
+    certificates = mockCertificates
+    dataWarning = "Showing sample certificates. Configure Supabase to view live records."
+  } else {
+    dataWarning = "Certificate records are unavailable because Supabase is not configured."
   }
 
   return (
     <CertificatesClient
       initialCertificates={certificates}
+      dataWarning={dataWarning}
       prefilledRecipient={searchParams?.recipient}
       prefilledCourse={searchParams?.course}
     />

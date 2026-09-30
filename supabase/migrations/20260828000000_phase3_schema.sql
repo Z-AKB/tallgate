@@ -133,6 +133,7 @@ create table if not exists lessons (
     id uuid primary key default gen_random_uuid(),
     module_id uuid not null references course_modules(id) on delete cascade,
     title text not null,
+    content_type text not null default 'text' check (content_type in ('video', 'text')),
     content_markdown text,
     duration_minutes int not null default 30,
     order_index int not null default 0,
@@ -250,51 +251,76 @@ alter table startup_reviews enable row level security;
 alter table contact_messages enable row level security;
 
 -- Helper Function to Check Admin Role
-create or replace function public.is_admin(user_id uuid)
-returns boolean language sql security definer as $$
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
   select exists (
     select 1
-    from public.user_roles ur
-    join public.roles r on ur.role_id = r.id
-    where ur.user_id = $1 and r.name = 'admin'
+    from public.user_roles
+    join public.roles on roles.id = user_roles.role_id
+    where user_roles.user_id = (select auth.uid())
+      and roles.name = 'admin'
   );
 $$;
 
+revoke all on function public.is_admin() from public;
+grant execute on function public.is_admin() to anon, authenticated;
+
 -- PROFILES Policies
-create policy "Public profiles are viewable by everyone" on profiles
-  for select using (true);
+create policy "Users and admins can view profiles" on profiles
+  for select to authenticated
+  using (auth.uid() = id or public.is_admin());
 create policy "Users can update own profile" on profiles
-  for update using (auth.uid() = id);
+  for update to authenticated
+  using (auth.uid() = id)
+  with check (auth.uid() = id);
+
+create policy "Authenticated users can read roles" on roles
+  for select to authenticated using (true);
+
+create policy "Users and admins can read user roles" on user_roles
+  for select to authenticated
+  using (auth.uid() = user_id or public.is_admin());
 
 -- SERVICES Policies
 create policy "Services are viewable by everyone" on services
-  for select using (is_active = true or public.is_admin(auth.uid()));
+  for select using (is_active = true or public.is_admin());
 create policy "Admins can modify services" on services
-  for all using (public.is_admin(auth.uid()));
+  for all to authenticated
+  using (public.is_admin())
+  with check (public.is_admin());
 
 -- CONSULTATION_REQUESTS Policies
 create policy "Anyone can insert consultation requests" on consultation_requests
   for insert with check (true);
 create policy "Users can view own consultation requests" on consultation_requests
-  for select using (auth.uid() = user_id or public.is_admin(auth.uid()));
+  for select using (auth.uid() = user_id or public.is_admin());
 create policy "Admins can update consultation requests" on consultation_requests
-  for update using (public.is_admin(auth.uid()));
+  for update to authenticated
+  using (public.is_admin())
+  with check (public.is_admin());
 
 -- SERVICE_INQUIRIES Policies
 create policy "Anyone can insert service inquiries" on service_inquiries
   for insert with check (true);
 create policy "Admins can view and manage service inquiries" on service_inquiries
-  for all using (public.is_admin(auth.uid()));
+  for all to authenticated
+  using (public.is_admin())
+  with check (public.is_admin());
 
 -- COURSES, MODULES & LESSONS Policies
 create policy "Published courses are viewable by everyone" on courses
-  for select using (is_published = true or public.is_admin(auth.uid()));
+  for select using (is_published = true or public.is_admin());
 create policy "Course modules viewable by everyone" on course_modules
   for select using (true);
 create policy "Lessons viewable by enrolled users or preview or admin" on lessons
   for select using (
     is_preview = true or 
-    public.is_admin(auth.uid()) or
+    public.is_admin() or
     exists (
       select 1 from course_enrollments ce
       join course_modules cm on cm.course_id = ce.course_id
@@ -304,35 +330,46 @@ create policy "Lessons viewable by enrolled users or preview or admin" on lesson
 
 -- COURSE_ENROLLMENTS Policies
 create policy "Users can view own enrollments" on course_enrollments
-  for select using (auth.uid() = user_id or public.is_admin(auth.uid()));
+  for select using (auth.uid() = user_id or public.is_admin());
 create policy "Users can insert own enrollment" on course_enrollments
-  for insert with check (auth.uid() = user_id);
+  for insert to authenticated
+  with check (auth.uid() = user_id and status = 'active');
 
 -- CERTIFICATES Policies
-create policy "Certificates are publicly viewable by verification code" on certificates
-  for select using (true);
+create policy "Certificates are publicly verifiable" on certificates
+  for select to anon using (true);
 create policy "Admins can manage certificates" on certificates
-  for all using (public.is_admin(auth.uid()));
+  for all to authenticated
+  using (public.is_admin())
+  with check (public.is_admin());
 
 -- STARTUP_APPLICATIONS Policies
 create policy "Anyone can submit a startup application" on startup_applications
   for insert with check (true);
 create policy "Users can view own startup applications" on startup_applications
-  for select using (auth.uid() = user_id or public.is_admin(auth.uid()));
+  for select using (auth.uid() = user_id or public.is_admin());
 create policy "Admins can manage startup applications" on startup_applications
-  for all using (public.is_admin(auth.uid()));
+  for all to authenticated
+  using (public.is_admin())
+  with check (public.is_admin());
 
 -- CONTACT_MESSAGES Policies
 create policy "Anyone can insert contact messages" on contact_messages
   for insert with check (true);
 create policy "Admins can view and manage contact messages" on contact_messages
-  for all using (public.is_admin(auth.uid()));
+  for all to authenticated
+  using (public.is_admin())
+  with check (public.is_admin());
 
 -- ==============================================================================
 -- AUTOMATIC PROFILE TRIGGER ON SIGNUP
 -- ==============================================================================
 create or replace function public.handle_new_user()
-returns trigger language plpgsql security definer as $$
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
 declare
   default_role_id uuid;
 begin
@@ -344,7 +381,10 @@ begin
   );
 
   -- Assign 'learner' default role
-  select id into default_role_id from public.roles where name = 'learner' limit 1;
+  select roles.id into default_role_id
+  from public.roles
+  where roles.name = 'learner'
+  limit 1;
   if default_role_id is not null then
     insert into public.user_roles (user_id, role_id) values (new.id, default_role_id);
   end if;

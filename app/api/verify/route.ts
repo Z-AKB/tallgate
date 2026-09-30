@@ -1,41 +1,64 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
+import { createPublicClient, isSupabaseConfigured } from "@/lib/supabase/server"
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
-  const code = searchParams.get("code")
+  const code = searchParams.get("code")?.trim().toUpperCase()
 
   if (!code) {
     return NextResponse.json({ error: "Code is required" }, { status: 400 })
   }
 
-  const supabase = createClient()
-
-  // Query certificates table
-  const { data, error } = await supabase
-    .from("certificates")
-    .select("*")
-    .ilike("verification_code", code.trim())
-    .eq("is_valid", true)
-    .single()
-
-  if (error || !data) {
-    // Fallback demo registry verification if database is in local setup
-    if (code.toUpperCase() === "TG-2024-DEMO" || code.toUpperCase() === "TG-2024-9182") {
-      return NextResponse.json({
-        certificate: {
-          verification_code: code.toUpperCase(),
-          recipient_name: "Amina Suleiman",
-          course_title: "Full Stack Web Development",
-          issue_date: "2024-07-15",
-          grade: "Distinction",
-          is_valid: true,
-        },
-      })
-    }
-
-    return NextResponse.json({ error: "Certificate not found." }, { status: 404 })
+  if (!/^[A-Z0-9-]{4,64}$/.test(code)) {
+    return NextResponse.json({ error: "Invalid verification code format." }, { status: 400 })
   }
 
-  return NextResponse.json({ certificate: data })
+  if (!isSupabaseConfigured()) {
+    return NextResponse.json(
+      { error: "Certificate verification is temporarily unavailable." },
+      { status: 503 }
+    )
+  }
+
+  try {
+    const supabase = createPublicClient()
+    const { data, error } = await supabase
+      .from("certificates")
+      .select("certificate_number, recipient_name, course_title, issue_date, grade, is_valid")
+      .eq("verification_code", code)
+      .maybeSingle()
+
+    if (error) {
+      console.error("Certificate verification query failed:", error)
+      return NextResponse.json(
+        { error: "Certificate verification is temporarily unavailable." },
+        { status: 503 }
+      )
+    }
+
+    if (!data) {
+      return NextResponse.json(
+        { status: "not_found", error: "Certificate not found." },
+        { status: 404 }
+      )
+    }
+
+    return NextResponse.json({
+      status: data.is_valid ? "valid" : "revoked",
+      certificate: {
+        certificate_number: data.certificate_number,
+        recipient_name: data.recipient_name,
+        course_title: data.course_title,
+        issue_date: data.issue_date,
+        grade: data.grade,
+        status: data.is_valid ? "valid" : "revoked",
+      },
+    })
+  } catch (error) {
+    console.error("Certificate verification request failed:", error)
+    return NextResponse.json(
+      { error: "Certificate verification is temporarily unavailable." },
+      { status: 503 }
+    )
+  }
 }

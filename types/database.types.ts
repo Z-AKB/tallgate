@@ -251,59 +251,40 @@ export interface Database {
           id: string
           slug: string
           title: string
-          description: string | null
-          category_id: string | null
-          instructor_id: string | null
-          status: 'draft' | 'pending_review' | 'published' | 'rejected'
-          thumbnail_url: string | null
-          category?: string
-          level?: string
-          price_ngn?: number
-          duration?: string
-          duration_weeks?: number | null
-          short_description?: string
-          overview?: string
-          learning_outcomes?: Json
-          prerequisites?: string | null
-          is_popular?: boolean
-          is_published?: boolean
-          display_order?: number
+          category: string
+          level: string
+          price_ngn: number
+          duration: string
+          short_description: string
+          overview: string
+          learning_outcomes: Json
+          prerequisites: string | null
+          is_popular: boolean
+          is_published: boolean
+          display_order: number
           created_at: string
-          updated_at?: string
         }
         Insert: {
           id?: string
           slug: string
           title: string
-          description?: string | null
-          category_id?: string | null
-          instructor_id?: string | null
-          status?: 'draft' | 'pending_review' | 'published' | 'rejected'
-          thumbnail_url?: string | null
-          category?: string
+          category: string
           level?: string
           price_ngn?: number
-          duration?: string
-          duration_weeks?: number | null
-          short_description?: string
-          overview?: string
+          duration: string
+          short_description: string
+          overview: string
           learning_outcomes?: Json
           prerequisites?: string | null
           is_popular?: boolean
           is_published?: boolean
           display_order?: number
           created_at?: string
-          updated_at?: string
         }
         Update: {
           id?: string
           slug?: string
           title?: string
-          description?: string | null
-          category_id?: string | null
-          instructor_id?: string | null
-          status?: 'draft' | 'pending_review' | 'published' | 'rejected'
-          thumbnail_url?: string | null
           category?: string
           level?: string
           price_ngn?: number
@@ -345,40 +326,14 @@ export interface Database {
         }
         Relationships: []
       }
-      modules: {
-        Row: {
-          id: string
-          course_id: string
-          title: string
-          sort_order: number
-        }
-        Insert: {
-          id?: string
-          course_id: string
-          title: string
-          sort_order?: number
-        }
-        Update: {
-          id?: string
-          course_id?: string
-          title?: string
-          sort_order?: number
-        }
-        Relationships: []
-      }
       lessons: {
         Row: {
           id: string
           module_id: string
           title: string
           content_type: 'video' | 'text'
-          content_url: string | null
-          content_body: string | null
-          content_markdown: string | null
           duration_minutes: number
-          duration_seconds: number | null
           order_index: number
-          sort_order: number
           is_preview: boolean
           created_at: string
         }
@@ -387,13 +342,8 @@ export interface Database {
           module_id: string
           title: string
           content_type?: 'video' | 'text'
-          content_url?: string | null
-          content_body?: string | null
-          content_markdown?: string | null
           duration_minutes?: number
-          duration_seconds?: number | null
           order_index?: number
-          sort_order?: number
           is_preview?: boolean
           created_at?: string
         }
@@ -402,13 +352,8 @@ export interface Database {
           module_id?: string
           title?: string
           content_type?: 'video' | 'text'
-          content_url?: string | null
-          content_body?: string | null
-          content_markdown?: string | null
           duration_minutes?: number
-          duration_seconds?: number | null
           order_index?: number
-          sort_order?: number
           is_preview?: boolean
           created_at?: string
         }
