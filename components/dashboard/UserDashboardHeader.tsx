@@ -10,6 +10,7 @@ import {
   HiOutlineAcademicCap,
   HiOutlineBriefcase,
   HiOutlineArrowRightOnRectangle,
+  HiOutlineUser,
   HiBars3,
   HiXMark,
 } from "react-icons/hi2"
@@ -49,6 +50,11 @@ export default function UserDashboardHeader({
       name: "Our Other Services",
       href: "/dashboard/services",
       icon: HiOutlineBriefcase,
+    },
+    {
+      name: "Profile Settings",
+      href: "/dashboard/profile",
+      icon: HiOutlineUser,
     },
   ]
 

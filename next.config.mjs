@@ -37,4 +37,17 @@ const nextConfig = {
 
   // ...other config
 };
+
+if (process.env.NODE_ENV === "production") {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn("⚠️ Warning: RESEND_API_KEY is not configured. Emails will fail in production.");
+  }
+  if (!process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_SITE_URL.includes("localhost")) {
+    console.warn("⚠️ Warning: NEXT_PUBLIC_SITE_URL is missing or set to localhost. Certificate verification links may break.");
+  }
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.warn("⚠️ Warning: SUPABASE_SERVICE_ROLE_KEY is missing. Admin user management will fail.");
+  }
+}
+
 export default nextConfig;

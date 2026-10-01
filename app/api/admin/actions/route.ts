@@ -244,6 +244,88 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: true, message: "Message status updated" })
       }
 
+      case "create_user": {
+        const { email, password, full_name, role } = payload
+        const { createAdminClient } = await import("@/lib/supabase/admin")
+        let adminSupabase
+        try {
+          adminSupabase = createAdminClient()
+        } catch (e: any) {
+          return NextResponse.json({ error: e.message }, { status: 503 })
+        }
+
+        // 1. Create auth user
+        const { data: authData, error: authError } = await adminSupabase.auth.admin.createUser({
+          email,
+          password,
+          email_confirm: true
+        })
+
+        if (authError || !authData.user) {
+          return NextResponse.json({ error: authError?.message || "Failed to create user" }, { status: 400 })
+        }
+        const newUserId = authData.user.id
+
+        // 2. Create profile
+        const { error: profileError } = await adminSupabase.from("profiles").insert({
+          id: newUserId,
+          full_name,
+          email
+        })
+
+        if (profileError) {
+          return NextResponse.json({ error: profileError.message }, { status: 400 })
+        }
+
+        // 3. Assign role
+        const { data: roleData, error: roleError } = await adminSupabase
+          .from("roles")
+          .select("id")
+          .eq("name", role || "learner")
+          .single()
+
+        if (!roleError && roleData) {
+          await adminSupabase.from("user_roles").insert({
+            user_id: newUserId,
+            role_id: roleData.id
+          })
+        }
+
+        return NextResponse.json({ success: true, message: "User created successfully" })
+      }
+
+      case "update_user_role": {
+        const { user_id, role } = payload
+        const { createAdminClient } = await import("@/lib/supabase/admin")
+        let adminSupabase
+        try {
+          adminSupabase = createAdminClient()
+        } catch (e: any) {
+          return NextResponse.json({ error: e.message }, { status: 503 })
+        }
+
+        const { data: roleData, error: roleError } = await adminSupabase
+          .from("roles")
+          .select("id")
+          .eq("name", role)
+          .single()
+
+        if (roleError || !roleData) {
+          return NextResponse.json({ error: "Role not found" }, { status: 400 })
+        }
+
+        await adminSupabase.from("user_roles").delete().eq("user_id", user_id)
+        const { error } = await adminSupabase.from("user_roles").insert({
+          user_id,
+          role_id: roleData.id
+        })
+
+        if (error) {
+          return NextResponse.json({ error: error.message }, { status: 400 })
+        }
+        return NextResponse.json({ success: true, message: "User role updated" })
+      }
+
       default:
         return NextResponse.json({ error: `Unknown action: ${action}` }, { status: 400 })
     }

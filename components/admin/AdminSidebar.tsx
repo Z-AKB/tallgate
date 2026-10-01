@@ -15,6 +15,7 @@ import {
   HiOutlineChatBubbleLeftRight,
   HiOutlineArrowTopRightOnSquare,
   HiOutlineXMark,
+  HiOutlineUsers,
 } from "react-icons/hi2"
 
 interface NavItem {
@@ -31,6 +32,7 @@ const navItems: NavItem[] = [
   { name: "Course Catalog", href: "/admin/courses", icon: HiOutlineAcademicCap },
   { name: "Student Enrollments", href: "/admin/enrollments", icon: HiOutlineUserGroup },
   { name: "Certificate Registry", href: "/admin/certificates", icon: HiOutlineIdentification },
+  { name: "Users & Roles", href: "/admin/users", icon: HiOutlineUsers },
   { name: "General Inquiries", href: "/admin/messages", icon: HiOutlineChatBubbleLeftRight },
 ]
 

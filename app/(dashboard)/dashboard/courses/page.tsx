@@ -16,6 +16,43 @@ import {
 export default function UserCoursesPage() {
   const [activeTab, setActiveTab] = useState<"courses" | "startups">("courses")
   const [enrolledCourse, setEnrolledCourse] = useState<string | null>(null)
+  const [enrollForm, setEnrollForm] = useState({ fullName: "", email: "", phone: "" })
+  const [enrollLoading, setEnrollLoading] = useState(false)
+  const [enrollError, setEnrollError] = useState<string | null>(null)
+  const [enrollDone, setEnrollDone] = useState(false)
+
+  const openEnroll = (title: string) => {
+    setEnrolledCourse(title)
+    setEnrollForm({ fullName: "", email: "", phone: "" })
+    setEnrollError(null)
+    setEnrollDone(false)
+  }
+
+  const handleEnrollSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!enrolledCourse) return
+    setEnrollLoading(true)
+    setEnrollError(null)
+    try {
+      const res = await fetch("/api/enrollments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName: enrollForm.fullName,
+          email: enrollForm.email,
+          phone: enrollForm.phone,
+          courseTitle: enrolledCourse,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Failed to submit enrollment.")
+      setEnrollDone(true)
+    } catch (err: any) {
+      setEnrollError(err.message || "Failed to submit enrollment.")
+    } finally {
+      setEnrollLoading(false)
+    }
+  }
 
   const startupPillars = [
     {
@@ -126,7 +163,7 @@ export default function UserCoursesPage() {
 
               <div className="pt-4 mt-4 border-t border-slate-100">
                 <button
-                  onClick={() => setEnrolledCourse(course.title)}
+                  onClick={() => openEnroll(course.title)}
                   className="btn-primary w-full justify-center text-xs py-2"
                 >
                   Enroll in Cohort
@@ -178,7 +215,7 @@ export default function UserCoursesPage() {
 
               <div className="pt-4 mt-4 border-t border-slate-100">
                 <button
-                  onClick={() => setEnrolledCourse(prog.title)}
+                  onClick={() => openEnroll(prog.title)}
                   className="btn-secondary w-full justify-center text-xs py-2"
                 >
                   Apply for Track
@@ -195,7 +232,7 @@ export default function UserCoursesPage() {
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
-                <h3 className="text-lg font-bold text-slate-900">Program Application</h3>
+                <h3 className="text-lg font-bold text-slate-900">Enrollment Application</h3>
                 <p className="text-xs text-slate-500">{enrolledCourse}</p>
               </div>
               <button
@@ -206,21 +243,85 @@ export default function UserCoursesPage() {
               </button>
             </div>
 
-            <div className="py-4 text-center space-y-3">
-              <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-200">
-                <HiOutlineCheck className="w-6 h-6" />
+            {enrollDone ? (
+              <div className="py-4 text-center space-y-3">
+                <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-200">
+                  <HiOutlineCheck className="w-6 h-6" />
+                </div>
+                <h4 className="font-bold text-slate-900 text-sm">Application Submitted</h4>
+                <p className="text-xs text-slate-500 max-w-xs mx-auto">
+                  Your enrollment application for <strong>{enrolledCourse}</strong> has been received.
+                  Our admissions team will contact you with batch timetables and onboarding details.
+                </p>
+                <button
+                  onClick={() => setEnrolledCourse(null)}
+                  className="btn-primary text-xs mt-3"
+                >
+                  Done
+                </button>
               </div>
-              <h4 className="font-bold text-slate-900 text-sm">Interest Registered</h4>
-              <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                Admissions has received your request for <strong>{enrolledCourse}</strong>. You will be sent batch timetables and onboarding details to your student portal account.
-              </p>
-              <button
-                onClick={() => setEnrolledCourse(null)}
-                className="btn-primary text-xs mt-3"
-              >
-                Done
-              </button>
-            </div>
+            ) : (
+              <form onSubmit={handleEnrollSubmit} className="space-y-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Full Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={enrollForm.fullName}
+                    onChange={(e) => setEnrollForm((p) => ({ ...p, fullName: e.target.value }))}
+                    disabled={enrollLoading}
+                    placeholder="Your full name"
+                    className="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-primary disabled:opacity-60"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Email Address *</label>
+                  <input
+                    type="email"
+                    required
+                    value={enrollForm.email}
+                    onChange={(e) => setEnrollForm((p) => ({ ...p, email: e.target.value }))}
+                    disabled={enrollLoading}
+                    placeholder="you@example.com"
+                    className="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-primary disabled:opacity-60"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Phone Number *</label>
+                  <input
+                    type="tel"
+                    required
+                    value={enrollForm.phone}
+                    onChange={(e) => setEnrollForm((p) => ({ ...p, phone: e.target.value }))}
+                    disabled={enrollLoading}
+                    placeholder="+234..."
+                    className="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-primary disabled:opacity-60"
+                  />
+                </div>
+
+                {enrollError && (
+                  <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{enrollError}</p>
+                )}
+
+                <div className="flex items-center justify-end gap-3 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setEnrolledCourse(null)}
+                    className="btn-ghost text-xs"
+                    disabled={enrollLoading}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={enrollLoading}
+                    className="btn-primary text-xs disabled:opacity-60"
+                  >
+                    {enrollLoading ? "Submitting…" : "Submit Application"}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

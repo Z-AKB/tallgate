@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/server"
 
+/**
+ * POST /api/enrollments
+ * Handles course enrollment intake from both guests and authenticated users.
+ * 
+ * NOTE: This intentionally writes to `service_inquiries` (as a lead/application) 
+ * instead of `course_enrollments`. 
+ * 
+ * The manual admin workflow is:
+ * 1. Admin reviews application in /admin/inquiries
+ * 2. Admin contacts applicant and confirms payment
+ * 3. Admin manually creates a user account (if guest)
+ * 4. Admin manually inserts a record into `course_enrollments` to grant lesson player access.
+ */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()

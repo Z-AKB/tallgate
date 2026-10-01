@@ -18,16 +18,41 @@ export default function UserServicesPage() {
   const [selectedService, setSelectedService] = useState<string | null>(null)
   const [submitted, setSubmitted] = useState(false)
   const [inquiryNotes, setInquiryNotes] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleServiceInquiry = (serviceTitle: string) => {
     setSelectedService(serviceTitle)
     setSubmitted(false)
     setInquiryNotes("")
+    setError(null)
   }
 
-  const handleSubmitInquiry = (e: React.FormEvent) => {
+  const handleSubmitInquiry = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSubmitted(true)
+    if (!selectedService) return
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch("/api/consultations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName: "Portal User",
+          email: "portal@tallgate.com",
+          phone: "N/A",
+          serviceInterest: selectedService,
+          projectScope: inquiryNotes.trim() || `Portal inquiry for ${selectedService}.`,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || "Failed to submit request.")
+      setSubmitted(true)
+    } catch (err: any) {
+      setError(err.message || "Failed to submit request.")
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -147,22 +172,28 @@ export default function UserServicesPage() {
                     rows={4}
                     value={inquiryNotes}
                     onChange={(e) => setInquiryNotes(e.target.value)}
+                    disabled={loading}
                     placeholder="Briefly describe what you'd like to achieve (e.g. mobile app launch, cybersecurity assessment, cloud migration)..."
-                    className="w-full text-xs p-3 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-primary"
+                    className="w-full text-xs p-3 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-primary disabled:opacity-60"
                   />
                 </div>
+
+                {error && (
+                  <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
+                )}
 
                 <div className="flex items-center justify-end gap-3 pt-2">
                   <button
                     type="button"
                     onClick={() => setSelectedService(null)}
                     className="btn-ghost text-xs"
+                    disabled={loading}
                   >
                     Cancel
                   </button>
-                  <button type="submit" className="btn-primary text-xs flex items-center gap-1.5">
+                  <button type="submit" disabled={loading} className="btn-primary text-xs flex items-center gap-1.5 disabled:opacity-60">
                     <HiOutlinePaperAirplane className="w-3.5 h-3.5" />
-                    <span>Submit Request</span>
+                    <span>{loading ? "Submitting…" : "Submit Request"}</span>
                   </button>
                 </div>
               </form>
