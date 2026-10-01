@@ -1,18 +1,23 @@
+import type { SupabaseClient } from "@supabase/supabase-js"
+import type { Database } from "@/types/supabase"
+
 export function uniqueRoles(values: Array<string | null | undefined>) {
   return Array.from(new Set(values.filter((role): role is string => Boolean(role))))
 }
 
-export async function fetchCurrentRoleNames(supabase: {
-  from: (table: string) => any
-}): Promise<string[]> {
-  const selects = ["role, role_id, roles(name)", "role_id, roles(name)", "role"]
+/**
+ * Resolves role names through the authoritative `user_roles -> role_id -> roles`
+ * join. There is no `user_roles.role` column in the Phase 3 schema, so there is
+ * nothing to fall back to.
+ *
+ * The caller passes the signed-in user's own client; the
+ * "Users and admins can read user roles" RLS policy scopes rows to that user,
+ * so no explicit user filter is applied here.
+ */
+export async function fetchCurrentRoleNames(
+  supabase: SupabaseClient<Database>
+): Promise<string[]> {
+  const { data } = await supabase.from("user_roles").select("roles(name)")
 
-  for (const select of selects) {
-    const { data, error } = await supabase.from("user_roles").select(select)
-    if (!error && data) {
-      return uniqueRoles(data.flatMap((row: any) => [row.role, row.roles?.name]))
-    }
-  }
-
-  return []
+  return uniqueRoles((data ?? []).map((row) => row.roles?.name))
 }

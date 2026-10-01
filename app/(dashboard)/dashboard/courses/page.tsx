@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { getErrorMessage } from "@/lib/utils"
 import Link from "next/link"
 import { coursesData } from "@/lib/data/courses"
 import {
@@ -47,8 +48,8 @@ export default function UserCoursesPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Failed to submit enrollment.")
       setEnrollDone(true)
-    } catch (err: any) {
-      setEnrollError(err.message || "Failed to submit enrollment.")
+    } catch (err: unknown) {
+      setEnrollError(getErrorMessage(err, "Failed to submit enrollment."))
     } finally {
       setEnrollLoading(false)
     }
@@ -99,7 +100,7 @@ export default function UserCoursesPage() {
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex items-center gap-2 mt-6">
+        <div className="flex flex-wrap items-center gap-2 mt-6">
           <button
             onClick={() => setActiveTab("courses")}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
@@ -263,7 +264,7 @@ export default function UserCoursesPage() {
             ) : (
               <form onSubmit={handleEnrollSubmit} className="space-y-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Full Name *</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Full Name</label>
                   <input
                     type="text"
                     required
@@ -275,7 +276,7 @@ export default function UserCoursesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Email Address *</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Email Address</label>
                   <input
                     type="email"
                     required
@@ -287,7 +288,7 @@ export default function UserCoursesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Phone Number *</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Phone Number</label>
                   <input
                     type="tel"
                     required

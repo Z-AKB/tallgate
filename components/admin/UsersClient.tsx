@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
+import { getErrorMessage } from "@/lib/utils"
 import { HiOutlineMagnifyingGlass, HiOutlinePlus, HiOutlineXMark } from "react-icons/hi2"
 
 type User = {
@@ -54,8 +55,8 @@ export default function UsersClient({
 
       // Reload page to reflect new user list
       window.location.reload()
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(getErrorMessage(err))
       setIsSubmitting(false)
     }
   }

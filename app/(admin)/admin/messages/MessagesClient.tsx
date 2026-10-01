@@ -152,7 +152,7 @@ export default function MessagesClient({
 
               <div className="flex items-center gap-3 sm:flex-col sm:items-end justify-between">
                 <span
-                  className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
+                  className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-md ${
                     msg.status === "unread"
                       ? "bg-brand-primary text-white"
                       : msg.status === "responded"

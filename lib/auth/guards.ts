@@ -12,6 +12,8 @@ export type CurrentUser = {
     phone?: string | null
     company_name?: string | null
     avatar_url?: string | null
+    location?: string | null
+    bio?: string | null
   } | null
   roles: string[]
 }
@@ -33,34 +35,16 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, email, phone, company_name, avatar_url")
+    .select("full_name, email, phone, company_name, avatar_url, location, bio")
     .eq("id", user.id)
     .maybeSingle()
 
-  let roleRows: any[] | null = null
-  const withJoin = await supabase
+  const { data: roleRows } = await supabase
     .from("user_roles")
-    .select("role, role_id, roles(name)")
+    .select("roles(name)")
     .eq("user_id", user.id)
 
-  if (!withJoin.error) {
-    roleRows = withJoin.data
-  } else {
-    const withRoleId = await supabase
-      .from("user_roles")
-      .select("role_id, roles(name)")
-      .eq("user_id", user.id)
-    if (!withRoleId.error) {
-      roleRows = withRoleId.data
-    } else {
-      const withRole = await supabase.from("user_roles").select("role").eq("user_id", user.id)
-      roleRows = withRole.data
-    }
-  }
-
-  const roles = uniqueRoles(
-    (roleRows || []).flatMap((row: any) => [row.role, row.roles?.name])
-  )
+  const roles = uniqueRoles((roleRows ?? []).map((row) => row.roles?.name))
 
   return {
     id: user.id,

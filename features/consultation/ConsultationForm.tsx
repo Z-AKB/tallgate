@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, Suspense } from "react"
+import { getErrorMessage } from "@/lib/utils"
 import { useSearchParams } from "next/navigation"
 import { HiCheckCircle, HiArrowRight, HiOutlineInformationCircle } from "react-icons/hi"
 import { FaWhatsapp } from "react-icons/fa"
@@ -75,9 +76,9 @@ function ConsultationFormContent({ preselectedService = "" }: { preselectedServi
       }
 
       setSubmitted(true)
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Consultation submission error:", err)
-      setError(err.message || "An unexpected error occurred. Please try again.")
+      setError(getErrorMessage(err, "An unexpected error occurred. Please try again."))
     } finally {
       setLoading(false)
     }

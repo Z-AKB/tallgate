@@ -1,30 +1,37 @@
 import Link from "next/link"
 import Image from "next/image"
 import SectionHeader from "@/components/ui/SectionHeader"
+import { siteConfig } from "@/lib/config/site"
 import {
   HiOutlineLocationMarker,
   HiOutlinePhone,
-  HiOutlineGlobeAlt,
+  HiOutlineMail,
   HiOutlineSparkles,
   HiOutlineBriefcase,
   HiOutlineAcademicCap,
-  HiOutlineCheckCircle,
-  HiOutlineUserGroup,
   HiOutlineChartBar,
+  HiOutlineDocumentText,
 } from "react-icons/hi"
 import {
   HiOutlineCodeBracket,
   HiOutlineRocketLaunch,
-  HiOutlineDevicePhoneMobile,
   HiOutlineMegaphone,
   HiOutlinePaintBrush,
-  HiOutlineShieldCheck,
 } from "react-icons/hi2"
 
 export const metadata = {
-  title: "About Us | TallGate Limited",
-  description: "Learn about TallGate Limited's corporate statement, hybrid business model, executive leadership, and dedicated technology team.",
+  title: `About Us | ${siteConfig.legalName}`,
+  description:
+    "Our corporate statement, hybrid business model, executive leadership, and dedicated technology team.",
 }
+
+const profileDocumentPages = [
+  { file: "corporate-statement.png", title: "Corporate Statement" },
+  { file: "business-model.png", title: "Business Model" },
+  { file: "ceo-chisom.png", title: "Chief Executive Officer" },
+  { file: "meet-our-team.png", title: "Meet Our Team" },
+  { file: "team-leaders.png", title: "Team & Leadership" },
+]
 
 export default function AboutPage() {
   const revenueStreams = [
@@ -59,43 +66,37 @@ export default function AboutPage() {
     },
   ]
 
-  const teamMetrics = [
-    { label: "Teamwork Efficiency", score: "92%" },
-    { label: "Healthy Office Environment", score: "96%" },
-    { label: "Socialization Between Teams", score: "91%" },
-  ]
-
   return (
     <div className="py-12 sm:py-20 space-y-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-20">
-        
+
         {/* ==================================================================== */}
         {/* 1. CORPORATE STATEMENT & HERO                                        */}
         {/* ==================================================================== */}
         <div className="site-panel rounded-2xl p-6 sm:p-12 border border-white/10 relative overflow-hidden bg-[#061A4F]">
           <div className="max-w-3xl space-y-6">
             <p className="text-xs sm:text-sm font-bold uppercase tracking-[0.16em] text-indigo-300">
-              TallGate Limited • Company Profile
+              {siteConfig.legalName} • Company Profile
             </p>
             <h1 className="text-3xl sm:text-5xl font-bold text-white tracking-tight leading-[1.1]">
               Opening Doors to Digital Growth.
             </h1>
             <p className="text-base sm:text-xl text-slate-200 leading-relaxed font-normal">
-              At <strong className="text-white">TALLGATE LIMITED</strong>, we believe that every business deserves the opportunity to grow, compete, and succeed in the digital economy. Through innovation, technology, and empowerment, we are building pathways that connect businesses to opportunities and people to possibilities.
+              At <strong className="text-white">{siteConfig.legalName.toUpperCase()}</strong>, we believe that every business deserves the opportunity to grow, compete, and succeed in the digital economy. Through innovation, technology, and empowerment, we are building pathways that connect businesses to opportunities and people to possibilities.
             </p>
 
             <div className="pt-4 flex flex-wrap items-center gap-6 text-xs text-slate-300 border-t border-white/10">
               <div className="flex items-start gap-2">
                 <HiOutlineLocationMarker className="w-4 h-4 text-indigo-300 shrink-0 mt-0.5" />
-                <span>NO 2, F.O EBURUCHE CLOSE, GBAZANGO EXTENSION, FCT, NIGERIA</span>
+                <span>{siteConfig.address.street}, {siteConfig.address.area}, {siteConfig.address.country}</span>
               </div>
               <div className="flex items-center gap-2">
                 <HiOutlinePhone className="w-4 h-4 text-indigo-300 shrink-0" />
-                <a href="tel:+2349131898566" className="hover:text-white transition-colors">+234 913 189 8566</a>
+                <a href={siteConfig.phone.href} className="hover:text-white transition-colors">{siteConfig.phone.display}</a>
               </div>
               <div className="flex items-center gap-2">
-                <HiOutlineGlobeAlt className="w-4 h-4 text-indigo-300 shrink-0" />
-                <span className="text-white font-medium">www.tallgateng.com</span>
+                <HiOutlineMail className="w-4 h-4 text-indigo-300 shrink-0" />
+                <a href={`mailto:${siteConfig.email}`} className="hover:text-white transition-colors">{siteConfig.email}</a>
               </div>
             </div>
           </div>
@@ -108,7 +109,7 @@ export default function AboutPage() {
           <SectionHeader
             badge="Operational Framework"
             title="Our Business Model"
-            description="TALLGATE operates through a hybrid model that combines service delivery, technology solutions, and talent development."
+            description={`${siteConfig.legalName} operates through a hybrid model that combines service delivery, technology solutions, and talent development.`}
           />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -138,13 +139,13 @@ export default function AboutPage() {
         {/* ==================================================================== */}
         <div className="site-panel rounded-2xl p-6 sm:p-12 border border-white/10 bg-[#061A4F]">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
-            
+
             {/* CEO Portrait */}
             <div className="lg:col-span-5 flex justify-center">
               <div className="relative w-full max-w-sm aspect-[4/3] sm:aspect-square rounded-2xl overflow-hidden border border-white/15 shadow-2xl bg-slate-900">
                 <Image
                   src="/assets/team/chisom.png"
-                  alt="Engr. Ogbonna Chisom - Chief Executive Officer at TallGate Limited"
+                  alt={`Engr. Ogbonna Chisom - Chief Executive Officer at ${siteConfig.legalName}`}
                   fill
                   className="object-cover object-top hover:scale-105 transition-transform duration-500"
                 />
@@ -173,7 +174,7 @@ export default function AboutPage() {
                   With a broad background in network administration and software development, along with several years of experience in branding, design, digital management, and marketing, Chisom has developed a strong grasp of data analytics, user behaviour, and the value of a seamless user experience. He is dedicated to creating high-performing organisations, structured training programmes, and digital solutions that generate lasting impact.
                 </p>
                 <p>
-                  His work consistently points toward building TallGate Limited into a platform that delivers robust management systems, technology-enabled healthcare services, professional training, and mission-critical enterprise solutions.
+                  His work consistently points toward building {siteConfig.legalName} into a platform that delivers robust management systems, technology-enabled healthcare services, professional training, and mission-critical enterprise solutions.
                 </p>
               </div>
             </div>
@@ -224,37 +225,54 @@ export default function AboutPage() {
             ))}
           </div>
 
-          {/* Team Culture & Performance Stats */}
-          <div className="site-panel rounded-2xl p-6 sm:p-10 border border-white/10 bg-[#061A4F] space-y-8">
+          {/* Team Culture */}
+          <div className="site-panel rounded-2xl p-6 sm:p-10 border border-white/10 bg-[#061A4F]">
             <div className="max-w-3xl space-y-3">
               <h3 className="text-xl sm:text-2xl font-bold text-white">
-                Culture of Dedication & Global Best Practices
+                Culture of Dedication &amp; Global Best Practices
               </h3>
               <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
                 At TallGate, our team possesses an abiding dedication to IT excellence and global best practices, a sincere commitment to making our clients happy, and a genuine respect for transparency and integrity. In addition to this, TallGate management is made up of engaging and experienced personalities who are easily able to build long-term relationships with both current and prospective clients.
               </p>
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-4 border-t border-white/10">
-              {teamMetrics.map((stat, idx) => (
-                <div
-                  key={idx}
-                  className="p-5 rounded-xl bg-white/[0.03] border border-white/10 text-center sm:text-left space-y-1"
-                >
-                  <p className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-                    {stat.score}
-                  </p>
-                  <p className="text-xs font-medium text-slate-400">
-                    {stat.label}
-                  </p>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
 
         {/* ==================================================================== */}
-        {/* 5. CALL TO ACTION                                                   */}
+        {/* 5. COMPANY PROFILE DOCUMENT                                          */}
+        {/* ==================================================================== */}
+        <div className="space-y-8">
+          <SectionHeader
+            badge="Source Material"
+            title="Company Profile Document"
+            description="The full company profile as issued by our leadership, reproduced page by page."
+          />
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {profileDocumentPages.map((page) => (
+              <figure
+                key={page.file}
+                className="card-base bg-white/[0.03] border border-white/10 overflow-hidden flex flex-col"
+              >
+                <div className="relative w-full aspect-[3/4] bg-slate-900">
+                  <Image
+                    src={`/assets/company-profile/${page.file}`}
+                    alt={`${siteConfig.legalName} company profile - ${page.title}`}
+                    fill
+                    className="object-cover object-top"
+                  />
+                </div>
+                <figcaption className="flex items-center gap-2 px-4 py-3 text-xs font-semibold text-slate-300 border-t border-white/10">
+                  <HiOutlineDocumentText className="w-4 h-4 text-indigo-300 shrink-0" />
+                  <span>{page.title}</span>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        </div>
+
+        {/* ==================================================================== */}
+        {/* 6. CALL TO ACTION                                                   */}
         {/* ==================================================================== */}
         <div className="text-center space-y-6 pt-6 border-t border-white/10">
           <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">

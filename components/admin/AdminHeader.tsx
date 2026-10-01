@@ -2,10 +2,13 @@
 
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import Logo from "@/components/layout/Logo"
 import { useAdmin } from "@/components/admin/AdminContext"
 import SignOutButton from "@/components/auth/SignOutButton"
+import { createClient } from "@/lib/supabase/client"
+import { siteConfig } from "@/lib/config/site"
+import { getErrorMessage } from "@/lib/utils"
 import {
   HiOutlineBell,
   HiChevronDown,
@@ -39,43 +42,63 @@ const getBreadcrumbTitle = (pathname: string) => {
 
 export default function AdminHeader({ title, subtitle, initialName, initialEmail }: AdminHeaderProps) {
   const pathname = usePathname()
+  const router = useRouter()
   const pageTitle = title || getBreadcrumbTitle(pathname)
   const { mobileOpen, toggleMobile } = useAdmin()
 
   // Admin Profile Settings State
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [savedSuccess, setSavedSuccess] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
   const [profile, setProfile] = useState({
     name: initialName || "Admin Lead",
-    email: initialEmail || "tallgatecomputing@gmail.com",
+    email: initialEmail || siteConfig.email,
     role: "Operations & Systems Lead",
-    phone: "+234 913 189 8566",
+    phone: "",
   })
 
-  // Load profile from localStorage on mount
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("tg_admin_profile")
-      if (stored) {
-        setProfile(JSON.parse(stored))
-      }
-    } catch (e) {
-      // ignore
-    }
-  }, [])
+    setProfile((prev) => ({
+      ...prev,
+      name: initialName || prev.name,
+      email: initialEmail || prev.email,
+    }))
+  }, [initialName, initialEmail])
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault()
+    setSaving(true)
+    setSaveError(null)
     try {
-      localStorage.setItem("tg_admin_profile", JSON.stringify(profile))
-    } catch (e) {
-      // ignore
+      const supabase = createClient()
+      const { data: authData } = await supabase.auth.getUser()
+      if (!authData?.user) {
+        throw new Error("Your session has expired. Please sign in again.")
+      }
+
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          full_name: profile.name,
+          phone: profile.phone,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", authData.user.id)
+
+      if (error) throw error
+
+      setSavedSuccess(true)
+      router.refresh()
+      setTimeout(() => {
+        setSavedSuccess(false)
+        setSettingsOpen(false)
+      }, 1200)
+    } catch (err: unknown) {
+      setSaveError(getErrorMessage(err, "Failed to save profile."))
+    } finally {
+      setSaving(false)
     }
-    setSavedSuccess(true)
-    setTimeout(() => {
-      setSavedSuccess(false)
-      setSettingsOpen(false)
-    }, 1200)
   }
 
   const initials = profile.name
@@ -97,6 +120,8 @@ export default function AdminHeader({ title, subtitle, initialName, initialEmail
               onClick={toggleMobile}
               className="lg:hidden p-2 rounded-xl bg-white/10 text-white hover:bg-white/20 border border-white/10 focus:outline-none transition-colors"
               aria-label="Toggle Navigation Menu"
+              aria-expanded={mobileOpen}
+              aria-controls="admin-sidebar"
             >
               {mobileOpen ? <HiOutlineXMark className="w-5 h-5" /> : <HiOutlineBars3 className="w-5 h-5" />}
             </button>
@@ -212,11 +237,15 @@ export default function AdminHeader({ title, subtitle, initialName, initialEmail
                     <input
                       type="email"
                       required
+                      readOnly
+                      disabled
                       value={profile.email}
-                      onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                      className="w-full text-xs pl-9 pr-3 py-2.5 rounded-lg bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-brand-primary"
+                      className="w-full text-xs pl-9 pr-3 py-2.5 rounded-lg bg-slate-800/60 border border-slate-700/60 text-slate-400 cursor-not-allowed"
                     />
                   </div>
+                  <p className="mt-1 text-[11px] text-slate-500">
+                    Sign-in email is managed by your authentication account and cannot be edited here.
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -258,7 +287,13 @@ export default function AdminHeader({ title, subtitle, initialName, initialEmail
                   </span>
                 </div>
 
-                <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+                {saveError && (
+                  <p className="text-xs text-red-300 bg-red-500/10 border border-red-500/40 rounded-lg px-3 py-2">
+                    {saveError}
+                  </p>
+                )}
+
+                <div className="flex flex-wrap items-center justify-end gap-3 pt-3 border-t border-slate-800">
                   <button
                     type="button"
                     onClick={() => setSettingsOpen(false)}
@@ -268,9 +303,10 @@ export default function AdminHeader({ title, subtitle, initialName, initialEmail
                   </button>
                   <button
                     type="submit"
-                    className="btn-primary text-xs px-5 py-2.5"
+                    disabled={saving}
+                    className="btn-primary text-xs px-5 py-2.5 disabled:opacity-60"
                   >
-                    Save Changes
+                    {saving ? "Saving…" : "Save Changes"}
                   </button>
                 </div>
               </form>

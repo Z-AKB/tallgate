@@ -11,9 +11,17 @@ import {
   HiCheckCircle,
 } from "react-icons/hi"
 
+type EnrollCourse = {
+  title: string
+  priceNgn?: number
+  monthlyPriceNgn?: number
+  duration?: string
+  totalDuration?: string
+}
+
 export default function LearningHubPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>("All")
-  const [selectedCourse, setSelectedCourse] = useState<CourseOffering | { title: string; monthlyPriceNgn?: number; totalDuration?: string } | null>(null)
+  const [selectedCourse, setSelectedCourse] = useState<EnrollCourse | null>(null)
   const [isEnrollModalOpen, setIsEnrollModalOpen] = useState(false)
 
   const categories = [
@@ -31,7 +39,7 @@ export default function LearningHubPage() {
       ? coursesData
       : coursesData.filter((c) => c.category === selectedCategory)
 
-  const handleOpenEnroll = (course: any) => {
+  const handleOpenEnroll = (course: EnrollCourse) => {
     setSelectedCourse(course)
     setIsEnrollModalOpen(true)
   }

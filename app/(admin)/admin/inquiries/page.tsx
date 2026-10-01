@@ -1,6 +1,7 @@
 import React from "react"
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/server"
 import { mockConsultations, MockConsultation } from "@/lib/data/adminMockData"
+import { toConsultation } from "@/lib/data/adminRowMappers"
 import InquiriesClient from "@/components/admin/InquiriesClient"
 
 export const metadata = {
@@ -13,12 +14,13 @@ export default async function AdminInquiriesPage() {
   let consultations: MockConsultation[] = mockConsultations
 
   if (isSupabaseConfigured()) try {
-    const { data, error } = await (supabase.from("consultation_requests") as any)
+    const { data } = await supabase
+      .from("consultation_requests")
       .select("*")
       .order("created_at", { ascending: false })
 
     if (data && data.length > 0) {
-      consultations = data
+      consultations = data.map(toConsultation)
     }
   } catch (err) {
     console.warn("Supabase consultation query fallback:", err)

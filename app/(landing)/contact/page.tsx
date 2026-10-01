@@ -2,6 +2,8 @@
 
 import { useState } from "react"
 import SectionHeader from "@/components/ui/SectionHeader"
+import { siteConfig } from "@/lib/config/site"
+import { getErrorMessage } from "@/lib/utils"
 import {
   HiOutlineLocationMarker,
   HiOutlinePhone,
@@ -48,10 +50,10 @@ export default function ContactPage() {
       }
 
       setSubmitted(true)
-    } catch (err: any) {
-      console.error("Contact error:", err)
-      setError(err.message || "Failed to send message.")
-    } finally {
+  } catch (err: unknown) {
+    console.error("Contact error:", err)
+    setError(getErrorMessage(err, "Failed to send message."))
+  } finally {
       setLoading(false)
     }
   }
@@ -75,23 +77,23 @@ export default function ContactPage() {
               <div className="space-y-3 text-xs text-slate-300">
                 <div className="flex items-start gap-2.5">
                   <HiOutlineLocationMarker className="w-4 h-4 text-indigo-400 flex-shrink-0 mt-0.5" />
-                  <span>No. 2 F.O. Eburuche Close, Gbazango Extension, Kubwa, Abuja, Nigeria</span>
+                  <span>{siteConfig.address.street}, {siteConfig.address.area}, {siteConfig.address.country}</span>
                 </div>
 
                 <div className="flex items-center gap-2.5">
                   <HiOutlinePhone className="w-4 h-4 text-indigo-400 flex-shrink-0" />
-                  <a href="tel:+2349131898566" className="hover:text-white transition-colors">+234 913 189 8566</a>
+                  <a href={siteConfig.phone.href} className="hover:text-white transition-colors">{siteConfig.phone.display}</a>
                 </div>
 
                 <div className="flex items-center gap-2.5">
                   <HiOutlineMail className="w-4 h-4 text-indigo-400 flex-shrink-0" />
-                  <a href="mailto:tallgatecomputing@gmail.com" className="hover:text-white transition-colors">tallgatecomputing@gmail.com</a>
+                  <a href={`mailto:${siteConfig.email}`} className="hover:text-white transition-colors">{siteConfig.email}</a>
                 </div>
               </div>
 
               <div className="pt-3 border-t border-white/10">
                 <a
-                  href="https://wa.me/2349131898566"
+                  href={siteConfig.phone.whatsapp}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn-primary w-full justify-center text-xs py-2.5 inline-flex items-center gap-2"

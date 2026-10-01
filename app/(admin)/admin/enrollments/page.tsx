@@ -1,6 +1,7 @@
 import React from "react"
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/server"
 import { mockEnrollments, MockEnrollment } from "@/lib/data/adminMockData"
+import { toEnrollment } from "@/lib/data/adminRowMappers"
 import EnrollmentsClient from "@/components/admin/EnrollmentsClient"
 
 export const metadata = {
@@ -13,21 +14,13 @@ export default async function AdminEnrollmentsPage() {
   let enrollments: MockEnrollment[] = mockEnrollments
 
   if (isSupabaseConfigured()) try {
-    const { data, error } = await (supabase.from("course_enrollments") as any)
+    const { data } = await supabase
+      .from("course_enrollments")
       .select("*, profiles(full_name, email), courses(title)")
       .order("enrolled_at", { ascending: false })
 
     if (data && data.length > 0) {
-      enrollments = data.map((item: any) => ({
-        id: item.id,
-        user_name: item.profiles?.full_name || "Enrolled Student",
-        user_email: item.profiles?.email || "student@tallgate.com",
-        course_title: item.courses?.title || "Technical Track",
-        status: item.status,
-        progress_percent: item.progress_percent || 0,
-        enrolled_at: item.enrolled_at,
-        completed_at: item.completed_at,
-      }))
+      enrollments = data.map((item) => toEnrollment(item, "Enrolled Student", "Technical Track"))
     }
   } catch (err) {
     console.warn("Supabase enrollments fallback:", err)

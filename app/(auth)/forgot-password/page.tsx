@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { getErrorMessage } from "@/lib/utils"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { HiOutlineMail, HiOutlineCheckCircle } from "react-icons/hi"
@@ -31,8 +32,8 @@ export default function ForgotPasswordPage() {
       }
 
       setSuccess(true)
-    } catch (err: any) {
-      setError(err.message || "Failed to send reset link.")
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Failed to send reset link."))
     } finally {
       setLoading(false)
     }

@@ -1,12 +1,28 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/server"
+import { isNonEmptyString } from "@/lib/utils"
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json()
-    const { fullName, email, phone, companyName, serviceInterest, projectScope, budgetRange, timeline } = body
+    const body: unknown = await req.json()
+    const {
+      fullName,
+      email,
+      phone,
+      companyName,
+      serviceInterest,
+      projectScope,
+      budgetRange,
+      timeline,
+    } = (body ?? {}) as Record<string, unknown>
 
-    if (!fullName || !email || !phone || !serviceInterest || !projectScope) {
+    if (
+      !isNonEmptyString(fullName) ||
+      !isNonEmptyString(email) ||
+      !isNonEmptyString(phone) ||
+      !isNonEmptyString(serviceInterest) ||
+      !isNonEmptyString(projectScope)
+    ) {
       return NextResponse.json(
         { error: "Please provide all required fields." },
         { status: 400 }
@@ -22,16 +38,16 @@ export async function POST(req: NextRequest) {
 
     const supabase = createClient()
 
-    const { error: dbError } = await (supabase.from("consultation_requests") as any).insert([
+    const { error: dbError } = await supabase.from("consultation_requests").insert([
       {
         full_name: fullName,
         email,
         phone,
-        company_name: companyName || null,
+        company_name: isNonEmptyString(companyName) ? companyName : null,
         service_interest: serviceInterest,
         project_scope: projectScope,
-        budget_range: budgetRange || "Not specified",
-        timeline: timeline || "Not specified",
+        budget_range: isNonEmptyString(budgetRange) ? budgetRange : "Not specified",
+        timeline: isNonEmptyString(timeline) ? timeline : "Not specified",
         status: "pending",
       },
     ])
@@ -48,7 +64,7 @@ export async function POST(req: NextRequest) {
       { success: true, message: "Consultation request received successfully." },
       { status: 200 }
     )
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Consultation API error:", error)
     return NextResponse.json(
       { error: "Internal server error occurred." },

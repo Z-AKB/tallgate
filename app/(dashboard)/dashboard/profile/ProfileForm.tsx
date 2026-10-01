@@ -2,13 +2,29 @@
 
 import { useState } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { getErrorMessage } from "@/lib/utils"
 import { HiOutlineUser, HiOutlineMail, HiOutlinePhone, HiOutlineLocationMarker, HiOutlineBriefcase } from "react-icons/hi"
+import type { Database } from "@/types/supabase"
+
+type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"]
+
+type EditableProfileKey =
+  | "full_name"
+  | "email"
+  | "phone"
+  | "company_name"
+  | "location"
+  | "bio"
+
+export type EditableProfile = {
+  [K in EditableProfileKey]?: ProfileRow[K] | null
+}
 
 export default function ProfileForm({
   initialProfile,
   userId,
 }: {
-  initialProfile: any
+  initialProfile: EditableProfile | null
   userId: string
 }) {
   const [formData, setFormData] = useState({
@@ -48,8 +64,8 @@ export default function ProfileForm({
       if (error) throw error
 
       setMessage({ text: "Profile updated successfully.", type: "success" })
-    } catch (err: any) {
-      setMessage({ text: err.message || "Failed to update profile.", type: "error" })
+    } catch (err: unknown) {
+      setMessage({ text: getErrorMessage(err, "Failed to update profile."), type: "error" })
     } finally {
       setLoading(false)
     }
@@ -72,7 +88,7 @@ export default function ProfileForm({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-xs font-semibold text-slate-700 mb-1">
-            Full Name *
+            Full Name
           </label>
           <div className="relative">
             <HiOutlineUser className="absolute left-3 top-3 w-4 h-4 text-slate-400" />

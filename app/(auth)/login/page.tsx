@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { getErrorMessage } from "@/lib/utils"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
@@ -35,9 +36,9 @@ export default function LoginPage() {
       const next = new URLSearchParams(window.location.search).get("next")
       router.push(getPostLoginPath(roles, next))
       router.refresh()
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Login error:", err)
-      setError(err.message || "Failed to sign in. Please verify credentials.")
+      setError(getErrorMessage(err, "Failed to sign in. Please verify credentials."))
     } finally {
       setLoading(false)
     }

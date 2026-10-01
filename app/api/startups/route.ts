@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/server"
+import { isNonEmptyString, isOneOf } from "@/lib/utils"
+
+const STARTUP_STAGES = [
+  "idea",
+  "prototype",
+  "mvp",
+  "early_revenue",
+  "scaling",
+] as const
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json()
+    const body: unknown = await req.json()
     const {
       companyName,
       founderName,
@@ -15,13 +24,24 @@ export async function POST(req: NextRequest) {
       solutionDescription,
       pitchDeckUrl,
       supportNeeded,
-    } = body
+    } = (body ?? {}) as Record<string, unknown>
 
-    if (!companyName || !founderName || !email || !phone || !problemStatement || !solutionDescription) {
+    if (
+      !isNonEmptyString(companyName) ||
+      !isNonEmptyString(founderName) ||
+      !isNonEmptyString(email) ||
+      !isNonEmptyString(phone) ||
+      !isNonEmptyString(problemStatement) ||
+      !isNonEmptyString(solutionDescription)
+    ) {
       return NextResponse.json(
         { error: "Please provide all required fields." },
         { status: 400 }
       )
+    }
+
+    if (!isOneOf(STARTUP_STAGES, stage) && stage !== undefined) {
+      return NextResponse.json({ error: "Invalid startup stage." }, { status: 400 })
     }
 
     if (!isSupabaseConfigured()) {
@@ -33,18 +53,18 @@ export async function POST(req: NextRequest) {
 
     const supabase = createClient()
 
-    const { error: dbError } = await (supabase.from("startup_applications") as any).insert([
+    const { error: dbError } = await supabase.from("startup_applications").insert([
       {
         company_name: companyName,
         founder_name: founderName,
         email,
         phone,
-        industry,
-        stage: stage || "mvp",
+        industry: isNonEmptyString(industry) ? industry : "Not specified",
+        stage: isOneOf(STARTUP_STAGES, stage) ? stage : "mvp",
         problem_statement: problemStatement,
         solution_description: solutionDescription,
-        pitch_deck_url: pitchDeckUrl || null,
-        support_needed: supportNeeded || [],
+        pitch_deck_url: isNonEmptyString(pitchDeckUrl) ? pitchDeckUrl : null,
+        support_needed: Array.isArray(supportNeeded) ? supportNeeded : [],
         status: "submitted",
       },
     ])
@@ -61,7 +81,7 @@ export async function POST(req: NextRequest) {
       { success: true, message: "Application received successfully." },
       { status: 200 }
     )
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Startup API error:", error)
     return NextResponse.json(
       { error: "Internal server error." },

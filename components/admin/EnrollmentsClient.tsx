@@ -60,7 +60,7 @@ export default function EnrollmentsClient({
             />
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             {["all", "active", "completed", "dropped"].map((status) => (
               <button
                 key={status}
@@ -128,7 +128,7 @@ export default function EnrollmentsClient({
 
                     <td className="px-6 py-4">
                       <span
-                        className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${
+                        className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md ${
                           item.status === "completed"
                             ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
                             : item.status === "active"

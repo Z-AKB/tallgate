@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { getErrorMessage } from "@/lib/utils"
 import Link from "next/link"
 import SectionHeader from "@/components/ui/SectionHeader"
 import { HiCheckCircle, HiOutlineInformationCircle, HiOutlineArrowLeft } from "react-icons/hi"
@@ -78,9 +79,9 @@ export default function StartupApplyPage() {
       }
 
       setSubmitted(true)
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Startup application error:", err)
-      setError(err.message || "Failed to submit application.")
+      setError(getErrorMessage(err, "Failed to submit application."))
     } finally {
       setLoading(false)
     }

@@ -25,3 +25,19 @@ export function formatDate(dateString: string): string {
     year: 'numeric',
   }).format(date)
 }
+
+export function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+export function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0
+}
+
+export function isOneOf<T extends string>(allowed: readonly T[], value: unknown): value is T {
+  return typeof value === 'string' && (allowed as readonly string[]).includes(value)
+}
+
+export function getErrorMessage(error: unknown, fallback = 'Internal server error'): string {
+  return error instanceof Error ? error.message : fallback
+}

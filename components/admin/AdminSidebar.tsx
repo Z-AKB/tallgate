@@ -52,6 +52,7 @@ export default function AdminSidebar() {
 
       {/* Sidebar Container */}
       <aside
+        id="admin-sidebar"
         className={`fixed top-0 bottom-0 left-0 z-40 w-72 bg-[#061A4F] text-slate-300 border-r border-white/[0.10] flex flex-col transition-transform duration-300 ease-in-out lg:translate-x-0 ${
           mobileOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"
         }`}
@@ -95,7 +96,7 @@ export default function AdminSidebar() {
                     </div>
                     {item.badge && (
                       <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
                           isActive
                             ? "bg-white/20 text-white"
                             : "bg-slate-800 text-slate-300 border border-slate-700/50"

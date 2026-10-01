@@ -1,15 +1,32 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import Image from "next/image"
 import Logo from "@/components/layout/Logo"
+import { siteConfig } from "@/lib/config/site"
 import { HiMenu, HiX, HiChevronDown, HiOutlinePhone, HiOutlineMail, HiOutlineLocationMarker } from "react-icons/hi"
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const pathname = usePathname()
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileMenuOpen(false)
+    }
+    const onResize = () => {
+      if (window.innerWidth >= 768) setMobileMenuOpen(false)
+    }
+    document.addEventListener("keydown", onKeyDown)
+    window.addEventListener("resize", onResize)
+    return () => {
+      document.removeEventListener("keydown", onKeyDown)
+      window.removeEventListener("resize", onResize)
+    }
+  }, [mobileMenuOpen])
 
   const navLinks = [
     { name: "Services", href: "/services" },
@@ -33,17 +50,17 @@ export default function Navbar() {
           <div className="flex items-center space-x-6">
             <span className="flex items-center gap-1.5">
               <HiOutlineLocationMarker className="w-3.5 h-3.5 text-indigo-300" />
-              <span>No. 2 F.O. Eburuche Close, Gbazango Ext., Kubwa, Abuja</span>
+              <span>{siteConfig.address.street}, {siteConfig.address.area}</span>
             </span>
             <span className="flex items-center gap-1.5">
               <HiOutlinePhone className="w-3.5 h-3.5 text-indigo-300" />
-              <a href="tel:+2349131898566" className="hover:text-white transition-colors">+234 913 189 8566</a>
+              <a href={siteConfig.phone.href} className="hover:text-white transition-colors">{siteConfig.phone.display}</a>
             </span>
           </div>
           <div className="flex items-center space-x-4">
             <span className="flex items-center gap-1.5">
               <HiOutlineMail className="w-3.5 h-3.5 text-indigo-300" />
-              <a href="mailto:tallgatecomputing@gmail.com" className="hover:text-white transition-colors">tallgatecomputing@gmail.com</a>
+              <a href={`mailto:${siteConfig.email}`} className="hover:text-white transition-colors">{siteConfig.email}</a>
             </span>
             <span className="text-slate-700">|</span>
             <Link href="/verify" prefetch={true} className="hover:text-white transition-colors">
@@ -108,6 +125,8 @@ export default function Navbar() {
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 rounded-lg text-slate-300 hover:text-white hover:bg-white/10"
               aria-label="Toggle Menu"
+              aria-expanded={mobileMenuOpen}
+              aria-controls="landing-mobile-menu"
             >
               {mobileMenuOpen ? <HiX className="w-6 h-6" /> : <HiMenu className="w-6 h-6" />}
             </button>
@@ -117,7 +136,18 @@ export default function Navbar() {
 
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-white/10 bg-[#061A4F] px-4 pt-2 pb-6 space-y-2 shadow-dropdown">
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-sm md:hidden"
+            onClick={() => setMobileMenuOpen(false)}
+            aria-hidden="true"
+          />
+          <div
+            id="landing-mobile-menu"
+            role="dialog"
+            aria-modal="true"
+            className="md:hidden border-t border-white/10 bg-[#061A4F] px-4 pt-2 pb-6 space-y-2 shadow-dropdown"
+          >
           <div className="space-y-1">
             {navLinks.map((link) => (
               <Link
@@ -154,11 +184,12 @@ export default function Navbar() {
               Portal Sign In
             </Link>
             <div className="pt-2 text-xs text-slate-400 space-y-1">
-              <p>📍 Kubwa, Abuja, Nigeria</p>
-              <p>📞 +234 913 189 8566</p>
+              <p>📍 {siteConfig.address.short}</p>
+              <p>📞 {siteConfig.phone.display}</p>
             </div>
           </div>
-        </div>
+          </div>
+        </>
       )}
     </header>
   )

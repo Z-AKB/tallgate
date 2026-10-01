@@ -92,7 +92,7 @@ export default function ServicesDirectory() {
                     {service.title}
                   </h3>
                 </div>
-                <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-white/[0.06] text-slate-300 border border-white/10 shrink-0">
+                <span className="text-[11px] font-semibold px-2.5 py-1 rounded-md bg-white/[0.06] text-slate-300 border border-white/10 shrink-0">
                   {service.category}
                 </span>
               </div>

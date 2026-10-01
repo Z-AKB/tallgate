@@ -260,7 +260,7 @@ export default function CertificatesClient({
                     <td className="px-6 py-4">
                       <button
                         onClick={() => toggleValidity(cert)}
-                        className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full transition-all ${
+                        className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md transition-all ${
                           cert.is_valid
                             ? "bg-emerald-100 text-emerald-800 border border-emerald-200 hover:bg-emerald-200"
                             : "bg-red-100 text-red-800 border border-red-200 hover:bg-red-200"

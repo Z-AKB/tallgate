@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Modal from "@/components/ui/Modal"
-import { formatNaira } from "@/lib/utils"
+import { formatNaira, getErrorMessage } from "@/lib/utils"
 import { HiCheckCircle, HiOutlineInformationCircle } from "react-icons/hi"
 import { FaWhatsapp } from "react-icons/fa"
 
@@ -63,9 +63,9 @@ export default function CourseEnrollModal({ isOpen, onClose, course }: CourseEnr
       }
 
       setSubmitted(true)
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Enrollment error:", err)
-      setError(err.message || "Failed to submit enrollment application.")
+      setError(getErrorMessage(err, "Failed to submit enrollment application."))
     } finally {
       setLoading(false)
     }

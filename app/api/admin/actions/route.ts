@@ -3,14 +3,44 @@ import { randomBytes } from "crypto"
 import QRCode from "qrcode"
 import { createClient } from "@/lib/supabase/server"
 import { requireAdminApi } from "@/lib/auth/guards"
+import type { Database } from "@/types/supabase"
+import { getErrorMessage, isNonEmptyString, isOneOf, isRecord } from "@/lib/utils"
+
+type ConsultationUpdate = Database["public"]["Tables"]["consultation_requests"]["Update"]
+type StartupApplicationUpdate = Database["public"]["Tables"]["startup_applications"]["Update"]
+type CourseUpdate = Database["public"]["Tables"]["courses"]["Update"]
+type CertificateUpdate = Database["public"]["Tables"]["certificates"]["Update"]
+type ContactMessageUpdate = Database["public"]["Tables"]["contact_messages"]["Update"]
+type CertificateInsert = Database["public"]["Tables"]["certificates"]["Insert"]
+
+type ConsultationStatus = Database["public"]["Tables"]["consultation_requests"]["Row"]["status"]
+type StartupApplicationStatus = Database["public"]["Tables"]["startup_applications"]["Row"]["status"]
+type MessageStatus = Database["public"]["Tables"]["contact_messages"]["Row"]["status"]
+
+const CONSULTATION_STATUSES: readonly ConsultationStatus[] = [
+  "pending",
+  "contacted",
+  "in_progress",
+  "closed",
+]
+
+const STARTUP_APPLICATION_STATUSES: readonly StartupApplicationStatus[] = [
+  "submitted",
+  "under_review",
+  "accepted",
+  "waitlisted",
+  "declined",
+]
+
+const MESSAGE_STATUSES: readonly MessageStatus[] = ["unread", "read", "responded", "archived"]
 
 export async function POST(req: NextRequest) {
   try {
     const admin = await requireAdminApi()
     if (admin.error) return admin.error
 
-    const body = await req.json()
-    if (!body || typeof body !== "object" || Array.isArray(body)) {
+    const body: unknown = await req.json()
+    if (!isRecord(body)) {
       return NextResponse.json({ error: "A valid action payload is required." }, { status: 400 })
     }
 
@@ -18,7 +48,7 @@ export async function POST(req: NextRequest) {
     if (typeof action !== "string" || !action.trim()) {
       return NextResponse.json({ error: "Action is required" }, { status: 400 })
     }
-    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    if (!isRecord(payload)) {
       return NextResponse.json({ error: "A valid action payload is required." }, { status: 400 })
     }
 
@@ -27,10 +57,21 @@ export async function POST(req: NextRequest) {
     switch (action) {
       case "update_consultation_status": {
         const { id, status, admin_notes } = payload
-        const updateData: Record<string, unknown> = { status, updated_at: new Date().toISOString() }
+        if (!isNonEmptyString(id)) {
+          return NextResponse.json({ error: "A consultation request id is required." }, { status: 400 })
+        }
+        if (!isOneOf(CONSULTATION_STATUSES, status)) {
+          return NextResponse.json({ error: "Invalid consultation status." }, { status: 400 })
+        }
+        if (admin_notes !== undefined && admin_notes !== null && typeof admin_notes !== "string") {
+          return NextResponse.json({ error: "Admin notes must be a string." }, { status: 400 })
+        }
+
+        const updateData: ConsultationUpdate = { status, updated_at: new Date().toISOString() }
         if (admin_notes !== undefined) updateData.admin_notes = admin_notes
 
-        const { error } = await (supabase.from("consultation_requests") as any)
+        const { error } = await supabase
+          .from("consultation_requests")
           .update(updateData)
           .eq("id", id)
 
@@ -42,8 +83,18 @@ export async function POST(req: NextRequest) {
 
       case "update_startup_status": {
         const { id, status } = payload
-        const { error } = await (supabase.from("startup_applications") as any)
-          .update({ status, updated_at: new Date().toISOString() })
+        if (!isNonEmptyString(id)) {
+          return NextResponse.json({ error: "A startup application id is required." }, { status: 400 })
+        }
+        if (!isOneOf(STARTUP_APPLICATION_STATUSES, status)) {
+          return NextResponse.json({ error: "Invalid startup application status." }, { status: 400 })
+        }
+
+        const updateData: StartupApplicationUpdate = { status, updated_at: new Date().toISOString() }
+
+        const { error } = await supabase
+          .from("startup_applications")
+          .update(updateData)
           .eq("id", id)
 
         if (error) {
@@ -54,9 +105,16 @@ export async function POST(req: NextRequest) {
 
       case "toggle_course_publish": {
         const { id, is_published } = payload
-        const { error } = await (supabase.from("courses") as any)
-          .update({ is_published })
-          .eq("id", id)
+        if (!isNonEmptyString(id)) {
+          return NextResponse.json({ error: "A course id is required." }, { status: 400 })
+        }
+        if (typeof is_published !== "boolean") {
+          return NextResponse.json({ error: "is_published must be a boolean." }, { status: 400 })
+        }
+
+        const updateData: CourseUpdate = { is_published }
+
+        const { error } = await supabase.from("courses").update(updateData).eq("id", id)
 
         if (error) {
           return NextResponse.json({ error: error.message }, { status: 400 })
@@ -66,9 +124,16 @@ export async function POST(req: NextRequest) {
 
       case "toggle_course_popular": {
         const { id, is_popular } = payload
-        const { error } = await (supabase.from("courses") as any)
-          .update({ is_popular })
-          .eq("id", id)
+        if (!isNonEmptyString(id)) {
+          return NextResponse.json({ error: "A course id is required." }, { status: 400 })
+        }
+        if (typeof is_popular !== "boolean") {
+          return NextResponse.json({ error: "is_popular must be a boolean." }, { status: 400 })
+        }
+
+        const updateData: CourseUpdate = { is_popular }
+
+        const { error } = await supabase.from("courses").update(updateData).eq("id", id)
 
         if (error) {
           return NextResponse.json({ error: error.message }, { status: 400 })
@@ -158,14 +223,14 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        const certificateInput = {
+        const certificateInput: Omit<CertificateInsert, "verification_code"> = {
           recipient_name: recipient_name.trim(),
           course_title: course_title.trim(),
-          course_id: typeof course_id === "string" && course_id ? course_id : null,
-          user_id: typeof user_id === "string" && user_id ? user_id : null,
           grade: typeof grade === "string" && grade.trim() ? grade.trim().slice(0, 100) : "Distinction",
           issue_date: issueDate,
           is_valid: true,
+          ...(typeof course_id === "string" && course_id ? { course_id } : {}),
+          ...(typeof user_id === "string" && user_id ? { user_id } : {}),
         }
 
         let issuedCertificate: Record<string, unknown> | null = null
@@ -187,7 +252,8 @@ export async function POST(req: NextRequest) {
             width: 320,
           })
 
-          const { data, error } = await (supabase.from("certificates") as any)
+          const { data, error } = await supabase
+            .from("certificates")
             .insert({ ...certificateInput, verification_code: generatedCode })
             .select(
               "id, certificate_number, verification_code, recipient_name, course_title, issue_date, grade, is_valid, created_at"
@@ -222,9 +288,16 @@ export async function POST(req: NextRequest) {
 
       case "toggle_certificate_validity": {
         const { id, is_valid } = payload
-        const { error } = await (supabase.from("certificates") as any)
-          .update({ is_valid })
-          .eq("id", id)
+        if (!isNonEmptyString(id)) {
+          return NextResponse.json({ error: "A certificate id is required." }, { status: 400 })
+        }
+        if (typeof is_valid !== "boolean") {
+          return NextResponse.json({ error: "is_valid must be a boolean." }, { status: 400 })
+        }
+
+        const updateData: CertificateUpdate = { is_valid }
+
+        const { error } = await supabase.from("certificates").update(updateData).eq("id", id)
 
         if (error) {
           return NextResponse.json({ error: error.message }, { status: 400 })
@@ -234,9 +307,16 @@ export async function POST(req: NextRequest) {
 
       case "update_message_status": {
         const { id, status } = payload
-        const { error } = await (supabase.from("contact_messages") as any)
-          .update({ status })
-          .eq("id", id)
+        if (!isNonEmptyString(id)) {
+          return NextResponse.json({ error: "A message id is required." }, { status: 400 })
+        }
+        if (!isOneOf(MESSAGE_STATUSES, status)) {
+          return NextResponse.json({ error: "Invalid message status." }, { status: 400 })
+        }
+
+        const updateData: ContactMessageUpdate = { status }
+
+        const { error } = await supabase.from("contact_messages").update(updateData).eq("id", id)
 
         if (error) {
           return NextResponse.json({ error: error.message }, { status: 400 })
@@ -246,12 +326,20 @@ export async function POST(req: NextRequest) {
 
       case "create_user": {
         const { email, password, full_name, role } = payload
+        if (!isNonEmptyString(email) || !isNonEmptyString(password) || !isNonEmptyString(full_name)) {
+          return NextResponse.json(
+            { error: "Email, password and full name are required." },
+            { status: 400 }
+          )
+        }
+        const roleName = isNonEmptyString(role) ? role : "learner"
+
         const { createAdminClient } = await import("@/lib/supabase/admin")
         let adminSupabase
         try {
           adminSupabase = createAdminClient()
-        } catch (e: any) {
-          return NextResponse.json({ error: e.message }, { status: 503 })
+        } catch (error: unknown) {
+          return NextResponse.json({ error: getErrorMessage(error) }, { status: 503 })
         }
 
         // 1. Create auth user
@@ -281,27 +369,40 @@ export async function POST(req: NextRequest) {
         const { data: roleData, error: roleError } = await adminSupabase
           .from("roles")
           .select("id")
-          .eq("name", role || "learner")
+          .eq("name", roleName)
           .single()
 
-        if (!roleError && roleData) {
-          await adminSupabase.from("user_roles").insert({
-            user_id: newUserId,
-            role_id: roleData.id
-          })
-        }
+      if (roleError || !roleData) {
+        return NextResponse.json({ error: "Role not found" }, { status: 400 })
+      }
+
+      const { error: assignError } = await adminSupabase.from("user_roles").insert({
+        user_id: newUserId,
+        role_id: roleData.id
+      })
+
+      if (assignError) {
+        return NextResponse.json({ error: assignError.message }, { status: 400 })
+      }
 
         return NextResponse.json({ success: true, message: "User created successfully" })
       }
 
       case "update_user_role": {
         const { user_id, role } = payload
+        if (!isNonEmptyString(user_id) || !isNonEmptyString(role)) {
+          return NextResponse.json(
+            { error: "A user id and role name are required." },
+            { status: 400 }
+          )
+        }
+
         const { createAdminClient } = await import("@/lib/supabase/admin")
         let adminSupabase
         try {
           adminSupabase = createAdminClient()
-        } catch (e: any) {
-          return NextResponse.json({ error: e.message }, { status: 503 })
+        } catch (error: unknown) {
+          return NextResponse.json({ error: getErrorMessage(error) }, { status: 503 })
         }
 
         const { data: roleData, error: roleError } = await adminSupabase
@@ -329,8 +430,8 @@ export async function POST(req: NextRequest) {
       default:
         return NextResponse.json({ error: `Unknown action: ${action}` }, { status: 400 })
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Admin action API error:", error)
-    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 })
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 })
   }
 }

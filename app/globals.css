@@ -69,19 +69,19 @@
 
   /* Badges */
   .badge-primary {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-brand-light text-brand-primary border border-brand-primary/20;
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-brand-light text-brand-primary border border-brand-primary/20;
   }
 
   .badge-neutral {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200;
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200;
   }
 
   .badge-success {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-status-success border border-emerald-200;
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-emerald-50 text-status-success border border-emerald-200;
   }
 
   .badge-warning {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-status-warning border border-amber-200;
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-amber-50 text-status-warning border border-amber-200;
   }
 
   /* Grid & Pattern Utilities */

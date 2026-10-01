@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/server"
+import { isNonEmptyString } from "@/lib/utils"
 
 /**
  * POST /api/enrollments
@@ -16,18 +17,15 @@ import { createClient, isSupabaseConfigured } from "@/lib/supabase/server"
  */
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json()
-    const { fullName, email, phone, courseTitle, schedulePreference, learningMode } = body
+    const body: unknown = await req.json()
+    const { fullName, email, phone, courseTitle, schedulePreference, learningMode } =
+      (body ?? {}) as Record<string, unknown>
 
     if (
-      typeof fullName !== "string" ||
-      !fullName.trim() ||
-      typeof email !== "string" ||
-      !email.trim() ||
-      typeof phone !== "string" ||
-      !phone.trim() ||
-      typeof courseTitle !== "string" ||
-      !courseTitle.trim()
+      !isNonEmptyString(fullName) ||
+      !isNonEmptyString(email) ||
+      !isNonEmptyString(phone) ||
+      !isNonEmptyString(courseTitle)
     ) {
       return NextResponse.json(
         { error: "Missing required enrollment information." },
@@ -43,13 +41,17 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = createClient()
-    const { error: dbError } = await (supabase.from("service_inquiries") as any).insert([
+    const { error: dbError } = await supabase.from("service_inquiries").insert([
       {
         full_name: fullName.trim(),
         email: email.trim(),
         phone: phone.trim(),
-        company_name: `Enrollment: ${courseTitle.trim()} (${learningMode || "Hybrid"}, ${schedulePreference || "Standard"})`,
-        message: `Applicant requested enrollment for course ${courseTitle.trim()}. Schedule: ${schedulePreference || "Standard"}. Mode: ${learningMode || "Hybrid"}.`,
+        company_name: `Enrollment: ${courseTitle.trim()} (${
+          isNonEmptyString(learningMode) ? learningMode : "Hybrid"
+        }, ${isNonEmptyString(schedulePreference) ? schedulePreference : "Standard"})`,
+        message: `Applicant requested enrollment for course ${courseTitle.trim()}. Schedule: ${
+          isNonEmptyString(schedulePreference) ? schedulePreference : "Standard"
+        }. Mode: ${isNonEmptyString(learningMode) ? learningMode : "Hybrid"}.`,
         status: "new",
       },
     ])

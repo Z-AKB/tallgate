@@ -165,7 +165,7 @@ export default function InquiriesClient({
 
                     <td className="px-6 py-4">
                       <span
-                        className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${
+                        className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md ${
                           item.status === "pending"
                             ? "bg-amber-100 text-amber-800 border border-amber-200"
                             : item.status === "in_progress"

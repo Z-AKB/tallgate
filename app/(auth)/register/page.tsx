@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { getErrorMessage } from "@/lib/utils"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
@@ -49,9 +50,9 @@ export default function RegisterPage() {
       const roles = await fetchCurrentRoleNames(supabase)
       router.push(getPostLoginPath(roles))
       router.refresh()
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Registration error:", err)
-      setError(err.message || "Failed to create account.")
+      setError(getErrorMessage(err, "Failed to create account."))
     } finally {
       setLoading(false)
     }

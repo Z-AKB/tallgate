@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import NavigationProgressBar from "@/components/ui/NavigationProgressBar";
+import { siteConfig } from "@/lib/config/site";
 import "./globals.css";
 
 const inter = Inter({
@@ -10,8 +11,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "TallGate | Technology Partner for African Enterprises & Startups",
-  description: "Enterprise software development, cloud infrastructure, cybersecurity, business automation, and hands-on technology training based in Abuja, Nigeria.",
+  title: `${siteConfig.name} | ${siteConfig.tagline}`,
+  description: siteConfig.description,
   keywords: [
     "Software Development Nigeria",
     "Tech Consulting Abuja",
@@ -21,20 +22,20 @@ export const metadata: Metadata = {
     "Computer Training Abuja",
     "Startup Hub Nigeria"
   ],
-  authors: [{ name: "TallGate Computing Enterprise" }],
+  authors: [{ name: siteConfig.legalName }],
   openGraph: {
     type: "website",
     locale: "en_NG",
-    url: "https://tallgate.com",
-    title: "TallGate | Technology Partner for African Enterprises & Startups",
+    url: siteConfig.url,
+    title: `${siteConfig.name} | ${siteConfig.tagline}`,
     description: "Enterprise software development, cybersecurity, cloud solutions, and technology education across West Africa.",
-    siteName: "TallGate",
+    siteName: siteConfig.name,
   },
   twitter: {
     card: "summary_large_image",
-    creator: "@tallgate_ng",
-    site: "@tallgate_ng",
-    title: "TallGate | Technology Partner & Academy",
+    creator: siteConfig.social.xHandle,
+    site: siteConfig.social.xHandle,
+    title: `${siteConfig.name} | Technology Partner & Academy`,
     description: "Enterprise software, cybersecurity, and practical tech training in Abuja, Nigeria.",
   },
 };

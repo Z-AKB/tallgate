@@ -10,6 +10,14 @@ import {
   mockMessages,
 } from "@/lib/data/adminMockData"
 import {
+  toConsultation,
+  toStartup,
+  toCourse,
+  toCertificate,
+  toMessage,
+  toEnrollment,
+} from "@/lib/data/adminRowMappers"
+import {
   HiOutlineInboxStack,
   HiOutlineRocketLaunch,
   HiOutlineAcademicCap,
@@ -41,31 +49,25 @@ export default async function AdminOverviewPage() {
 
   if (isSupabaseConfigured()) try {
     const [cRes, sRes, crsRes, enrRes, certRes, msgRes] = await Promise.all([
-      (supabase.from("consultation_requests") as any).select("*").order("created_at", { ascending: false }),
-      (supabase.from("startup_applications") as any).select("*").order("created_at", { ascending: false }),
-      (supabase.from("courses") as any).select("*").order("created_at", { ascending: false }),
-      (supabase.from("course_enrollments") as any).select("*, profiles(full_name, email), courses(title)").order("enrolled_at", { ascending: false }),
-      (supabase.from("certificates") as any).select("*").order("created_at", { ascending: false }),
-      (supabase.from("contact_messages") as any).select("*").order("created_at", { ascending: false }),
+      supabase.from("consultation_requests").select("*").order("created_at", { ascending: false }),
+      supabase.from("startup_applications").select("*").order("created_at", { ascending: false }),
+      supabase.from("courses").select("*").order("created_at", { ascending: false }),
+      supabase
+        .from("course_enrollments")
+        .select("*, profiles(full_name, email), courses(title)")
+        .order("enrolled_at", { ascending: false }),
+      supabase.from("certificates").select("*").order("created_at", { ascending: false }),
+      supabase.from("contact_messages").select("*").order("created_at", { ascending: false }),
     ])
 
-    if (cRes.data && cRes.data.length > 0) consultations = cRes.data
-    if (sRes.data && sRes.data.length > 0) startups = sRes.data
-    if (crsRes.data && crsRes.data.length > 0) courses = crsRes.data
+    if (cRes.data && cRes.data.length > 0) consultations = cRes.data.map(toConsultation)
+    if (sRes.data && sRes.data.length > 0) startups = sRes.data.map(toStartup)
+    if (crsRes.data && crsRes.data.length > 0) courses = crsRes.data.map(toCourse)
     if (enrRes.data && enrRes.data.length > 0) {
-      enrollments = enrRes.data.map((item: any) => ({
-        id: item.id,
-        user_name: item.profiles?.full_name || "Student",
-        user_email: item.profiles?.email || "student@tallgate.com",
-        course_title: item.courses?.title || "Technical Course",
-        status: item.status,
-        progress_percent: item.progress_percent || 0,
-        enrolled_at: item.enrolled_at,
-        completed_at: item.completed_at,
-      }))
+      enrollments = enrRes.data.map((item) => toEnrollment(item, "Student", "Technical Course"))
     }
-    if (certRes.data && certRes.data.length > 0) certificates = certRes.data
-    if (msgRes.data && msgRes.data.length > 0) messages = msgRes.data
+    if (certRes.data && certRes.data.length > 0) certificates = certRes.data.map(toCertificate)
+    if (msgRes.data && msgRes.data.length > 0) messages = msgRes.data.map(toMessage)
   } catch (err) {
     console.warn("Supabase query fallback in admin dashboard:", err)
   }
@@ -275,7 +277,7 @@ export default async function AdminOverviewPage() {
 
                 <div className="flex items-center gap-3 sm:flex-col sm:items-end justify-between border-t sm:border-0 pt-2 sm:pt-0 border-slate-200/60">
                   <span
-                    className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
+                    className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-md ${
                       item.status === "pending"
                         ? "bg-amber-100 text-amber-800"
                         : item.status === "in_progress"

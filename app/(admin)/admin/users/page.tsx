@@ -27,14 +27,14 @@ export default async function AdminUsersPage() {
     console.error("Error fetching users:", error)
   }
 
-  const users = (profiles || []).map((p: any) => {
+  const users = (profiles || []).map((p) => {
     const roleObj = p.user_roles?.[0]?.roles
     return {
       id: p.id,
       full_name: p.full_name,
       email: p.email,
       created_at: p.created_at,
-      role: roleObj ? roleObj.name : "learner"
+      role: roleObj ? roleObj.name : "learner",
     }
   })
 

@@ -6,6 +6,17 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
+/**
+ * Hand-maintained mirror of the authoritative schema:
+ *   supabase/migrations/20260828000000_phase3_schema.sql
+ *   supabase/migrations/20260829000000_lesson_content_gating.sql
+ *   supabase/migrations/20260930000000_certificate_registry.sql
+ *
+ * Tables that exist only in earlier revisions (enrollments, lesson_progress,
+ * categories) and columns dropped by later migrations (lessons.content_markdown)
+ * have been removed. `Relationships` mirrors the foreign keys declared in the
+ * migrations so embedded resource selects type-resolve.
+ */
 export interface Database {
   public: {
     Tables: {
@@ -73,49 +84,37 @@ export interface Database {
         Row: {
           id: string
           user_id: string
-          role_id?: string
-          role?: string
-          assigned_at?: string
-          granted_at?: string
+          role_id: string
+          assigned_at: string
         }
         Insert: {
           id?: string
           user_id: string
-          role_id?: string
-          role?: string
+          role_id: string
           assigned_at?: string
-          granted_at?: string
         }
         Update: {
           id?: string
           user_id?: string
           role_id?: string
-          role?: string
           assigned_at?: string
-          granted_at?: string
         }
-        Relationships: []
-      }
-      categories: {
-        Row: {
-          id: string
-          name: string
-          slug: string
-          content_type: 'course' | 'article' | 'project'
-        }
-        Insert: {
-          id?: string
-          name: string
-          slug: string
-          content_type: 'course' | 'article' | 'project'
-        }
-        Update: {
-          id?: string
-          name?: string
-          slug?: string
-          content_type?: 'course' | 'article' | 'project'
-        }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       services: {
         Row: {
@@ -208,7 +207,15 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "consultation_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       service_inquiries: {
         Row: {
@@ -244,7 +251,15 @@ export interface Database {
           status?: 'new' | 'reviewed' | 'converted' | 'archived'
           created_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "service_inquiries_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       courses: {
         Row: {
@@ -289,7 +304,6 @@ export interface Database {
           level?: string
           price_ngn?: number
           duration?: string
-          duration_weeks?: number | null
           short_description?: string
           overview?: string
           learning_outcomes?: Json
@@ -298,7 +312,6 @@ export interface Database {
           is_published?: boolean
           display_order?: number
           created_at?: string
-          updated_at?: string
         }
         Relationships: []
       }
@@ -324,7 +337,15 @@ export interface Database {
           order_index?: number
           created_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "course_modules_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       lessons: {
         Row: {
@@ -357,7 +378,15 @@ export interface Database {
           is_preview?: boolean
           created_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "lessons_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "course_modules"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       lesson_content: {
         Row: {
@@ -375,31 +404,15 @@ export interface Database {
           content_url?: string | null
           content_body?: string | null
         }
-        Relationships: []
-      }
-      enrollments: {
-        Row: {
-          id: string
-          learner_id: string
-          course_id: string
-          status: 'active' | 'completed'
-          enrolled_at: string
-        }
-        Insert: {
-          id?: string
-          learner_id: string
-          course_id: string
-          status?: 'active' | 'completed'
-          enrolled_at?: string
-        }
-        Update: {
-          id?: string
-          learner_id?: string
-          course_id?: string
-          status?: 'active' | 'completed'
-          enrolled_at?: string
-        }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "lesson_content_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: true
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       course_enrollments: {
         Row: {
@@ -429,58 +442,46 @@ export interface Database {
           enrolled_at?: string
           completed_at?: string | null
         }
-        Relationships: []
-      }
-      lesson_progress: {
-        Row: {
-          id: string
-          enrollment_id: string
-          lesson_id: string
-          completed_at: string | null
-        }
-        Insert: {
-          id?: string
-          enrollment_id: string
-          lesson_id: string
-          completed_at?: string | null
-        }
-        Update: {
-          id?: string
-          enrollment_id?: string
-          lesson_id?: string
-          completed_at?: string | null
-        }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "course_enrollments_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_enrollments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       certificates: {
         Row: {
           id: string
-          verification_code?: string
-          certificate_number?: string
-          user_id?: string
-          learner_id?: string
-          enrollment_id?: string
-          course_id?: string
-          recipient_name?: string
-          course_title?: string
-          issue_date?: string
-          issued_at?: string
+          verification_code: string
+          certificate_number: string
+          user_id: string | null
+          course_id: string | null
+          recipient_name: string
+          course_title: string
+          issue_date: string
           grade: string | null
-          is_valid?: boolean
-          created_at?: string
+          is_valid: boolean
+          created_at: string
         }
         Insert: {
           id?: string
-          verification_code?: string
+          verification_code: string
           certificate_number?: string
-          user_id?: string
-          learner_id?: string
-          enrollment_id?: string
-          course_id?: string
-          recipient_name?: string
-          course_title?: string
+          user_id?: string | null
+          course_id?: string | null
+          recipient_name: string
+          course_title: string
           issue_date?: string
-          issued_at?: string
           grade?: string | null
           is_valid?: boolean
           created_at?: string
@@ -489,19 +490,31 @@ export interface Database {
           id?: string
           verification_code?: string
           certificate_number?: string
-          user_id?: string
-          learner_id?: string
-          enrollment_id?: string
-          course_id?: string
+          user_id?: string | null
+          course_id?: string | null
           recipient_name?: string
           course_title?: string
           issue_date?: string
-          issued_at?: string
           grade?: string | null
           is_valid?: boolean
           created_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "certificates_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certificates_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       startup_applications: {
         Row: {
@@ -555,7 +568,15 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "startup_applications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       startup_reviews: {
         Row: {
@@ -585,7 +606,22 @@ export interface Database {
           recommendation?: 'accept' | 'interview' | 'decline' | 'request_more_info' | null
           created_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "startup_reviews_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "startup_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "startup_reviews_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       contact_messages: {
         Row: {

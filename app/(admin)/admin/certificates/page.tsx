@@ -1,5 +1,6 @@
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/server"
 import { mockCertificates, type MockCertificate } from "@/lib/data/adminMockData"
+import { toCertificate } from "@/lib/data/adminRowMappers"
 import CertificatesClient from "@/components/admin/CertificatesClient"
 
 export const metadata = {
@@ -18,7 +19,8 @@ export default async function AdminCertificatesPage({
   if (isSupabaseConfigured()) {
     try {
       const supabase = createClient()
-      const { data, error } = await (supabase.from("certificates") as any)
+      const { data, error } = await supabase
+        .from("certificates")
         .select("*")
         .order("created_at", { ascending: false })
 
@@ -26,7 +28,7 @@ export default async function AdminCertificatesPage({
         console.error("Unable to load certificate registry:", error)
         dataWarning = "Certificate records could not be loaded from Supabase."
       } else {
-        certificates = data ?? []
+        certificates = (data ?? []).map(toCertificate)
       }
     } catch (error) {
       console.error("Unable to load certificate registry:", error)

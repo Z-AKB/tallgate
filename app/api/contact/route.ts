@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/server"
+import { isNonEmptyString } from "@/lib/utils"
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json()
-    const { fullName, email, phone, subject, message } = body
+    const body: unknown = await req.json()
+    const { fullName, email, phone, subject, message } = (body ?? {}) as Record<string, unknown>
 
-    if (!fullName || !email || !message) {
+    if (!isNonEmptyString(fullName) || !isNonEmptyString(email) || !isNonEmptyString(message)) {
       return NextResponse.json(
         { error: "Please provide your name, email, and message." },
         { status: 400 }
@@ -22,12 +23,12 @@ export async function POST(req: NextRequest) {
 
     const supabase = createClient()
 
-    const { error: dbError } = await (supabase.from("contact_messages") as any).insert([
+    const { error: dbError } = await supabase.from("contact_messages").insert([
       {
         full_name: fullName,
         email,
-        phone: phone || null,
-        subject: subject || "General Inquiry",
+        phone: isNonEmptyString(phone) ? phone : null,
+        subject: isNonEmptyString(subject) ? subject : "General Inquiry",
         message,
         status: "unread",
       },
@@ -45,7 +46,7 @@ export async function POST(req: NextRequest) {
       { success: true, message: "Message sent successfully." },
       { status: 200 }
     )
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Contact API error:", error)
     return NextResponse.json(
       { error: "Internal server error." },

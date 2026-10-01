@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true, id: data.id })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Email API error:", error)
     return NextResponse.json(
       { error: "Internal server error." },
