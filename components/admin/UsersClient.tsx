@@ -209,7 +209,9 @@ export default function UsersClient({
 
             <form onSubmit={handleCreateUser} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Full Name</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Full Name
+<span className="ml-1 font-normal text-slate-500">(required)</span>
+          </label>
                 <input
                   type="text"
                   required
@@ -219,7 +221,9 @@ export default function UsersClient({
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Email Address</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Email Address
+<span className="ml-1 font-normal text-slate-500">(required)</span>
+          </label>
                 <input
                   type="email"
                   required
@@ -229,7 +233,9 @@ export default function UsersClient({
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Password</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Password
+<span className="ml-1 font-normal text-slate-500">(required)</span>
+          </label>
                 <input
                   type="password"
                   required

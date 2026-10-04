@@ -148,6 +148,7 @@ export default function StartupApplyPage() {
               <div>
                 <label htmlFor="companyName" className="form-label">
                   Startup / Company Name
+                  <span className="ml-1 font-normal text-slate-500">(required)</span>
                 </label>
                 <input
                   id="companyName"
@@ -164,6 +165,7 @@ export default function StartupApplyPage() {
               <div>
                 <label htmlFor="founderName" className="form-label">
                   Lead Founder&apos;s Full Name
+                  <span className="ml-1 font-normal text-slate-500">(required)</span>
                 </label>
                 <input
                   id="founderName"
@@ -183,6 +185,7 @@ export default function StartupApplyPage() {
               <div>
                 <label htmlFor="email" className="form-label">
                   Founder Email Address
+                  <span className="ml-1 font-normal text-slate-500">(required)</span>
                 </label>
                 <input
                   id="email"
@@ -199,6 +202,7 @@ export default function StartupApplyPage() {
               <div>
                 <label htmlFor="phone" className="form-label">
                   Phone (WhatsApp)
+                  <span className="ml-1 font-normal text-slate-500">(required)</span>
                 </label>
                 <input
                   id="phone"
@@ -258,6 +262,7 @@ export default function StartupApplyPage() {
             <div>
               <label htmlFor="problemStatement" className="form-label">
                 The Problem You Are Solving
+                <span className="ml-1 font-normal text-slate-500">(required)</span>
               </label>
               <textarea
                 id="problemStatement"
@@ -275,6 +280,7 @@ export default function StartupApplyPage() {
             <div>
               <label htmlFor="solutionDescription" className="form-label">
                 Your Proposed Technology Solution
+                <span className="ml-1 font-normal text-slate-500">(required)</span>
               </label>
               <textarea
                 id="solutionDescription"

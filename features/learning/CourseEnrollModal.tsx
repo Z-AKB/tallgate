@@ -130,6 +130,7 @@ export default function CourseEnrollModal({ isOpen, onClose, course }: CourseEnr
           <div>
             <label htmlFor="fullName" className="form-label">
               Full Name
+              <span className="ml-1 font-normal text-slate-500">(required)</span>
             </label>
             <input
               id="fullName"
@@ -147,6 +148,7 @@ export default function CourseEnrollModal({ isOpen, onClose, course }: CourseEnr
             <div>
               <label htmlFor="email" className="form-label">
                 Email Address
+                <span className="ml-1 font-normal text-slate-500">(required)</span>
               </label>
               <input
                 id="email"
@@ -163,6 +165,7 @@ export default function CourseEnrollModal({ isOpen, onClose, course }: CourseEnr
             <div>
               <label htmlFor="phone" className="form-label">
                 Phone (WhatsApp)
+                <span className="ml-1 font-normal text-slate-500">(required)</span>
               </label>
               <input
                 id="phone"

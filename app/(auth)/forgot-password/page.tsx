@@ -66,6 +66,7 @@ export default function ForgotPasswordPage() {
               className="block text-xs font-semibold text-slate-700 mb-1"
             >
               Email Address
+              <span className="ml-1 font-normal text-slate-500">(required)</span>
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">

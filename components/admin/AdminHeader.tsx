@@ -222,6 +222,7 @@ export default function AdminHeader({ title, subtitle, initialName, initialEmail
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1">
                     Display Name
+                    <span className="ml-1 font-normal text-slate-400">(required)</span>
                   </label>
                   <div className="relative">
                     <HiOutlineUser className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
@@ -238,6 +239,7 @@ export default function AdminHeader({ title, subtitle, initialName, initialEmail
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1">
                     Admin Email Address
+                    <span className="ml-1 font-normal text-slate-400">(required)</span>
                   </label>
                   <div className="relative">
                     <HiOutlineEnvelope className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />

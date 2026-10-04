@@ -65,7 +65,9 @@ async function loadCertificateLogo(): Promise<string | undefined> {
     const buffer = await readFile(filePath)
     return `data:image/png;base64,${buffer.toString("base64")}`
   } catch (error) {
-    console.warn("Certificate logo could not be loaded; issuing without it:", error)
+    // Issuance still succeeds, but the PDF is produced without the brand logo.
+    // Logged as an error because this is a silent degradation of the output.
+    console.error("Certificate logo could not be loaded; issuing without it:", error)
     return undefined
   }
 }

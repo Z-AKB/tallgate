@@ -92,6 +92,7 @@ export default function VerifyPage() {
                 className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5"
               >
                 Enter Certificate Verification Code
+                <span className="ml-1 font-normal text-slate-400">(required)</span>
               </label>
               <div className="relative">
                 <input

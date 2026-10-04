@@ -78,6 +78,7 @@ export default function RegisterPage() {
         <div>
           <label htmlFor="fullName" className="form-label">
             Full Name
+            <span className="ml-1 font-normal text-slate-500">(required)</span>
           </label>
           <div className="relative">
             <input
@@ -97,6 +98,7 @@ export default function RegisterPage() {
         <div>
           <label htmlFor="email" className="form-label">
             Email Address
+            <span className="ml-1 font-normal text-slate-500">(required)</span>
           </label>
           <div className="relative">
             <input
@@ -133,6 +135,7 @@ export default function RegisterPage() {
         <div>
           <label htmlFor="password" className="form-label">
             Create Password
+            <span className="ml-1 font-normal text-slate-500">(required)</span>
           </label>
           <div className="relative">
             <input

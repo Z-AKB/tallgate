@@ -165,7 +165,7 @@ export default function CertificatesClient({
             <Link
               href={issueResult.verificationUrl}
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
               className="break-all text-xs font-semibold text-brand-primary underline"
             >
               {issueResult.verificationUrl}
@@ -174,7 +174,7 @@ export default function CertificatesClient({
               <Link
                 href={issueResult.downloadUrl}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-900 underline"
               >
                 <HiOutlineArrowDownTray className="w-3.5 h-3.5" />
@@ -301,7 +301,7 @@ export default function CertificatesClient({
                           <Link
                             href={`/api/admin/certificates/${cert.id}/download`}
                             target="_blank"
-                            rel="noreferrer"
+                            rel="noopener noreferrer"
                             className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-brand-primary hover:underline"
                           >
                             <HiOutlineArrowDownTray className="w-3.5 h-3.5" />
@@ -311,6 +311,7 @@ export default function CertificatesClient({
                         <Link
                           href={`/verify?code=${encodeURIComponent(cert.verification_code)}`}
                           target="_blank"
+                          rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 text-xs font-semibold text-brand-primary hover:underline"
                         >
                           <span>Verify Lookup</span>
@@ -361,6 +362,7 @@ export default function CertificatesClient({
               <div>
                 <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1">
                   Recipient Full Name:
+                  <span className="ml-1 font-normal text-slate-500">(required)</span>
                 </label>
                 <input
                   type="text"
@@ -375,6 +377,7 @@ export default function CertificatesClient({
               <div>
                 <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1">
                   Course Program:
+                  <span className="ml-1 font-normal text-slate-500">(required)</span>
                 </label>
                 <input
                   type="text"

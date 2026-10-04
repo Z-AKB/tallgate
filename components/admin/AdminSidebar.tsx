@@ -177,6 +177,7 @@ export default function AdminSidebar() {
           <Link
             href="/"
             target="_blank"
+            rel="noopener noreferrer"
             className="flex items-center justify-between w-full px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-300 hover:text-white bg-slate-900/80 hover:bg-slate-800 border border-slate-800 transition-colors"
           >
             <span>View Live Site</span>

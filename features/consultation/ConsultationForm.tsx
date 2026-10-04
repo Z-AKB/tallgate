@@ -146,6 +146,7 @@ function ConsultationFormContent({ preselectedService = "" }: { preselectedServi
         <div>
           <label htmlFor="fullName" className="form-label">
             Your Full Name
+            <span className="ml-1 font-normal text-slate-500">(required)</span>
           </label>
           <input
             id="fullName"
@@ -162,6 +163,7 @@ function ConsultationFormContent({ preselectedService = "" }: { preselectedServi
         <div>
           <label htmlFor="email" className="form-label">
             Work Email Address
+            <span className="ml-1 font-normal text-slate-500">(required)</span>
           </label>
           <input
             id="email"
@@ -180,6 +182,7 @@ function ConsultationFormContent({ preselectedService = "" }: { preselectedServi
         <div>
           <label htmlFor="phone" className="form-label">
             Phone / WhatsApp Number
+            <span className="ml-1 font-normal text-slate-500">(required)</span>
           </label>
           <input
             id="phone"
@@ -271,6 +274,7 @@ function ConsultationFormContent({ preselectedService = "" }: { preselectedServi
       <div>
         <label htmlFor="projectScope" className="form-label">
           Project Scope & Objectives
+          <span className="ml-1 font-normal text-slate-500">(required)</span>
         </label>
         <textarea
           id="projectScope"

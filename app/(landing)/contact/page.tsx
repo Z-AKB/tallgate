@@ -168,6 +168,7 @@ export default function ContactPage() {
                   <div>
                     <label htmlFor="fullName" className="form-label">
                       Full Name
+                      <span className="ml-1 font-normal text-slate-500">(required)</span>
                     </label>
                     <input
                       id="fullName"
@@ -184,6 +185,7 @@ export default function ContactPage() {
                   <div>
                     <label htmlFor="email" className="form-label">
                       Email Address
+                      <span className="ml-1 font-normal text-slate-500">(required)</span>
                     </label>
                     <input
                       id="email"
@@ -237,6 +239,7 @@ export default function ContactPage() {
                 <div>
                   <label htmlFor="message" className="form-label">
                     Your Message
+                    <span className="ml-1 font-normal text-slate-500">(required)</span>
                   </label>
                   <textarea
                     id="message"

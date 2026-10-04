@@ -64,6 +64,7 @@ export default function LoginPage() {
         <div>
           <label htmlFor="email" className="form-label">
             Email Address
+            <span className="ml-1 font-normal text-slate-500">(required)</span>
           </label>
           <div className="relative">
             <input
@@ -83,6 +84,7 @@ export default function LoginPage() {
           <div className="flex justify-between items-center mb-1">
             <label htmlFor="password" className="form-label mb-0">
               Password
+              <span className="ml-1 font-normal text-slate-500">(required)</span>
             </label>
             <Link
               href="/forgot-password"

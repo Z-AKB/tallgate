@@ -191,6 +191,7 @@ export default function CoursesClient({
               <Link
                 href={`/learning-hub`}
                 target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-xs font-semibold text-brand-primary hover:underline"
               >
                 <span>Live Preview</span>

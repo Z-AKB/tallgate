@@ -89,6 +89,7 @@ export default function ProfileForm({
         <div>
           <label className="block text-xs font-semibold text-slate-700 mb-1">
             Full Name
+            <span className="ml-1 font-normal text-slate-500">(required)</span>
           </label>
           <div className="relative">
             <HiOutlineUser className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
