@@ -1,10 +1,20 @@
 import { NextRequest, NextResponse } from "next/server"
 import { randomBytes } from "crypto"
+import { readFile } from "fs/promises"
+import path from "path"
 import QRCode from "qrcode"
 import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { requireAdminApi } from "@/lib/auth/guards"
+import { renderCertificatePdf } from "@/lib/certificates/generateCertificatePdf"
 import type { Database } from "@/types/supabase"
 import { getErrorMessage, isNonEmptyString, isOneOf, isRecord } from "@/lib/utils"
+
+export const runtime = "nodejs"
+
+const CERTIFICATE_BUCKET = "certificates"
+const CERTIFICATE_CONTENT_TYPE = "application/pdf"
+const CERTIFICATE_FILE_NAME = "certificate.pdf"
 
 type ConsultationUpdate = Database["public"]["Tables"]["consultation_requests"]["Update"]
 type StartupApplicationUpdate = Database["public"]["Tables"]["startup_applications"]["Update"]
@@ -33,6 +43,57 @@ const STARTUP_APPLICATION_STATUSES: readonly StartupApplicationStatus[] = [
 ]
 
 const MESSAGE_STATUSES: readonly MessageStatus[] = ["unread", "read", "responded", "archived"]
+
+type CertificateRow = Database["public"]["Tables"]["certificates"]["Row"]
+
+type IssuedCertificate = Pick<
+  CertificateRow,
+  | "id"
+  | "certificate_number"
+  | "verification_code"
+  | "recipient_name"
+  | "course_title"
+  | "issue_date"
+  | "grade"
+  | "is_valid"
+  | "created_at"
+>
+
+async function loadCertificateLogo(): Promise<string | undefined> {
+  try {
+    const filePath = path.join(process.cwd(), "public", "assets", "tallgate-logo.png")
+    const buffer = await readFile(filePath)
+    return `data:image/png;base64,${buffer.toString("base64")}`
+  } catch (error) {
+    console.warn("Certificate logo could not be loaded; issuing without it:", error)
+    return undefined
+  }
+}
+
+function buildCertificateStoragePath() {
+  const token = randomBytes(24).toString("hex")
+  return `${token.slice(0, 2)}/${token.slice(2, 4)}/${token}.${CERTIFICATE_FILE_NAME.split(".").pop()}`
+}
+
+async function rollbackCertificate(
+  supabase: ReturnType<typeof createClient>,
+  certificateId: string
+) {
+  const { error } = await supabase.from("certificates").delete().eq("id", certificateId)
+  if (error) {
+    console.error(`Failed to roll back certificate ${certificateId}:`, error)
+  }
+}
+
+async function removeCertificateFile(
+  storageClient: ReturnType<typeof createAdminClient>,
+  storagePath: string
+) {
+  const { error } = await storageClient.storage.from(CERTIFICATE_BUCKET).remove([storagePath])
+  if (error) {
+    console.error(`Failed to remove orphaned certificate file ${storagePath}:`, error)
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -233,7 +294,7 @@ export async function POST(req: NextRequest) {
           ...(typeof user_id === "string" && user_id ? { user_id } : {}),
         }
 
-        let issuedCertificate: Record<string, unknown> | null = null
+        let issuedCertificate: IssuedCertificate | null = null
         let generatedCode = ""
         let verificationUrlString = ""
         let qrCode = ""
@@ -278,11 +339,78 @@ export async function POST(req: NextRequest) {
           )
         }
 
+        const storagePath = buildCertificateStoragePath()
+        let storageClient: ReturnType<typeof createAdminClient>
+        try {
+          storageClient = createAdminClient()
+        } catch (error) {
+          console.error("Service role client unavailable for certificate upload:", error)
+          await rollbackCertificate(supabase, issuedCertificate.id)
+          return NextResponse.json(
+            { error: "Certificate could not be issued. Storage is not configured." },
+            { status: 503 }
+          )
+        }
+
+        let pdfBuffer: Buffer
+        try {
+          pdfBuffer = await renderCertificatePdf({
+            recipient_name: issuedCertificate.recipient_name,
+            course_title: issuedCertificate.course_title,
+            issue_date: issuedCertificate.issue_date,
+            grade: issuedCertificate.grade,
+            certificate_number: issuedCertificate.certificate_number,
+            verification_code: issuedCertificate.verification_code,
+            verification_url: verificationUrlString,
+            qr_data_url: qrCode,
+            logo_src: await loadCertificateLogo(),
+          })
+        } catch (error) {
+          console.error("Certificate PDF generation failed:", error)
+          await rollbackCertificate(supabase, issuedCertificate.id)
+          return NextResponse.json(
+            { error: "Certificate could not be issued. PDF generation failed." },
+            { status: 503 }
+          )
+        }
+
+        const { error: uploadError } = await storageClient.storage
+          .from(CERTIFICATE_BUCKET)
+          .upload(storagePath, pdfBuffer, {
+            contentType: CERTIFICATE_CONTENT_TYPE,
+            upsert: false,
+          })
+
+        if (uploadError) {
+          console.error("Certificate PDF upload failed:", uploadError)
+          await rollbackCertificate(supabase, issuedCertificate.id)
+          return NextResponse.json(
+            { error: "Certificate could not be issued. PDF upload failed." },
+            { status: 503 }
+          )
+        }
+
+        const { error: persistError } = await supabase
+          .from("certificates")
+          .update({ storage_path: storagePath })
+          .eq("id", issuedCertificate.id)
+
+        if (persistError) {
+          console.error("Certificate storage path could not be persisted:", persistError)
+          await removeCertificateFile(storageClient, storagePath)
+          await rollbackCertificate(supabase, issuedCertificate.id)
+          return NextResponse.json(
+            { error: "Certificate could not be issued. Please try again." },
+            { status: 503 }
+          )
+        }
+
         return NextResponse.json({
           success: true,
-          certificate: issuedCertificate,
+          certificate: { ...issuedCertificate, storage_path: storagePath },
           verification_url: verificationUrlString,
           qr_code: qrCode,
+          download_url: `/api/admin/certificates/${issuedCertificate.id}/download`,
         })
       }
 
@@ -334,7 +462,6 @@ export async function POST(req: NextRequest) {
         }
         const roleName = isNonEmptyString(role) ? role : "learner"
 
-        const { createAdminClient } = await import("@/lib/supabase/admin")
         let adminSupabase
         try {
           adminSupabase = createAdminClient()
@@ -397,7 +524,6 @@ export async function POST(req: NextRequest) {
           )
         }
 
-        const { createAdminClient } = await import("@/lib/supabase/admin")
         let adminSupabase
         try {
           adminSupabase = createAdminClient()

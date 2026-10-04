@@ -5,6 +5,7 @@ import Modal from "@/components/ui/Modal"
 import { formatNaira, getErrorMessage } from "@/lib/utils"
 import { HiCheckCircle, HiOutlineInformationCircle } from "react-icons/hi"
 import { FaWhatsapp } from "react-icons/fa"
+import { whatsappPrefilledLink, siteConfig } from "@/lib/config/site"
 
 interface CourseEnrollModalProps {
   isOpen: boolean
@@ -91,7 +92,9 @@ export default function CourseEnrollModal({ isOpen, onClose, course }: CourseEnr
 
           <div className="pt-4 border-t border-slate-100 flex flex-col gap-2">
             <a
-              href={`https://wa.me/2349131898566?text=Hello%20Admissions%2C%20I%20just%20enrolled%20for%20${encodeURIComponent(course.title)}`}
+              href={whatsappPrefilledLink(
+                `Hello Admissions, I just enrolled for ${course.title}`
+              )}
               target="_blank"
               rel="noopener noreferrer"
               className="btn-primary w-full justify-center inline-flex items-center gap-2"
@@ -204,7 +207,7 @@ export default function CourseEnrollModal({ isOpen, onClose, course }: CourseEnr
                 onChange={handleChange}
                 className="form-select text-xs py-2"
               >
-                <option value="In-Person Lab (Kubwa, Abuja)">In-Person Lab (Kubwa, Abuja)</option>
+                <option value={`In-Person Lab (${siteConfig.campus})`}>In-Person Lab ({siteConfig.campus})</option>
                 <option value="Virtual / Hybrid (Live Online)">Virtual / Hybrid (Live Online)</option>
                 <option value="Self-Paced Digital Track">Self-Paced Digital Track</option>
               </select>

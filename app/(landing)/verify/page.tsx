@@ -81,7 +81,7 @@ export default function VerifyPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeader
           title="Verify TallGate Academy Certificates"
-          description="Employers and institutions can verify the authenticity of any certificate or credential issued by TallGate Computing Enterprise."
+          description="Employers and institutions can verify the authenticity of any certificate or credential issued by {siteConfig.companyName}."
         />
 
         <div className="card-base max-w-xl mx-auto space-y-6 border-white/10 bg-white/[0.03]">

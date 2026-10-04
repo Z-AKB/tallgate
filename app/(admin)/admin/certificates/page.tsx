@@ -1,6 +1,5 @@
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/server"
-import { mockCertificates, type MockCertificate } from "@/lib/data/adminMockData"
-import { toCertificate } from "@/lib/data/adminRowMappers"
+import { toCertificate, type AdminCertificate } from "@/lib/data/adminRowMappers"
 import CertificatesClient from "@/components/admin/CertificatesClient"
 
 export const metadata = {
@@ -13,10 +12,15 @@ export default async function AdminCertificatesPage({
 }: {
   searchParams: { recipient?: string; course?: string }
 }) {
-  let certificates: MockCertificate[] = []
+  let certificates: AdminCertificate[] = []
   let dataWarning = ""
+  let loadFailed = false
 
-  if (isSupabaseConfigured()) {
+  if (!isSupabaseConfigured()) {
+    loadFailed = true
+    dataWarning =
+      "Certificate records are unavailable because Supabase is not configured."
+  } else {
     try {
       const supabase = createClient()
       const { data, error } = await supabase
@@ -25,26 +29,26 @@ export default async function AdminCertificatesPage({
         .order("created_at", { ascending: false })
 
       if (error) {
+        loadFailed = true
         console.error("Unable to load certificate registry:", error)
-        dataWarning = "Certificate records could not be loaded from Supabase."
+        dataWarning =
+          "Certificate records could not be loaded from Supabase. The list below may be incomplete."
       } else {
         certificates = (data ?? []).map(toCertificate)
       }
     } catch (error) {
+      loadFailed = true
       console.error("Unable to load certificate registry:", error)
-      dataWarning = "Certificate records could not be loaded from Supabase."
+      dataWarning =
+        "Certificate records could not be loaded from Supabase. The list below may be incomplete."
     }
-  } else if (process.env.NODE_ENV === "development") {
-    certificates = mockCertificates
-    dataWarning = "Showing sample certificates. Configure Supabase to view live records."
-  } else {
-    dataWarning = "Certificate records are unavailable because Supabase is not configured."
   }
 
   return (
     <CertificatesClient
       initialCertificates={certificates}
       dataWarning={dataWarning}
+      loadFailed={loadFailed}
       prefilledRecipient={searchParams?.recipient}
       prefilledCourse={searchParams?.course}
     />

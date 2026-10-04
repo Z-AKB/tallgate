@@ -3,48 +3,53 @@
 import React, { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { MockCertificate } from "@/lib/data/adminMockData"
+import { AdminCertificate } from "@/lib/data/adminRowMappers"
 import {
   HiOutlineMagnifyingGlass,
   HiOutlineIdentification,
   HiOutlinePlus,
   HiOutlineArrowTopRightOnSquare,
+  HiOutlineArrowDownTray,
   HiOutlineXMark,
 } from "react-icons/hi2"
 
 export default function CertificatesClient({
   initialCertificates,
   dataWarning,
+  loadFailed = false,
   prefilledRecipient,
   prefilledCourse,
 }: {
-  initialCertificates: MockCertificate[]
+  initialCertificates: AdminCertificate[]
   dataWarning: string
+  loadFailed?: boolean
   prefilledRecipient?: string
   prefilledCourse?: string
 }) {
-  const [certificates, setCertificates] = useState<MockCertificate[]>(initialCertificates)
+  const [certificates, setCertificates] = useState<AdminCertificate[]>(initialCertificates)
   const [searchQuery, setSearchQuery] = useState("")
   const [isModalOpen, setIsModalOpen] = useState(Boolean(prefilledRecipient))
   const [issueResult, setIssueResult] = useState<{
     verificationUrl: string
     qrCode: string
+    downloadUrl: string
   } | null>(null)
   const [requestError, setRequestError] = useState("")
 
   const [recipientName, setRecipientName] = useState(prefilledRecipient || "")
-  const [courseTitle, setCourseTitle] = useState(
-    prefilledCourse || "Full-Stack Enterprise Cloud Engineering"
-  )
+  const [courseTitle, setCourseTitle] = useState(prefilledCourse || "")
   const [grade, setGrade] = useState("Distinction")
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split("T")[0])
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const filteredCertificates = certificates.filter((c) => {
+    const query = searchQuery.trim().toLowerCase()
+    if (!query) return true
     return (
-      c.recipient_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.verification_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.course_title.toLowerCase().includes(searchQuery.toLowerCase())
+      c.recipient_name.toLowerCase().includes(query) ||
+      c.verification_code.toLowerCase().includes(query) ||
+      c.certificate_number.toLowerCase().includes(query) ||
+      c.course_title.toLowerCase().includes(query)
     )
   })
 
@@ -71,9 +76,10 @@ export default function CertificatesClient({
       })
       const result = (await response.json()) as {
         success?: boolean
-        certificate?: MockCertificate
+        certificate?: AdminCertificate
         verification_url?: string
         qr_code?: string
+        download_url?: string
         error?: string
       }
 
@@ -86,6 +92,7 @@ export default function CertificatesClient({
       setIssueResult({
         verificationUrl: result.verification_url,
         qrCode: result.qr_code,
+        downloadUrl: result.download_url ?? "",
       })
       setIsSubmitting(false)
       setIsModalOpen(false)
@@ -100,7 +107,7 @@ export default function CertificatesClient({
     }
   }
 
-  const toggleValidity = async (cert: MockCertificate) => {
+  const toggleValidity = async (cert: AdminCertificate) => {
     const nextState = !cert.is_valid
     setRequestError("")
 
@@ -163,6 +170,17 @@ export default function CertificatesClient({
             >
               {issueResult.verificationUrl}
             </Link>
+            {issueResult.downloadUrl && (
+              <Link
+                href={issueResult.downloadUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-900 underline"
+              >
+                <HiOutlineArrowDownTray className="w-3.5 h-3.5" />
+                <span>Download PDF</span>
+              </Link>
+            )}
           </div>
           <button
             type="button"
@@ -197,12 +215,12 @@ export default function CertificatesClient({
         </div>
 
         {/* Search Bar */}
-        <div className="flex items-center justify-between gap-4 pt-2 border-t border-slate-100">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2 border-t border-slate-100">
           <div className="relative flex-1 max-w-md">
             <HiOutlineMagnifyingGlass className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search by code (e.g. TG-2026-...) or recipient..."
+              placeholder="Search by recipient, course, certificate number, or verification code..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-brand-primary focus:outline-none transition-all"
@@ -221,7 +239,8 @@ export default function CertificatesClient({
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[10px]">
                 <tr>
-                  <th className="px-6 py-4">Verification Hash</th>
+                  <th className="px-6 py-4">Certificate Number</th>
+                  <th className="px-6 py-4">Verification Code</th>
                   <th className="px-6 py-4">Recipient</th>
                   <th className="px-6 py-4">Course Program</th>
                   <th className="px-6 py-4">Issue Date</th>
@@ -233,6 +252,12 @@ export default function CertificatesClient({
               <tbody className="divide-y divide-slate-100">
                 {filteredCertificates.map((cert) => (
                   <tr key={cert.id} className="hover:bg-slate-50/70 transition-colors">
+                    <td className="px-6 py-4">
+                      <span className="font-mono font-bold text-slate-800 bg-slate-50 px-2 py-1 rounded border border-slate-200 text-[11px]">
+                        {cert.certificate_number}
+                      </span>
+                    </td>
+
                     <td className="px-6 py-4">
                       <span className="font-mono font-bold text-brand-primary bg-indigo-50 px-2 py-1 rounded border border-indigo-200 text-[11px]">
                         {cert.verification_code}
@@ -271,14 +296,27 @@ export default function CertificatesClient({
                     </td>
 
                     <td className="px-6 py-4 text-right">
-                      <Link
-                        href={`/verify?code=${encodeURIComponent(cert.verification_code)}`}
-                        target="_blank"
-                        className="inline-flex items-center gap-1 text-xs font-semibold text-brand-primary hover:underline"
-                      >
-                        <span>Verify Lookup</span>
-                        <HiOutlineArrowTopRightOnSquare className="w-3.5 h-3.5" />
-                      </Link>
+                      <div className="flex items-center justify-end gap-3">
+                        {cert.storage_path && (
+                          <Link
+                            href={`/api/admin/certificates/${cert.id}/download`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-brand-primary hover:underline"
+                          >
+                            <HiOutlineArrowDownTray className="w-3.5 h-3.5" />
+                            <span>PDF</span>
+                          </Link>
+                        )}
+                        <Link
+                          href={`/verify?code=${encodeURIComponent(cert.verification_code)}`}
+                          target="_blank"
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-brand-primary hover:underline"
+                        >
+                          <span>Verify Lookup</span>
+                          <HiOutlineArrowTopRightOnSquare className="w-3.5 h-3.5" />
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -288,7 +326,14 @@ export default function CertificatesClient({
         ) : (
           <div className="py-16 text-center text-slate-500 space-y-2">
             <HiOutlineIdentification className="w-10 h-10 mx-auto text-slate-300" />
-            <h4 className="text-sm font-bold text-slate-700">No Certificates Found</h4>
+            <h4 className="text-sm font-bold text-slate-700">
+              {loadFailed ? "Registry Unavailable" : "No Certificates Found"}
+            </h4>
+            {!loadFailed && (
+              <p className="text-xs text-slate-500">
+                No certificates have been issued yet.
+              </p>
+            )}
           </div>
         )}
       </div>
@@ -320,7 +365,7 @@ export default function CertificatesClient({
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Kelechi Onyema"
+                  placeholder="Recipient full name as it should appear on the certificate"
                   value={recipientName}
                   onChange={(e) => setRecipientName(e.target.value)}
                   className="w-full p-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-brand-primary focus:outline-none"
@@ -331,27 +376,17 @@ export default function CertificatesClient({
                 <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1">
                   Course Program:
                 </label>
-                <select
+                <input
+                  type="text"
+                  required
+                  placeholder="Course or programme title"
                   value={courseTitle}
                   onChange={(e) => setCourseTitle(e.target.value)}
                   className="w-full p-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-brand-primary focus:outline-none"
-                >
-                  <option value="Full-Stack Enterprise Cloud Engineering">
-                    Full-Stack Enterprise Cloud Engineering
-                  </option>
-                  <option value="Applied AI & Large Language Models in Production">
-                    Applied AI & Large Language Models in Production
-                  </option>
-                  <option value="Cybersecurity Defense & Threat Intelligence">
-                    Cybersecurity Defense & Threat Intelligence
-                  </option>
-                  <option value="Fintech Systems & Payment Infrastructure Design">
-                    Fintech Systems & Payment Infrastructure Design
-                  </option>
-                </select>
+                />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1">
                     Graduation Grade:

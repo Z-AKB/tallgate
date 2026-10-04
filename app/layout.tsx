@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     "Computer Training Abuja",
     "Startup Hub Nigeria"
   ],
-  authors: [{ name: siteConfig.legalName }],
+  authors: [{ name: siteConfig.companyName }],
   openGraph: {
     type: "website",
     locale: "en_NG",
@@ -33,8 +33,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    creator: siteConfig.social.xHandle,
-    site: siteConfig.social.xHandle,
+    creator: siteConfig.social.twitterHandle,
+    site: siteConfig.social.twitterHandle,
     title: `${siteConfig.name} | Technology Partner & Academy`,
     description: "Enterprise software, cybersecurity, and practical tech training in Abuja, Nigeria.",
   },

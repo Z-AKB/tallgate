@@ -64,13 +64,13 @@ export default function UserDashboardHeader({
   }
 
   return (
-    <header className="sticky top-0 z-40 w-full bg-[#061A4F] border-b border-indigo-900/50 shadow-sm backdrop-blur-md">
+    <header className="sticky top-0 z-40 w-full bg-[#031544] border-b border-[#202DB8]/40 shadow-sm backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-18">
           <div className="flex items-center gap-3 sm:gap-4">
             <Logo variant="light" href="/dashboard" />
             <div className="h-6 w-px bg-white/15 hidden sm:block" />
-            <span className="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-indigo-500/20 text-indigo-200 border border-indigo-400/30 tracking-wide uppercase">
+            <span className="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-[#202DB8]/30 text-indigo-100 border border-[#202DB8]/50 tracking-wide uppercase">
               Student Portal
             </span>
           </div>
@@ -85,7 +85,7 @@ export default function UserDashboardHeader({
                   href={link.href}
                   className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold transition-all ${
                     active
-                      ? "bg-brand-primary text-white shadow-sm shadow-brand-primary/30"
+                      ? "bg-[#202DB8] text-white shadow-sm shadow-[#202DB8]/30"
                       : "text-slate-300 hover:text-white hover:bg-white/[0.07]"
                   }`}
                 >
@@ -110,12 +110,12 @@ export default function UserDashboardHeader({
             </Link>
             <div className="h-5 w-px bg-white/15" />
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center ring-2 ring-indigo-400/40">
+              <div className="w-8 h-8 rounded-full bg-[#202DB8] text-white font-bold text-xs flex items-center justify-center ring-2 ring-[#202DB8]/60">
                 {initials}
               </div>
               <div className="text-left">
                 <span className="block text-xs font-semibold text-white leading-tight">{displayName}</span>
-                <span className="block text-[10px] text-slate-400">{email || "Active account"}</span>
+                <span className="block text-[10px] text-slate-400">{email}</span>
               </div>
             </div>
             <SignOutButton
@@ -126,7 +126,7 @@ export default function UserDashboardHeader({
           </div>
 
           <div className="flex md:hidden items-center gap-2">
-            <span className="text-[10px] font-semibold bg-indigo-500/20 text-indigo-200 border border-indigo-400/30 px-2 py-0.5 rounded">
+            <span className="text-[10px] font-semibold bg-[#202DB8]/30 text-indigo-100 border border-[#202DB8]/50 px-2 py-0.5 rounded">
               Portal
             </span>
             <button
@@ -141,7 +141,7 @@ export default function UserDashboardHeader({
       </div>
 
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-indigo-900/60 bg-[#061A4F] px-4 pt-3 pb-6 space-y-3">
+        <div className="md:hidden border-t border-[#202DB8]/40 bg-[#031544] px-4 pt-3 pb-6 space-y-3">
           <div className="space-y-1">
             {dashboardNavLinks.map((link) => {
               const Icon = link.icon
@@ -153,7 +153,7 @@ export default function UserDashboardHeader({
                   onClick={() => setMobileMenuOpen(false)}
                   className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                     active
-                      ? "bg-brand-primary text-white font-semibold"
+                      ? "bg-[#202DB8] text-white font-semibold"
                       : "text-slate-300 hover:bg-white/[0.06] hover:text-white"
                   }`}
                 >

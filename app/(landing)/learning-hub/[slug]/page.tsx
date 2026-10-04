@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation"
+import { siteConfig } from "@/lib/config/site"
 import Link from "next/link"
 import { coursesData } from "@/lib/data/courses"
 import { formatNaira } from "@/lib/utils"
@@ -134,11 +135,11 @@ export default function CourseDetailPage({ params }: { params: { slug: string } 
                 </div>
                 <div className="flex items-center gap-2 text-slate-300">
                   <HiOutlineCalendar className="w-4 h-4 text-indigo-400" />
-                  <span>Next Batch: <strong className="text-white">Enrolling Now</strong></span>
+                  <span>Next Batch: <strong className="text-white">Contact us for dates</strong></span>
                 </div>
                 <div className="flex items-center gap-2 text-slate-300">
                   <HiOutlineLocationMarker className="w-4 h-4 text-indigo-400" />
-                  <span>Campus: <strong className="text-white">Kubwa, Abuja (or Virtual)</strong></span>
+                  <span>Campus: <strong className="text-white">{siteConfig.campus} (or Virtual)</strong></span>
                 </div>
                 <div className="flex items-center gap-2 text-slate-300">
                   <HiOutlineAcademicCap className="w-4 h-4 text-indigo-400" />

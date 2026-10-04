@@ -4,6 +4,7 @@ import React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import Logo from "@/components/layout/Logo"
+import SignOutButton from "@/components/auth/SignOutButton"
 import { useAdmin } from "@/components/admin/AdminContext"
 import {
   HiOutlineSquares2X2,
@@ -14,6 +15,7 @@ import {
   HiOutlineIdentification,
   HiOutlineChatBubbleLeftRight,
   HiOutlineArrowTopRightOnSquare,
+  HiOutlineArrowRightOnRectangle,
   HiOutlineXMark,
   HiOutlineUsers,
 } from "react-icons/hi2"
@@ -187,6 +189,10 @@ export default function AdminSidebar() {
             <span>Student Dashboard</span>
             <HiOutlineArrowTopRightOnSquare className="w-4 h-4 text-slate-400" />
           </Link>
+          <SignOutButton className="lg:hidden flex items-center justify-between w-full px-3.5 py-2.5 rounded-xl text-xs font-medium text-rose-300 hover:text-white bg-rose-950/40 hover:bg-rose-900/40 border border-rose-900/50 transition-colors">
+            <span>Sign Out</span>
+            <HiOutlineArrowRightOnRectangle className="w-4 h-4" />
+          </SignOutButton>
         </div>
       </aside>
     </>

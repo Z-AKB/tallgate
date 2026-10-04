@@ -270,7 +270,7 @@ export default function InquiriesClient({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
                   <span className="text-[10px] uppercase font-bold text-slate-400">Budget Range</span>
                   <p className="text-xs font-bold text-slate-900 mt-0.5">{selectedItem.budget_range}</p>

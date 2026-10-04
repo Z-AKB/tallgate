@@ -2,6 +2,7 @@ import React from "react"
 import UserDashboardHeader from "@/components/dashboard/UserDashboardHeader"
 import Link from "next/link"
 import { requireUser } from "@/lib/auth/guards"
+import { siteConfig } from "@/lib/config/site"
 
 export const metadata = {
   title: "User Dashboard | TallGate Student & Client Portal",
@@ -30,7 +31,7 @@ export default async function UserDashboardLayout({
       </main>
       <footer className="border-t border-slate-200 bg-white py-6 text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p>© {new Date().getFullYear()} TallGate Computing Enterprise. Learner & Client Portal.</p>
+          <p>© {new Date().getFullYear()} {siteConfig.companyName}. Learner & Client Portal.</p>
           <div className="flex items-center gap-4">
             <Link href="/verify" className="hover:text-brand-primary transition-colors">
               Verify Certificate

@@ -55,17 +55,6 @@ export interface MockEnrollment {
   completed_at?: string
 }
 
-export interface MockCertificate {
-  id: string
-  verification_code: string
-  recipient_name: string
-  course_title: string
-  issue_date: string
-  grade: string
-  is_valid: boolean
-  created_at: string
-}
-
 export interface MockMessage {
   id: string
   full_name: string
@@ -280,39 +269,6 @@ export const mockEnrollments: MockEnrollment[] = [
     progress_percent: 100,
     enrolled_at: "2026-07-28T11:00:00Z",
     completed_at: "2026-09-12T14:20:00Z",
-  },
-]
-
-export const mockCertificates: MockCertificate[] = [
-  {
-    id: "cert-01",
-    verification_code: "TG-2026-A89F2",
-    recipient_name: "Amina Yusuf",
-    course_title: "Applied AI & Large Language Models in Production",
-    issue_date: "2026-09-10",
-    grade: "Distinction",
-    is_valid: true,
-    created_at: "2026-09-10T16:05:00Z",
-  },
-  {
-    id: "cert-02",
-    verification_code: "TG-2026-B44E9",
-    recipient_name: "Zainab Mohammed",
-    course_title: "Fintech Systems & Payment Infrastructure Design",
-    issue_date: "2026-09-12",
-    grade: "Merit",
-    is_valid: true,
-    created_at: "2026-09-12T14:25:00Z",
-  },
-  {
-    id: "cert-03",
-    verification_code: "TG-2026-C77K1",
-    recipient_name: "Victor Ogundipe",
-    course_title: "Full-Stack Enterprise Cloud Engineering",
-    issue_date: "2026-08-30",
-    grade: "Distinction",
-    is_valid: true,
-    created_at: "2026-08-30T10:00:00Z",
   },
 ]
 

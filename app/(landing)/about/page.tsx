@@ -20,7 +20,7 @@ import {
 } from "react-icons/hi2"
 
 export const metadata = {
-  title: `About Us | ${siteConfig.legalName}`,
+  title: `About Us | ${siteConfig.companyName}`,
   description:
     "Our corporate statement, hybrid business model, executive leadership, and dedicated technology team.",
 }
@@ -76,19 +76,25 @@ export default function AboutPage() {
         <div className="site-panel rounded-2xl p-6 sm:p-12 border border-white/10 relative overflow-hidden bg-[#061A4F]">
           <div className="max-w-3xl space-y-6">
             <p className="text-xs sm:text-sm font-bold uppercase tracking-[0.16em] text-indigo-300">
-              {siteConfig.legalName} • Company Profile
+              {siteConfig.companyName} • Company Profile
             </p>
-            <h1 className="text-3xl sm:text-5xl font-bold text-white tracking-tight leading-[1.1]">
-              Opening Doors to Digital Growth.
+<h1 className="text-3xl sm:text-5xl font-bold text-white tracking-tight leading-[1.1]">
+              {siteConfig.tagline}
             </h1>
             <p className="text-base sm:text-xl text-slate-200 leading-relaxed font-normal">
-              At <strong className="text-white">{siteConfig.legalName.toUpperCase()}</strong>, we believe that every business deserves the opportunity to grow, compete, and succeed in the digital economy. Through innovation, technology, and empowerment, we are building pathways that connect businesses to opportunities and people to possibilities.
+              At <strong className="text-white">{siteConfig.companyName.toUpperCase()}</strong>, we believe that every business deserves the opportunity to grow, compete, and succeed in the digital economy. Through innovation, technology, and empowerment, we are building pathways that connect businesses to opportunities and people to possibilities.
             </p>
+            <div className="pt-4 space-y-4 text-slate-200">
+              <p>TALLGATE LIMITED is a forward-thinking hybrid technology and service company dedicated to helping small and medium-sized businesses establish, strengthen, and scale their digital presence. We provide affordable, practical, and results-driven digital solutions that enable businesses to compete effectively in an increasingly digital economy.</p>
+              <p>Founded on the belief that every business deserves access to modern digital tools, TALLGATE bridges the gap between traditional business operations and digital transformation. Through a combination of technology, strategic support, and skilled talent, we help businesses improve visibility, attract customers, increase sales, and achieve sustainable growth.</p>
+              <p>In addition to supporting businesses, TALLGATE is committed to empowering the next generation of professionals by creating opportunities for university students and young graduates to develop valuable digital skills, gain practical experience, and participate in meaningful employment opportunities.</p>
+            </div>
+
 
             <div className="pt-4 flex flex-wrap items-center gap-6 text-xs text-slate-300 border-t border-white/10">
               <div className="flex items-start gap-2">
                 <HiOutlineLocationMarker className="w-4 h-4 text-indigo-300 shrink-0 mt-0.5" />
-                <span>{siteConfig.address.street}, {siteConfig.address.area}, {siteConfig.address.country}</span>
+                <span>{siteConfig.address.line1}, {siteConfig.address.line2}</span>
               </div>
               <div className="flex items-center gap-2">
                 <HiOutlinePhone className="w-4 h-4 text-indigo-300 shrink-0" />
@@ -96,7 +102,7 @@ export default function AboutPage() {
               </div>
               <div className="flex items-center gap-2">
                 <HiOutlineMail className="w-4 h-4 text-indigo-300 shrink-0" />
-                <a href={`mailto:${siteConfig.email}`} className="hover:text-white transition-colors">{siteConfig.email}</a>
+                <a href={`mailto:${siteConfig.supportEmail}`} className="hover:text-white transition-colors">{siteConfig.supportEmail}</a>
               </div>
             </div>
           </div>
@@ -109,7 +115,7 @@ export default function AboutPage() {
           <SectionHeader
             badge="Operational Framework"
             title="Our Business Model"
-            description={`${siteConfig.legalName} operates through a hybrid model that combines service delivery, technology solutions, and talent development.`}
+            description={`${siteConfig.companyName} operates through a hybrid model that combines service delivery, technology solutions, and talent development.`}
           />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -145,7 +151,7 @@ export default function AboutPage() {
               <div className="relative w-full max-w-sm aspect-[4/3] sm:aspect-square rounded-2xl overflow-hidden border border-white/15 shadow-2xl bg-slate-900">
                 <Image
                   src="/assets/team/chisom.png"
-                  alt={`Engr. Ogbonna Chisom - Chief Executive Officer at ${siteConfig.legalName}`}
+                  alt={`Engr. Ogbonna Chisom - Chief Executive Officer at ${siteConfig.companyName}`}
                   fill
                   className="object-cover object-top hover:scale-105 transition-transform duration-500"
                 />
@@ -174,7 +180,7 @@ export default function AboutPage() {
                   With a broad background in network administration and software development, along with several years of experience in branding, design, digital management, and marketing, Chisom has developed a strong grasp of data analytics, user behaviour, and the value of a seamless user experience. He is dedicated to creating high-performing organisations, structured training programmes, and digital solutions that generate lasting impact.
                 </p>
                 <p>
-                  His work consistently points toward building {siteConfig.legalName} into a platform that delivers robust management systems, technology-enabled healthcare services, professional training, and mission-critical enterprise solutions.
+                  His work consistently points toward building {siteConfig.companyName} into a platform that delivers robust management systems, technology-enabled healthcare services, professional training, and mission-critical enterprise solutions.
                 </p>
               </div>
             </div>
@@ -239,6 +245,37 @@ export default function AboutPage() {
         </div>
 
         {/* ==================================================================== */}
+        {/* 4. VISION, MISSION & CORE VALUES                                   */}
+        {/* ==================================================================== */}
+        <div className="space-y-10">
+          <SectionHeader
+            title="Vision, Mission & Core Values"
+            description="Guiding our commitment to empowering businesses and individuals."
+          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="card-base bg-white/[0.03] border border-white/10 p-6 space-y-3">
+              <h3 className="text-lg font-bold text-white">Vision</h3>
+              <p className="text-sm text-slate-200 leading-relaxed">&quot;To become Africa&apos;s leading digital enablement company, empowering businesses and individuals through technology, innovation, and opportunity.&quot;</p>
+            </div>
+            <div className="card-base bg-white/[0.03] border border-white/10 p-6 space-y-3">
+              <h3 className="text-lg font-bold text-white">Mission</h3>
+              <p className="text-sm text-slate-200 leading-relaxed">&quot;To simplify digital transformation for small businesses by providing accessible, affordable, and innovative solutions that drive growth, efficiency, and long-term success.&quot;</p>
+            </div>
+          </div>
+          <div className="card-base bg-white/[0.03] border border-white/10 p-6 space-y-4">
+            <h3 className="text-lg font-bold text-white">Core Values</h3>
+            <ol className="space-y-2 text-sm text-slate-200">
+              <li>1. Innovation</li>
+              <li>2. Excellence</li>
+              <li>3. Integrity</li>
+              <li>4. Empowerment</li>
+              <li>5. Customer Success</li>
+              <li>6. Collaboration</li>
+            </ol>
+          </div>
+        </div>
+
+        {/* ==================================================================== */}
         {/* 5. COMPANY PROFILE DOCUMENT                                          */}
         {/* ==================================================================== */}
         <div className="space-y-8">
@@ -257,7 +294,7 @@ export default function AboutPage() {
                 <div className="relative w-full aspect-[3/4] bg-slate-900">
                   <Image
                     src={`/assets/company-profile/${page.file}`}
-                    alt={`${siteConfig.legalName} company profile - ${page.title}`}
+                    alt={`${siteConfig.companyName} company profile - ${page.title}`}
                     fill
                     className="object-cover object-top"
                   />

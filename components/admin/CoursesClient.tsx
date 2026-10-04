@@ -131,7 +131,7 @@ export default function CoursesClient({
             className="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-card hover:border-slate-300 transition-all flex flex-col justify-between space-y-4"
           >
             <div className="space-y-3">
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-brand-light text-brand-primary border border-brand-primary/20">
                   {course.category}
                 </span>
@@ -159,7 +159,7 @@ export default function CoursesClient({
             </div>
 
             {/* Admin Toggles & Public Link */}
-            <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+            <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 {/* Publish Toggle */}
                 <button

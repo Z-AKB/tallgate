@@ -53,7 +53,7 @@ export default function AdminHeader({ title, subtitle, initialName, initialEmail
   const [saving, setSaving] = useState(false)
   const [profile, setProfile] = useState({
     name: initialName || "Admin Lead",
-    email: initialEmail || siteConfig.email,
+    email: initialEmail || siteConfig.supportEmail,
     role: "Operations & Systems Lead",
     phone: "",
   })
@@ -114,7 +114,7 @@ export default function AdminHeader({ title, subtitle, initialName, initialEmail
         <div className="flex items-center justify-between gap-3 sm:gap-4">
           
           {/* Left: Mobile Menu Button & Brand / Breadcrumbs */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             {/* Anchored Mobile Toggle inside header */}
             <button
               onClick={toggleMobile}
@@ -127,8 +127,15 @@ export default function AdminHeader({ title, subtitle, initialName, initialEmail
             </button>
 
             {/* Mobile Logo linking to /admin */}
-            <div className="block lg:hidden">
+            <div className="block lg:hidden shrink-0">
               <Logo variant="light" href="/admin" width={135} height={34} showWordmark={true} />
+            </div>
+
+            {/* Compact Page Title for tablet widths */}
+            <div className="hidden sm:block lg:hidden min-w-0">
+              <h2 className="text-sm font-bold text-white tracking-tight truncate">
+                {pageTitle}
+              </h2>
             </div>
 
             {/* Desktop Breadcrumb & Title */}
@@ -148,10 +155,10 @@ export default function AdminHeader({ title, subtitle, initialName, initialEmail
           </div>
 
           {/* Right Actions & Admin Identity */}
-          <div className="flex items-center gap-2 sm:gap-5">
+          <div className="flex items-center gap-2 sm:gap-5 shrink-0">
             <button
               aria-label="Admin Alerts"
-              className="p-2 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 relative transition-colors"
+              className="hidden sm:block p-2 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 relative transition-colors"
             >
               <HiOutlineBell className="w-5 h-5" />
             </button>

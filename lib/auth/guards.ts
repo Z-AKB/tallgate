@@ -33,16 +33,24 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     return null
   }
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("full_name, email, phone, company_name, avatar_url, location, bio")
     .eq("id", user.id)
     .maybeSingle()
 
-  const { data: roleRows } = await supabase
+  if (profileError) {
+    console.error("Unable to load profile for current user:", profileError)
+  }
+
+  const { data: roleRows, error: rolesError } = await supabase
     .from("user_roles")
     .select("roles(name)")
     .eq("user_id", user.id)
+
+  if (rolesError) {
+    console.error("Unable to load roles for current user:", rolesError)
+  }
 
   const roles = uniqueRoles((roleRows ?? []).map((row) => row.roles?.name))
 

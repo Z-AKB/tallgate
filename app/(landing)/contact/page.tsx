@@ -77,7 +77,7 @@ export default function ContactPage() {
               <div className="space-y-3 text-xs text-slate-300">
                 <div className="flex items-start gap-2.5">
                   <HiOutlineLocationMarker className="w-4 h-4 text-indigo-400 flex-shrink-0 mt-0.5" />
-                  <span>{siteConfig.address.street}, {siteConfig.address.area}, {siteConfig.address.country}</span>
+                  <span>{siteConfig.address.line1}, {siteConfig.address.line2}</span>
                 </div>
 
                 <div className="flex items-center gap-2.5">
@@ -87,13 +87,13 @@ export default function ContactPage() {
 
                 <div className="flex items-center gap-2.5">
                   <HiOutlineMail className="w-4 h-4 text-indigo-400 flex-shrink-0" />
-                  <a href={`mailto:${siteConfig.email}`} className="hover:text-white transition-colors">{siteConfig.email}</a>
+                  <a href={`mailto:${siteConfig.supportEmail}`} className="hover:text-white transition-colors">{siteConfig.supportEmail}</a>
                 </div>
               </div>
 
               <div className="pt-3 border-t border-white/10">
                 <a
-                  href={siteConfig.phone.whatsapp}
+                  href={siteConfig.whatsappLink}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn-primary w-full justify-center text-xs py-2.5 inline-flex items-center gap-2"

@@ -1,9 +1,12 @@
 import Link from "next/link"
 import Logo from "@/components/layout/Logo"
-import { siteConfig } from "@/lib/config/site"
+import { siteConfig, whatsappPrefilledLink } from "@/lib/config/site"
 import { FaWhatsapp, FaInstagram } from "react-icons/fa"
 import { FaXTwitter } from "react-icons/fa6"
 import { HiOutlineMail, HiOutlinePhone, HiOutlineLocationMarker } from "react-icons/hi"
+
+const WHATSAPP_DEFAULT_MESSAGE =
+  "Hello TallGate, I would like to inquire about your services"
 
 export default function Footer() {
   const currentYear = new Date().getFullYear()
@@ -21,7 +24,7 @@ export default function Footer() {
             <div className="space-y-2 text-xs text-slate-400 pt-2">
               <p className="flex items-start gap-2">
                 <HiOutlineLocationMarker className="w-4 h-4 text-brand-primary flex-shrink-0 mt-0.5" />
-                <span>{siteConfig.address.street}, {siteConfig.address.area}, {siteConfig.address.country}</span>
+                <span>{siteConfig.address.line1}, {siteConfig.address.line2}</span>
               </p>
               <p className="flex items-center gap-2">
                 <HiOutlinePhone className="w-4 h-4 text-brand-primary flex-shrink-0" />
@@ -29,7 +32,7 @@ export default function Footer() {
               </p>
               <p className="flex items-center gap-2">
                 <HiOutlineMail className="w-4 h-4 text-brand-primary flex-shrink-0" />
-                <a href={`mailto:${siteConfig.email}`} className="hover:text-white transition-colors">{siteConfig.email}</a>
+                <a href={`mailto:${siteConfig.supportEmail}`} className="hover:text-white transition-colors">{siteConfig.supportEmail}</a>
               </p>
             </div>
           </div>
@@ -147,7 +150,7 @@ export default function Footer() {
 
             <div className="pt-6">
               <a
-                href={siteConfig.phone.whatsappPrefilled}
+                href={whatsappPrefilledLink(WHATSAPP_DEFAULT_MESSAGE)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold transition-colors"
@@ -161,7 +164,7 @@ export default function Footer() {
 
         {/* Bottom Bar */}
         <div className="mt-12 pt-8 border-t border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-slate-500">
-          <p>© {currentYear} {siteConfig.legalName}. All rights reserved. {siteConfig.registration}.</p>
+          <p>© {currentYear} {siteConfig.companyName}. All rights reserved. {siteConfig.registration}.</p>
           <div className="flex items-center space-x-6">
             <Link href="/privacy" className="hover:text-slate-400 transition-colors">Privacy Policy</Link>
             <Link href="/terms" className="hover:text-slate-400 transition-colors">Terms of Service</Link>
@@ -169,10 +172,10 @@ export default function Footer() {
               <a href={siteConfig.social.instagram} target="_blank" rel="noopener noreferrer" aria-label="TallGate on Instagram" className="hover:text-white transition-colors">
                 <FaInstagram className="w-4 h-4" />
               </a>
-              <a href={siteConfig.social.x} target="_blank" rel="noopener noreferrer" aria-label="TallGate on X" className="hover:text-white transition-colors">
+              <a href={siteConfig.social.twitter} target="_blank" rel="noopener noreferrer" aria-label="TallGate on X" className="hover:text-white transition-colors">
                 <FaXTwitter className="w-4 h-4" />
               </a>
-              <a href={siteConfig.phone.whatsapp} target="_blank" rel="noopener noreferrer" aria-label="TallGate WhatsApp" className="hover:text-white transition-colors">
+              <a href={siteConfig.whatsappLink} target="_blank" rel="noopener noreferrer" aria-label="TallGate WhatsApp" className="hover:text-white transition-colors">
                 <FaWhatsapp className="w-4 h-4" />
               </a>
             </div>

@@ -6,7 +6,6 @@ import {
   mockStartups,
   mockCourses,
   mockEnrollments,
-  mockCertificates,
   mockMessages,
 } from "@/lib/data/adminMockData"
 import {
@@ -16,6 +15,7 @@ import {
   toCertificate,
   toMessage,
   toEnrollment,
+  type AdminCertificate,
 } from "@/lib/data/adminRowMappers"
 import {
   HiOutlineInboxStack,
@@ -44,7 +44,7 @@ export default async function AdminOverviewPage() {
   let startups = mockStartups
   let courses = mockCourses
   let enrollments = mockEnrollments
-  let certificates = mockCertificates
+  let certificates: AdminCertificate[] = []
   let messages = mockMessages
 
   if (isSupabaseConfigured()) try {
@@ -66,7 +66,10 @@ export default async function AdminOverviewPage() {
     if (enrRes.data && enrRes.data.length > 0) {
       enrollments = enrRes.data.map((item) => toEnrollment(item, "Student", "Technical Course"))
     }
-    if (certRes.data && certRes.data.length > 0) certificates = certRes.data.map(toCertificate)
+    if (certRes.error) {
+      console.error("Admin overview certificates query failed:", certRes.error)
+    }
+    if (certRes.data) certificates = certRes.data.map(toCertificate)
     if (msgRes.data && msgRes.data.length > 0) messages = msgRes.data.map(toMessage)
   } catch (err) {
     console.warn("Supabase query fallback in admin dashboard:", err)

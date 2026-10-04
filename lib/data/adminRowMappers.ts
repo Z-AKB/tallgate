@@ -4,7 +4,6 @@ import type {
   MockStartup,
   MockCourse,
   MockEnrollment,
-  MockCertificate,
   MockMessage,
 } from "@/lib/data/adminMockData"
 
@@ -18,6 +17,19 @@ type MessageRow = Tables["contact_messages"]["Row"]
 export type EnrollmentWithCourse = Tables["course_enrollments"]["Row"] & {
   profiles: Pick<Tables["profiles"]["Row"], "full_name" | "email"> | null
   courses: Pick<Tables["courses"]["Row"], "title"> | null
+}
+
+export type AdminCertificate = {
+  id: string
+  certificate_number: string
+  verification_code: string
+  recipient_name: string
+  course_title: string
+  issue_date: string
+  grade: string
+  is_valid: boolean
+  storage_path: string | null
+  created_at: string
 }
 
 export function toConsultation(row: ConsultationRow): MockConsultation {
@@ -74,15 +86,17 @@ export function toCourse(row: CourseRow): MockCourse {
   }
 }
 
-export function toCertificate(row: CertificateRow): MockCertificate {
+export function toCertificate(row: CertificateRow): AdminCertificate {
   return {
     id: row.id,
+    certificate_number: row.certificate_number,
     verification_code: row.verification_code,
     recipient_name: row.recipient_name,
     course_title: row.course_title,
     issue_date: row.issue_date,
     grade: row.grade ?? "N/A",
     is_valid: row.is_valid,
+    storage_path: row.storage_path,
     created_at: row.created_at,
   }
 }

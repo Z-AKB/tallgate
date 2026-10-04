@@ -6,6 +6,7 @@ import Link from "next/link"
 import SectionHeader from "@/components/ui/SectionHeader"
 import { HiCheckCircle, HiOutlineInformationCircle, HiOutlineArrowLeft } from "react-icons/hi"
 import { FaWhatsapp } from "react-icons/fa"
+import { whatsappPrefilledLink } from "@/lib/config/site"
 
 export default function StartupApplyPage() {
   const [formData, setFormData] = useState({
@@ -118,7 +119,9 @@ export default function StartupApplyPage() {
 
             <div className="pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-center gap-3">
               <a
-                href={`https://wa.me/2349131898566?text=Hello%20TallGate%20Startup%20Hub%2C%20I%20just%20submitted%20an%20incubation%20application%20for%20${encodeURIComponent(formData.companyName)}`}
+                href={whatsappPrefilledLink(
+                  `Hello TallGate Startup Hub, I just submitted an incubation application for ${formData.companyName}`
+                )}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn-primary w-full sm:w-auto inline-flex items-center justify-center gap-2"

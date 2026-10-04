@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { siteConfig } from "@/lib/config/site"
 
 interface LogoProps {
   variant?: "light" | "dark"
@@ -26,7 +27,7 @@ export default function Logo({
       href={href}
       prefetch={true}
       className={`inline-flex items-center group select-none transition-opacity hover:opacity-95 ${className}`}
-      aria-label="TallGate Limited Home"
+      aria-label={`${siteConfig.companyName} Home`}
     >
       <svg
         width={width}

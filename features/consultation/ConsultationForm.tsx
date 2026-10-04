@@ -5,6 +5,7 @@ import { getErrorMessage } from "@/lib/utils"
 import { useSearchParams } from "next/navigation"
 import { HiCheckCircle, HiArrowRight, HiOutlineInformationCircle } from "react-icons/hi"
 import { FaWhatsapp } from "react-icons/fa"
+import { whatsappPrefilledLink } from "@/lib/config/site"
 
 function ConsultationFormContent({ preselectedService = "" }: { preselectedService?: string }) {
   const searchParams = useSearchParams()
@@ -99,7 +100,9 @@ function ConsultationFormContent({ preselectedService = "" }: { preselectedServi
 
         <div className="mt-6 pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-center gap-3">
           <a
-            href={`https://wa.me/2349131898566?text=Hello%20TallGate%2C%20I%20just%20submitted%20a%20consultation%20request%20for%20${encodeURIComponent(formData.serviceInterest)}`}
+            href={whatsappPrefilledLink(
+              `Hello TallGate, I just submitted a consultation request for ${formData.serviceInterest}`
+            )}
             target="_blank"
             rel="noopener noreferrer"
             className="btn-primary w-full sm:w-auto inline-flex items-center justify-center gap-2"

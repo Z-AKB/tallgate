@@ -3,12 +3,21 @@ import { NextRequest, NextResponse } from "next/server"
 /**
  * POST /api/email
  * Sends a transactional email via Resend.
- * Required env: RESEND_API_KEY, RESEND_FROM_EMAIL (optional, defaults shown below)
+ * Required env: RESEND_API_KEY, RESEND_FROM_EMAIL
  */
 export async function POST(req: NextRequest) {
   const apiKey = process.env.RESEND_API_KEY
   if (!apiKey) {
     console.warn("RESEND_API_KEY is not configured — email sending skipped.")
+    return NextResponse.json(
+      { error: "Email sending is not configured." },
+      { status: 503 }
+    )
+  }
+
+  const from = process.env.RESEND_FROM_EMAIL
+  if (!from) {
+    console.warn("RESEND_FROM_EMAIL is not configured — email sending skipped.")
     return NextResponse.json(
       { error: "Email sending is not configured." },
       { status: 503 }
@@ -25,9 +34,6 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       )
     }
-
-    const from =
-      process.env.RESEND_FROM_EMAIL || "TallGate <noreply@tallgate.com>"
 
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",

@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import SectionHeader from "@/components/ui/SectionHeader"
+import { siteConfig } from "@/lib/config/site"
 import { HiPlus, HiMinus } from "react-icons/hi"
 
 interface FaqItem {
@@ -31,7 +32,7 @@ export default function FaqSection() {
     {
       question: "Where is TallGate located, and can we meet physically?",
       answer:
-        "Our headquarters and physical engineering lab are located at No. 2 F.O. Eburuche Close, Gbazango Ext., Kubwa, Abuja, Nigeria. Clients are welcome to visit our physical facility or schedule remote consultation sessions anywhere in West Africa and globally.",
+        `Our headquarters and physical engineering lab are located at ${siteConfig.address.line1}, ${siteConfig.address.line2}. Clients are welcome to visit our physical facility or schedule remote consultation sessions anywhere in West Africa and globally.`,
     },
     {
       question: "Do you offer post-launch maintenance and dedicated engineering support?",

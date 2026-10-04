@@ -29,6 +29,13 @@ Before using the database-backed forms, learning content, or certificate registr
 1. `20260828000000_phase3_schema.sql`
 2. `20260829000000_lesson_content_gating.sql`
 3. `20260930000000_certificate_registry.sql`
+4. `20261001000000_lesson_progress.sql`
+5. `20261002000000_certificate_storage_path.sql`
+6. `20261003000000_storage_buckets_and_grants.sql`
+7. `20261005000000_certificate_storage_policies.sql`
+8. `20261004000000_demo_certificate_seed.sql` (optional; seeds three `[DEMO]` certificates for testing `/verify`)
+
+Certificate PDFs are rendered server-side with `@react-pdf/renderer` and stored in the private `certificates` Storage bucket. `SUPABASE_SERVICE_ROLE_KEY` is required for issuance (upload) and for `GET /api/admin/certificates/[id]/download`, which issues a 5-minute signed URL to signed-in admins only.
 
 When applying through the Supabase SQL Editor, run each file once, in order. The timestamped Phase 3 migrations are authoritative; do not apply the removed legacy `0001` / `0002` learning-hub migrations. The admin dashboard also requires the signed-in admin account to have the `admin` role in `user_roles`.
 

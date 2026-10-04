@@ -11,10 +11,12 @@ export type Json =
  *   supabase/migrations/20260828000000_phase3_schema.sql
  *   supabase/migrations/20260829000000_lesson_content_gating.sql
  *   supabase/migrations/20260930000000_certificate_registry.sql
+ *   supabase/migrations/20261001000000_lesson_progress.sql
+ *   supabase/migrations/20261002000000_certificate_storage_path.sql
  *
- * Tables that exist only in earlier revisions (enrollments, lesson_progress,
- * categories) and columns dropped by later migrations (lessons.content_markdown)
- * have been removed. `Relationships` mirrors the foreign keys declared in the
+ * Tables that exist only in earlier revisions (enrollments, categories) and
+ * columns dropped by later migrations (lessons.content_markdown) have been
+ * removed. `Relationships` mirrors the foreign keys declared in the
  * migrations so embedded resource selects type-resolve.
  */
 export interface Database {
@@ -464,6 +466,7 @@ export interface Database {
           id: string
           verification_code: string
           certificate_number: string
+          storage_path: string | null
           user_id: string | null
           course_id: string | null
           recipient_name: string
@@ -477,6 +480,7 @@ export interface Database {
           id?: string
           verification_code: string
           certificate_number?: string
+          storage_path?: string | null
           user_id?: string | null
           course_id?: string | null
           recipient_name: string
@@ -490,6 +494,7 @@ export interface Database {
           id?: string
           verification_code?: string
           certificate_number?: string
+          storage_path?: string | null
           user_id?: string | null
           course_id?: string | null
           recipient_name?: string
@@ -509,6 +514,51 @@ export interface Database {
           },
           {
             foreignKeyName: "certificates_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lesson_progress: {
+        Row: {
+          user_id: string
+          lesson_id: string
+          is_completed: boolean
+          watch_time_seconds: number
+          last_watched_at: string | null
+          updated_at: string
+          completed_at: string | null
+        }
+        Insert: {
+          user_id: string
+          lesson_id: string
+          is_completed?: boolean
+          watch_time_seconds?: number
+          last_watched_at?: string | null
+          updated_at?: string
+          completed_at?: string | null
+        }
+        Update: {
+          user_id?: string
+          lesson_id?: string
+          is_completed?: boolean
+          watch_time_seconds?: number
+          last_watched_at?: string | null
+          updated_at?: string
+          completed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_progress_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_progress_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -661,7 +711,10 @@ export interface Database {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

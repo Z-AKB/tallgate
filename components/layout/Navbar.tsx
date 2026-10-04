@@ -50,7 +50,7 @@ export default function Navbar() {
           <div className="flex items-center space-x-6">
             <span className="flex items-center gap-1.5">
               <HiOutlineLocationMarker className="w-3.5 h-3.5 text-indigo-300" />
-              <span>{siteConfig.address.street}, {siteConfig.address.area}</span>
+              <span>{siteConfig.address.line1}, {siteConfig.address.line2}</span>
             </span>
             <span className="flex items-center gap-1.5">
               <HiOutlinePhone className="w-3.5 h-3.5 text-indigo-300" />
@@ -60,7 +60,7 @@ export default function Navbar() {
           <div className="flex items-center space-x-4">
             <span className="flex items-center gap-1.5">
               <HiOutlineMail className="w-3.5 h-3.5 text-indigo-300" />
-              <a href={`mailto:${siteConfig.email}`} className="hover:text-white transition-colors">{siteConfig.email}</a>
+              <a href={`mailto:${siteConfig.supportEmail}`} className="hover:text-white transition-colors">{siteConfig.supportEmail}</a>
             </span>
             <span className="text-slate-700">|</span>
             <Link href="/verify" prefetch={true} className="hover:text-white transition-colors">

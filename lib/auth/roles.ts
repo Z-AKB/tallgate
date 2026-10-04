@@ -17,7 +17,11 @@ export function uniqueRoles(values: Array<string | null | undefined>) {
 export async function fetchCurrentRoleNames(
   supabase: SupabaseClient<Database>
 ): Promise<string[]> {
-  const { data } = await supabase.from("user_roles").select("roles(name)")
+  const { data, error } = await supabase.from("user_roles").select("roles(name)")
+
+  if (error) {
+    console.error("Unable to resolve current role names:", error)
+  }
 
   return uniqueRoles((data ?? []).map((row) => row.roles?.name))
 }

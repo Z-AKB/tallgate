@@ -15,9 +15,11 @@ type User = {
 export default function UsersClient({
   initialUsers,
   availableRoles,
+  loadFailed = false,
 }: {
   initialUsers: User[]
   availableRoles: string[]
+  loadFailed?: boolean
 }) {
   const [users, setUsers] = useState<User[]>(initialUsers)
   const [searchQuery, setSearchQuery] = useState("")
@@ -28,6 +30,7 @@ export default function UsersClient({
   const [createForm, setCreateForm] = useState({ full_name: "", email: "", password: "", role: "learner" })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [roleError, setRoleError] = useState<string | null>(null)
 
   const filteredUsers = users.filter((u) => {
     const matchesSearch =
@@ -63,6 +66,7 @@ export default function UsersClient({
 
   const handleRoleChange = async (userId: string, newRole: string) => {
     const previousUsers = [...users]
+    setRoleError(null)
     setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u)))
     try {
       const res = await fetch("/api/admin/actions", {
@@ -73,12 +77,15 @@ export default function UsersClient({
           payload: { user_id: userId, role: newRole },
         }),
       })
+      const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        throw new Error("Failed to update role")
+        throw new Error(
+          getErrorMessage(data, `Failed to update role to ${newRole}.`)
+        )
       }
-    } catch (err) {
-      alert("Failed to update role. Please check server logs.")
-      setUsers(previousUsers) // revert
+    } catch (err: unknown) {
+      setRoleError(getErrorMessage(err, "Failed to update role."))
+      setUsers(previousUsers)
     }
   }
 
@@ -119,6 +126,15 @@ export default function UsersClient({
           <span>New User</span>
         </button>
       </div>
+
+      {roleError && (
+        <p
+          role="alert"
+          className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700"
+        >
+          {roleError}
+        </p>
+      )}
 
       {/* Users Table */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
@@ -167,7 +183,11 @@ export default function UsersClient({
               ) : (
                 <tr>
                   <td colSpan={3} className="px-6 py-12 text-center text-slate-500 text-sm">
-                    No users found matching your search.
+                    {loadFailed
+                      ? "User list unavailable."
+                      : searchQuery || roleFilter !== "all"
+                        ? "No users found matching your search."
+                        : "No users have been registered yet."}
                   </td>
                 </tr>
               )}
