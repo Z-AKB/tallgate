@@ -479,7 +479,21 @@ export async function POST(req: NextRequest) {
         if (authError || !authData.user) {
           return NextResponse.json({ error: authError?.message || "Failed to create user" }, { status: 400 })
         }
-        const newUserId = authData.user.id
+const newUserId = authData.user.id
+
+        // The auth user exists from this point on, so any later failure must
+        // delete it again or an unusable account is left behind.
+        const rollbackAuthUser = async (reason: string) => {
+          const { error: cleanupError } = await adminSupabase.auth.admin.deleteUser(newUserId)
+          if (cleanupError) {
+            console.error(
+              `Failed to delete orphaned auth user ${newUserId} after: ${reason}:`,
+              cleanupError
+            )
+          } else {
+            console.error(`Deleted orphaned auth user ${newUserId} after: ${reason}`)
+          }
+        }
 
         // 2. Create profile
         const { error: profileError } = await adminSupabase.from("profiles").insert({
@@ -489,6 +503,7 @@ export async function POST(req: NextRequest) {
         })
 
         if (profileError) {
+          await rollbackAuthUser(`profile insert failed (${profileError.message})`)
           return NextResponse.json({ error: profileError.message }, { status: 400 })
         }
 
@@ -499,18 +514,20 @@ export async function POST(req: NextRequest) {
           .eq("name", roleName)
           .single()
 
-      if (roleError || !roleData) {
-        return NextResponse.json({ error: "Role not found" }, { status: 400 })
-      }
+        if (roleError || !roleData) {
+          await rollbackAuthUser(`role lookup failed for "${roleName}"`)
+          return NextResponse.json({ error: "Role not found" }, { status: 400 })
+        }
 
-      const { error: assignError } = await adminSupabase.from("user_roles").insert({
-        user_id: newUserId,
-        role_id: roleData.id
-      })
+        const { error: assignError } = await adminSupabase.from("user_roles").insert({
+          user_id: newUserId,
+          role_id: roleData.id
+        })
 
-      if (assignError) {
-        return NextResponse.json({ error: assignError.message }, { status: 400 })
-      }
+        if (assignError) {
+          await rollbackAuthUser(`role assignment failed (${assignError.message})`)
+          return NextResponse.json({ error: assignError.message }, { status: 400 })
+        }
 
         return NextResponse.json({ success: true, message: "User created successfully" })
       }
@@ -541,15 +558,68 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ error: "Role not found" }, { status: 400 })
         }
 
-        await adminSupabase.from("user_roles").delete().eq("user_id", user_id)
-        const { error } = await adminSupabase.from("user_roles").insert({
+        // Snapshot the current assignments first. A user_roles row cascades on
+        // profile delete, so the old ids are all that is needed to put them back.
+        const { data: existingAssignments, error: readError } = await adminSupabase
+          .from("user_roles")
+          .select("role_id")
+          .eq("user_id", user_id)
+
+        if (readError) {
+          return NextResponse.json({ error: readError.message }, { status: 503 })
+        }
+
+        const previousRoleIds = (existingAssignments ?? []).map((r) => r.role_id)
+
+        // A discard here is silently ignored by PostgREST unless we check it,
+        // which previously hid a failed delete and then left the insert to
+        // collide with the surviving rows.
+        const { error: deleteError } = await adminSupabase
+          .from("user_roles")
+          .delete()
+          .eq("user_id", user_id)
+
+        if (deleteError) {
+          return NextResponse.json(
+            { error: `Existing role assignments could not be removed: ${deleteError.message}` },
+            { status: 400 }
+          )
+        }
+
+        const { error: insertError } = await adminSupabase.from("user_roles").insert({
           user_id,
           role_id: roleData.id
         })
 
-        if (error) {
-          return NextResponse.json({ error: error.message }, { status: 400 })
+        if (insertError) {
+          const rolesToRestore = previousRoleIds.filter((id) => id !== roleData.id)
+
+          if (rolesToRestore.length > 0) {
+            const { error: restoreError } = await adminSupabase
+              .from("user_roles")
+              .insert(rolesToRestore.map((role_id) => ({ user_id, role_id })))
+
+            if (restoreError) {
+              console.error(
+                `Failed to restore ${rolesToRestore.length} role assignment(s) for ${user_id}:`,
+                restoreError
+              )
+              return NextResponse.json(
+                {
+                  error: `Role was not changed and previous assignments could not be restored. Manual repair required.`,
+                  detail: restoreError.message,
+                },
+                { status: 500 }
+              )
+            }
+          }
+
+          return NextResponse.json(
+            { error: `Role was not changed: ${insertError.message}` },
+            { status: 400 }
+          )
         }
+
         return NextResponse.json({ success: true, message: "User role updated" })
       }
 

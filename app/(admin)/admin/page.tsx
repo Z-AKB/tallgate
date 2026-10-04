@@ -7,6 +7,11 @@ import {
   mockCourses,
   mockEnrollments,
   mockMessages,
+  type MockConsultation,
+  type MockStartup,
+  type MockCourse,
+  type MockEnrollment,
+  type MockMessage,
 } from "@/lib/data/adminMockData"
 import {
   toConsultation,
@@ -38,41 +43,71 @@ export const metadata = {
 
 export default async function AdminOverviewPage() {
   const supabase = createClient()
+  const useMockData = !isSupabaseConfigured() && process.env.NODE_ENV === "development"
 
-  // Fetch live counts from Supabase with safe fallback
-  let consultations = mockConsultations
-  let startups = mockStartups
-  let courses = mockCourses
-  let enrollments = mockEnrollments
+  // Mock data is only ever a development placeholder for an unconfigured
+  // project. Once Supabase answers, its result is authoritative even when it
+  // is empty: a zero-row table must render as empty, never as seeded rows.
+  let consultations: MockConsultation[] = useMockData ? mockConsultations : []
+  let startups: MockStartup[] = useMockData ? mockStartups : []
+  let courses: MockCourse[] = useMockData ? mockCourses : []
+  let enrollments: MockEnrollment[] = useMockData ? mockEnrollments : []
   let certificates: AdminCertificate[] = []
-  let messages = mockMessages
+  let messages: MockMessage[] = useMockData ? mockMessages : []
+  let dataWarning = ""
 
-  if (isSupabaseConfigured()) try {
-    const [cRes, sRes, crsRes, enrRes, certRes, msgRes] = await Promise.all([
-      supabase.from("consultation_requests").select("*").order("created_at", { ascending: false }),
-      supabase.from("startup_applications").select("*").order("created_at", { ascending: false }),
-      supabase.from("courses").select("*").order("created_at", { ascending: false }),
-      supabase
-        .from("course_enrollments")
-        .select("*, profiles(full_name, email), courses(title)")
-        .order("enrolled_at", { ascending: false }),
-      supabase.from("certificates").select("*").order("created_at", { ascending: false }),
-      supabase.from("contact_messages").select("*").order("created_at", { ascending: false }),
-    ])
+  if (!isSupabaseConfigured()) {
+    dataWarning = useMockData
+      ? "Supabase is not configured, so this overview is showing sample data."
+      : "Metrics are unavailable because Supabase is not configured."
+  } else {
+    try {
+      const [cRes, sRes, crsRes, enrRes, certRes, msgRes] = await Promise.all([
+        supabase.from("consultation_requests").select("*").order("created_at", { ascending: false }),
+        supabase.from("startup_applications").select("*").order("created_at", { ascending: false }),
+        supabase.from("courses").select("*").order("created_at", { ascending: false }),
+        supabase
+          .from("course_enrollments")
+          .select("*, profiles(full_name, email), courses(title)")
+          .order("enrolled_at", { ascending: false }),
+        supabase.from("certificates").select("*").order("created_at", { ascending: false }),
+        supabase.from("contact_messages").select("*").order("created_at", { ascending: false }),
+      ])
 
-    if (cRes.data && cRes.data.length > 0) consultations = cRes.data.map(toConsultation)
-    if (sRes.data && sRes.data.length > 0) startups = sRes.data.map(toStartup)
-    if (crsRes.data && crsRes.data.length > 0) courses = crsRes.data.map(toCourse)
-    if (enrRes.data && enrRes.data.length > 0) {
-      enrollments = enrRes.data.map((item) => toEnrollment(item, "Student", "Technical Course"))
+      const failures: string[] = []
+
+      if (cRes.error) failures.push("consultation requests")
+      else consultations = (cRes.data ?? []).map(toConsultation)
+
+      if (sRes.error) failures.push("startup applications")
+      else startups = (sRes.data ?? []).map(toStartup)
+
+      if (crsRes.error) failures.push("courses")
+      else courses = (crsRes.data ?? []).map(toCourse)
+
+      if (enrRes.error) failures.push("enrollments")
+      else {
+        enrollments = (enrRes.data ?? []).map((item) =>
+          toEnrollment(item, "Student", "Technical Course")
+        )
+      }
+
+      if (certRes.error) failures.push("certificates")
+      else certificates = (certRes.data ?? []).map(toCertificate)
+
+      if (msgRes.error) failures.push("messages")
+      else messages = (msgRes.data ?? []).map(toMessage)
+
+      if (failures.length > 0) {
+        for (const result of [cRes, sRes, crsRes, enrRes, certRes, msgRes]) {
+          if (result.error) console.error("Admin overview query failed:", result.error)
+        }
+        dataWarning = `Could not load ${failures.join(", ")}. The affected figures below may be understated.`
+      }
+    } catch (err) {
+      console.error("Admin overview query failed:", err)
+      dataWarning = "Metrics could not be loaded from Supabase. Figures below may be understated."
     }
-    if (certRes.error) {
-      console.error("Admin overview certificates query failed:", certRes.error)
-    }
-    if (certRes.data) certificates = certRes.data.map(toCertificate)
-    if (msgRes.data && msgRes.data.length > 0) messages = msgRes.data.map(toMessage)
-  } catch (err) {
-    console.warn("Supabase query fallback in admin dashboard:", err)
   }
 
   // Calculated Stats
@@ -85,6 +120,15 @@ export default async function AdminOverviewPage() {
 
   return (
     <div className="space-y-8">
+      {dataWarning && (
+        <div
+          role="alert"
+          className="rounded-xl border border-amber-500/40 bg-amber-50 px-4 py-3 text-xs font-medium text-amber-900"
+        >
+          {dataWarning}
+        </div>
+      )}
+
       {/* Top Banner */}
       <div className="rounded-[1.75rem] bg-gradient-to-r from-[#03184B] via-[#06245F] to-[#0D43A9] p-7 sm:p-9 lg:p-10 text-white relative overflow-hidden shadow-elevated border border-[#1C5BDD]">
         <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-grid-dark opacity-30 pointer-events-none"></div>
