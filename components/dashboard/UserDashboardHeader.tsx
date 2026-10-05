@@ -103,7 +103,7 @@ export default function UserDashboardHeader({
               </Link>
             ) : null}
             <Link
-              href="/verify"
+              href="/dashboard/verify"
               className="text-xs font-medium text-slate-300 hover:text-white transition-colors"
             >
               Verify Certificate
@@ -179,7 +179,7 @@ export default function UserDashboardHeader({
               </Link>
             ) : null}
             <Link
-              href="/verify"
+              href="/dashboard/verify"
               onClick={() => setMobileMenuOpen(false)}
               className="px-3 py-2 text-xs text-slate-300 hover:text-white hover:bg-white/[0.06] rounded-lg"
             >

@@ -33,7 +33,7 @@ export default async function UserDashboardLayout({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p>© {new Date().getFullYear()} {siteConfig.companyName}. Learner & Client Portal.</p>
           <div className="flex items-center gap-4">
-            <Link href="/verify" className="hover:text-brand-primary transition-colors">
+            <Link href="/dashboard/verify" className="hover:text-brand-primary transition-colors">
               Verify Certificate
             </Link>
             <span>•</span>
