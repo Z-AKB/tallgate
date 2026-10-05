@@ -26,7 +26,7 @@ export default async function AdminUsersPage() {
     loadFailed = true
     loadWarning = "User records are unavailable because Supabase is not configured."
   } else {
-    const supabase = createClient()
+    const supabase = await createClient()
 
     const { data: profiles, error } = await supabase
       .from("profiles")

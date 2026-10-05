@@ -10,7 +10,7 @@ export const metadata = {
 }
 
 export default async function AdminCoursesPage() {
-  const supabase = createClient()
+  const supabase = await createClient()
   const useMockData = !isSupabaseConfigured() && process.env.NODE_ENV === "development"
 
   // Mock data is only ever a development placeholder for an unconfigured

@@ -23,7 +23,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     return null
   }
 
-  const supabase = createClient()
+  const supabase = await createClient()
   const {
     data: { user },
     error,

@@ -22,7 +22,9 @@ This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-opti
 
 ## Backend Setup
 
-Copy `.env.example` to `.env.local` and set the Supabase project URL and publishable/anon key. Set `NEXT_PUBLIC_SITE_URL` to the public site origin; certificate QR links use this value. Do not use a service-role key in the browser or commit `.env.local`.
+The app requires Node.js 20.9.0 or newer.
+
+Copy `.env.example` to `.env.local` and set the Supabase project URL and publishable/anon key. Set `NEXT_PUBLIC_SITE_URL` to the public site origin; certificate QR links use this value. `SUPABASE_SERVICE_ROLE_KEY` is required server-side for admin operations and durable API rate limiting. Never expose it to browser code or commit `.env.local`.
 
 Before using the database-backed forms, learning content, or certificate registry, apply the migrations in `supabase/migrations` to the intended Supabase project in this order:
 
@@ -34,10 +36,13 @@ Before using the database-backed forms, learning content, or certificate registr
 6. `20261003000000_storage_buckets_and_grants.sql`
 7. `20261005000000_certificate_storage_policies.sql`
 8. `20261004000000_demo_certificate_seed.sql` (optional; seeds three `[DEMO]` certificates for testing `/verify`)
+9. `20261006000000_public_api_hardening.sql`
 
 Certificate PDFs are rendered server-side with `@react-pdf/renderer` and stored in the private `certificates` Storage bucket. `SUPABASE_SERVICE_ROLE_KEY` is required for issuance (upload) and for `GET /api/admin/certificates/[id]/download`, which issues a 5-minute signed URL to signed-in admins only.
 
-When applying through the Supabase SQL Editor, run each file once, in order. The timestamped Phase 3 migrations are authoritative; do not apply the removed legacy `0001` / `0002` learning-hub migrations. The admin dashboard also requires the signed-in admin account to have the `admin` role in `user_roles`.
+Public form endpoints also use a server-side Supabase rate-limit table. The limits are 5 contact requests, 3 consultation requests, 3 startup applications, or 5 enrollment inquiries per IP address per 15 minutes. The email endpoint requires an admin session and is limited to 20 sends per admin per hour. Production hosting must supply a trusted `x-real-ip` or `cf-connecting-ip` request header for IP-based limits to work.
+
+For a new database, use the Supabase CLI to link the project, inspect migration status, and apply pending migrations with `supabase db push`. If using the SQL Editor instead, run each migration once in the order above and do not also push the same migrations through the CLI. If earlier migrations were applied manually, reconcile the CLI migration history before using `db push`; do not blindly rerun SQL against a database that already has those changes. The timestamped Phase 3 migrations are authoritative; do not apply the removed legacy `0001` / `0002` learning-hub migrations. The admin dashboard also requires the signed-in admin account to have the `admin` role in `user_roles`.
 
 ## Learn More
 

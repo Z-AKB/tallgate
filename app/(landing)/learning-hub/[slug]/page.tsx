@@ -19,8 +19,13 @@ export function generateStaticParams() {
   }))
 }
 
-export function generateMetadata({ params }: { params: { slug: string } }) {
-  const course = coursesData.find((c) => c.slug === params.slug)
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>
+}) {
+  const { slug } = await params
+  const course = coursesData.find((c) => c.slug === slug)
   if (!course) return { title: "Course Not Found" }
 
   return {
@@ -29,8 +34,13 @@ export function generateMetadata({ params }: { params: { slug: string } }) {
   }
 }
 
-export default function CourseDetailPage({ params }: { params: { slug: string } }) {
-  const course = coursesData.find((c) => c.slug === params.slug)
+export default async function CourseDetailPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>
+}) {
+  const { slug } = await params
+  const course = coursesData.find((c) => c.slug === slug)
 
   if (!course) {
     notFound()

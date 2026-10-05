@@ -19,7 +19,7 @@ export type PortalOverview = {
 }
 
 export async function getPortalOverview(user: CurrentUser): Promise<PortalOverview> {
-  const supabase = createClient()
+  const supabase = await createClient()
 
   const [{ data: courseEnrollments }, { data: startups }, { data: consultations }] =
     await Promise.all([

@@ -66,9 +66,10 @@ export default function VerifyPage() {
 
   useEffect(() => {
     const initialCode = new URLSearchParams(window.location.search).get("code")
-    if (initialCode) {
-      void verifyCode(initialCode)
-    }
+    if (!initialCode) return
+
+    const timer = setTimeout(() => void verifyCode(initialCode), 0)
+    return () => clearTimeout(timer)
   }, [verifyCode])
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {

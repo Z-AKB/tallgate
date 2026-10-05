@@ -15,13 +15,13 @@ import {
 } from "react-icons/hi"
 
 interface LessonPlayerPageProps {
-  params: {
+  params: Promise<{
     slug: string
-  }
-  searchParams?: {
+  }>
+  searchParams?: Promise<{
     lessonId?: string
     lesson?: string
-  }
+  }>
 }
 
 interface ModuleWithLessons {
@@ -55,6 +55,8 @@ export default async function LessonPlayerPage({
   params,
   searchParams,
 }: LessonPlayerPageProps) {
+  const { slug } = await params
+  const resolvedSearchParams = await searchParams
   const supabase = await createClient()
   let courseContentError = ""
 
@@ -62,7 +64,7 @@ export default async function LessonPlayerPage({
   const { data: dbCourse, error: courseError } = await supabase
     .from("courses")
     .select("id, slug, title, overview")
-    .eq("slug", params.slug)
+    .eq("slug", slug)
     .maybeSingle()
 
   if (courseError) {
@@ -71,7 +73,7 @@ export default async function LessonPlayerPage({
   }
 
   // Fallback to static catalogue data if DB course is not yet seeded
-  const staticCourse = coursesData.find((c) => c.slug === params.slug)
+  const staticCourse = coursesData.find((c) => c.slug === slug)
   const courseTitle = dbCourse?.title || staticCourse?.title
   const courseOverview = dbCourse?.overview || staticCourse?.overview
 
@@ -147,7 +149,8 @@ export default async function LessonPlayerPage({
 
   // Flatten all lessons across all modules
   const allLessons = modules.flatMap((m) => m.lessons)
-  const requestedLessonId = searchParams?.lessonId || searchParams?.lesson
+  const requestedLessonId =
+    resolvedSearchParams?.lessonId || resolvedSearchParams?.lesson
 
   // Determine active lesson
   const activeLesson =
@@ -174,7 +177,7 @@ export default async function LessonPlayerPage({
     }
   }
 
-  const courseOverviewUrl = `/learning-hub/${params.slug}`
+  const courseOverviewUrl = `/learning-hub/${slug}`
 
   return (
     <div className="site-shell min-h-screen text-slate-100 bg-[#09091a]">
@@ -393,7 +396,7 @@ export default async function LessonPlayerPage({
                         return (
                           <Link
                             key={lesson.id}
-                            href={`/learn/courses/${params.slug}/learn?lessonId=${lesson.id}`}
+                            href={`/learn/courses/${slug}/learn?lessonId=${lesson.id}`}
                             className={`group flex items-start gap-3 p-2.5 rounded-xl text-xs transition-all ${
                               isActive
                                 ? "bg-indigo-600/20 border border-indigo-500/40 text-white font-medium"

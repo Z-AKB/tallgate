@@ -1,6 +1,18 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/server"
 import { isNonEmptyString } from "@/lib/utils"
+import {
+  isNonEmptyText,
+  isOptionalText,
+  isValidEmailAddress,
+  readJsonObject,
+} from "@/lib/api/request"
+import {
+  checkRateLimit,
+  rateLimitResponse,
+  rateLimitUnavailableResponse,
+  RateLimitUnavailableError,
+} from "@/lib/api/rateLimit"
 
 /**
  * POST /api/enrollments
@@ -17,15 +29,18 @@ import { isNonEmptyString } from "@/lib/utils"
  */
 export async function POST(req: NextRequest) {
   try {
-    const body: unknown = await req.json()
+    const parsed = await readJsonObject(req)
+    if (parsed.response) return parsed.response
     const { fullName, email, phone, courseTitle, schedulePreference, learningMode } =
-      (body ?? {}) as Record<string, unknown>
+      parsed.data
 
     if (
-      !isNonEmptyString(fullName) ||
-      !isNonEmptyString(email) ||
-      !isNonEmptyString(phone) ||
-      !isNonEmptyString(courseTitle)
+      !isNonEmptyText(fullName, 120) ||
+      !isValidEmailAddress(email) ||
+      !isNonEmptyText(phone, 40) ||
+      !isNonEmptyText(courseTitle, 200) ||
+      !isOptionalText(schedulePreference, 120) ||
+      !isOptionalText(learningMode, 120)
     ) {
       return NextResponse.json(
         { error: "Missing required enrollment information." },
@@ -40,11 +55,15 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const supabase = createClient()
+    if (!(await checkRateLimit(req, "enrollment", 5, 900))) {
+      return rateLimitResponse(900)
+    }
+
+    const supabase = await createClient()
     const { error: dbError } = await supabase.from("service_inquiries").insert([
       {
         full_name: fullName.trim(),
-        email: email.trim(),
+        email: email.trim().toLowerCase(),
         phone: phone.trim(),
         company_name: `Enrollment: ${courseTitle.trim()} (${
           isNonEmptyString(learningMode) ? learningMode : "Hybrid"
@@ -69,6 +88,9 @@ export async function POST(req: NextRequest) {
       { status: 200 }
     )
   } catch (error) {
+    if (error instanceof RateLimitUnavailableError) {
+      return rateLimitUnavailableResponse()
+    }
     console.error("Enrollment API error:", error)
     return NextResponse.json(
       { error: "Internal server error." },

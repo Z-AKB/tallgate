@@ -12,14 +12,21 @@ function ProgressBarContent() {
 
   // Reset/Complete progress bar on route change
   useEffect(() => {
-    if (isNavigating) {
+    if (!isNavigating) return
+
+    let hideTimer: ReturnType<typeof setTimeout> | undefined
+    const completeTimer = setTimeout(() => {
       setProgress(100)
-      const timer = setTimeout(() => {
+      hideTimer = setTimeout(() => {
         setIsVisible(false)
         setIsNavigating(false)
         setProgress(0)
       }, 250)
-      return () => clearTimeout(timer)
+    }, 0)
+
+    return () => {
+      clearTimeout(completeTimer)
+      if (hideTimer) clearTimeout(hideTimer)
     }
   }, [pathname, searchParams, isNavigating])
 

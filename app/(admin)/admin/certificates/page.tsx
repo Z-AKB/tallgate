@@ -10,8 +10,9 @@ export const metadata = {
 export default async function AdminCertificatesPage({
   searchParams,
 }: {
-  searchParams: { recipient?: string; course?: string }
+  searchParams: Promise<{ recipient?: string; course?: string }>
 }) {
+  const { recipient, course } = await searchParams
   let certificates: AdminCertificate[] = []
   let dataWarning = ""
   let loadFailed = false
@@ -22,7 +23,7 @@ export default async function AdminCertificatesPage({
       "Certificate records are unavailable because Supabase is not configured."
   } else {
     try {
-      const supabase = createClient()
+      const supabase = await createClient()
       const { data, error } = await supabase
         .from("certificates")
         .select("*")
@@ -49,8 +50,8 @@ export default async function AdminCertificatesPage({
       initialCertificates={certificates}
       dataWarning={dataWarning}
       loadFailed={loadFailed}
-      prefilledRecipient={searchParams?.recipient}
-      prefilledCourse={searchParams?.course}
+      prefilledRecipient={recipient}
+      prefilledCourse={course}
     />
   )
 }

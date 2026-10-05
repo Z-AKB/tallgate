@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import Logo from "@/components/layout/Logo"
@@ -57,14 +57,6 @@ export default function AdminHeader({ title, subtitle, initialName, initialEmail
     role: "Operations & Systems Lead",
     phone: "",
   })
-
-  useEffect(() => {
-    setProfile((prev) => ({
-      ...prev,
-      name: initialName || prev.name,
-      email: initialEmail || prev.email,
-    }))
-  }, [initialName, initialEmail])
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault()

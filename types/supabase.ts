@@ -715,6 +715,15 @@ export interface Database {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      consume_public_rate_limit: {
+        Args: {
+          p_bucket: string
+          p_key_hash: string
+          p_limit: number
+          p_window_seconds: number
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

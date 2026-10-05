@@ -9,9 +9,10 @@ const SIGNED_URL_TTL_SECONDS = 300
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const admin = await requireAdminApi()
     if (admin.error) return admin.error
 
@@ -20,7 +21,7 @@ export async function GET(
     const { data: certificate, error } = await supabase
       .from("certificates")
       .select("storage_path")
-      .eq("id", params.id)
+      .eq("id", id)
       .maybeSingle()
 
     if (error) {

@@ -78,7 +78,7 @@ function buildCertificateStoragePath() {
 }
 
 async function rollbackCertificate(
-  supabase: ReturnType<typeof createClient>,
+  supabase: Awaited<ReturnType<typeof createClient>>,
   certificateId: string
 ) {
   const { error } = await supabase.from("certificates").delete().eq("id", certificateId)
@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "A valid action payload is required." }, { status: 400 })
     }
 
-    const supabase = createClient()
+    const supabase = await createClient()
 
     switch (action) {
       case "update_consultation_status": {
