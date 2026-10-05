@@ -6,8 +6,8 @@ const PROTECTED_PREFIXES = ["/dashboard", "/admin", "/learn", "/api/admin"]
 const AUTH_PATHS = ["/login", "/register"]
 
 function copyCookies(from: NextResponse, to: NextResponse) {
-  from.cookies.getAll().forEach(({ name, value }) => {
-    to.cookies.set(name, value)
+  from.cookies.getAll().forEach((cookie) => {
+    to.cookies.set(cookie)
   })
   for (const header of ["cache-control", "expires", "pragma"]) {
     const value = from.headers.get(header)

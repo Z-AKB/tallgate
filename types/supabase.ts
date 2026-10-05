@@ -724,6 +724,17 @@ export interface Database {
         }
         Returns: boolean
       }
+      verify_certificate: {
+        Args: {
+          p_verification_code: string
+        }
+        Returns: {
+          certificate_number: string
+          course_title: string
+          issue_date: string
+          is_valid: boolean
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

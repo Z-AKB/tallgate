@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createPublicClient, isSupabaseConfigured } from "@/lib/supabase/server"
+import {
+  checkRateLimit,
+  rateLimitResponse,
+  rateLimitUnavailableResponse,
+  RateLimitUnavailableError,
+} from "@/lib/api/rateLimit"
 
 function noStore(body: unknown, status: number) {
   return NextResponse.json(body, {
@@ -28,12 +34,16 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    if (!(await checkRateLimit(req, "verification", 30, 900))) {
+      const response = rateLimitResponse(900)
+      response.headers.set("Cache-Control", "no-store")
+      return response
+    }
+
     const supabase = createPublicClient()
-    const { data, error } = await supabase
-      .from("certificates")
-      .select("certificate_number, recipient_name, course_title, issue_date, grade, is_valid")
-      .eq("verification_code", code)
-      .maybeSingle()
+    const { data, error } = await supabase.rpc("verify_certificate", {
+      p_verification_code: code,
+    })
 
     if (error) {
       console.error("Certificate verification query failed:", error)
@@ -43,7 +53,8 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    if (!data) {
+    const certificate = data?.[0]
+    if (!certificate) {
       return noStore(
         { status: "not_found", error: "Certificate not found." },
         404
@@ -52,19 +63,22 @@ export async function GET(req: NextRequest) {
 
     return noStore(
       {
-        status: data.is_valid ? "valid" : "revoked",
+        status: certificate.is_valid ? "valid" : "revoked",
         certificate: {
-          certificate_number: data.certificate_number,
-          recipient_name: data.recipient_name,
-          course_title: data.course_title,
-          issue_date: data.issue_date,
-          grade: data.grade,
-          status: data.is_valid ? "valid" : "revoked",
+          certificate_number: certificate.certificate_number,
+          course_title: certificate.course_title,
+          issue_date: certificate.issue_date,
+          status: certificate.is_valid ? "valid" : "revoked",
         },
       },
       200
     )
   } catch (error) {
+    if (error instanceof RateLimitUnavailableError) {
+      const response = rateLimitUnavailableResponse()
+      response.headers.set("Cache-Control", "no-store")
+      return response
+    }
     console.error("Certificate verification request failed:", error)
     return noStore(
       { error: "Certificate verification is temporarily unavailable." },

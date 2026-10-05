@@ -10,10 +10,8 @@ import {
 
 interface VerificationCertificate {
   certificate_number: string
-  recipient_name: string
   course_title: string
   issue_date: string
-  grade: string | null
   status: "valid" | "revoked"
 }
 
@@ -82,7 +80,7 @@ export default function VerifyPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <SectionHeader
           title="Verify TallGate Academy Certificates"
-          description="Employers and institutions can verify the authenticity of any certificate or credential issued by {siteConfig.companyName}."
+          description="Employers and institutions can verify the authenticity of any certificate or credential issued by TallGate Academy."
         />
 
         <div className="card-base max-w-xl mx-auto space-y-6 border-white/10 bg-white/[0.03]">
@@ -180,15 +178,11 @@ function CertificateDetails({
   return (
     <div className="grid grid-cols-2 gap-3 text-xs pt-2 border-t border-white/10">
       <Detail label="Certificate Number" value={certificate.certificate_number} />
-      <Detail label="Recipient Name" value={certificate.recipient_name} />
       <Detail label="Course / Track" value={certificate.course_title} />
       <Detail
         label="Issue Date"
         value={new Date(`${certificate.issue_date}T00:00:00`).toLocaleDateString()}
       />
-      {certificate.grade && (
-        <Detail label="Grade / Standing" value={certificate.grade} />
-      )}
       <Detail label="Status" value={certificate.status === "valid" ? "Valid" : "Revoked"} />
     </div>
   )

@@ -40,6 +40,12 @@ const nextConfig = {
 };
 
 if (process.env.NODE_ENV === "production") {
+  if (
+    !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  ) {
+    console.warn("⚠️ Warning: Supabase public configuration is missing. Authentication and database-backed features will fail.");
+  }
   if (!process.env.RESEND_API_KEY) {
     console.warn("⚠️ Warning: RESEND_API_KEY is not configured. Emails will fail in production.");
   }
@@ -47,7 +53,7 @@ if (process.env.NODE_ENV === "production") {
     console.warn("⚠️ Warning: NEXT_PUBLIC_SITE_URL is missing or set to localhost. Certificate verification links may break.");
   }
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    console.warn("⚠️ Warning: SUPABASE_SERVICE_ROLE_KEY is missing. Admin user management will fail.");
+    console.warn("⚠️ Warning: SUPABASE_SERVICE_ROLE_KEY is missing. Admin actions, rate limiting, and public form submissions will fail.");
   }
 }
 

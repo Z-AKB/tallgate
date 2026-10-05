@@ -6,6 +6,7 @@ import QRCode from "qrcode"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { requireAdminApi } from "@/lib/auth/guards"
+import { readJsonObject } from "@/lib/api/request"
 import { renderCertificatePdf } from "@/lib/certificates/generateCertificatePdf"
 import type { Database } from "@/types/supabase"
 import { getErrorMessage, isNonEmptyString, isOneOf, isRecord } from "@/lib/utils"
@@ -102,12 +103,10 @@ export async function POST(req: NextRequest) {
     const admin = await requireAdminApi()
     if (admin.error) return admin.error
 
-    const body: unknown = await req.json()
-    if (!isRecord(body)) {
-      return NextResponse.json({ error: "A valid action payload is required." }, { status: 400 })
-    }
+    const parsed = await readJsonObject(req)
+    if (parsed.response) return parsed.response
 
-    const { action, payload } = body
+    const { action, payload } = parsed.data
     if (typeof action !== "string" || !action.trim()) {
       return NextResponse.json({ error: "Action is required" }, { status: 400 })
     }

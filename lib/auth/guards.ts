@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { redirect } from "next/navigation"
+import { cookies } from "next/headers"
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/server"
 import { uniqueRoles } from "@/lib/auth/roles"
 
@@ -19,6 +20,8 @@ export type CurrentUser = {
 }
 
 export async function getCurrentUser(): Promise<CurrentUser | null> {
+  await cookies()
+
   if (!isSupabaseConfigured()) {
     return null
   }

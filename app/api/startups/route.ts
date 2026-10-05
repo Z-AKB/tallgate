@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createClient, isSupabaseConfigured } from "@/lib/supabase/server"
+import { isSupabaseConfigured } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { isNonEmptyString, isOneOf } from "@/lib/utils"
 import {
   isNonEmptyText,
@@ -77,7 +78,7 @@ export async function POST(req: NextRequest) {
       return rateLimitResponse(900)
     }
 
-    const supabase = await createClient()
+    const supabase = createAdminClient()
 
     const { error: dbError } = await supabase.from("startup_applications").insert([
       {

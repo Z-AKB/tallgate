@@ -34,13 +34,17 @@ Before using the database-backed forms, learning content, or certificate registr
 4. `20261001000000_lesson_progress.sql`
 5. `20261002000000_certificate_storage_path.sql`
 6. `20261003000000_storage_buckets_and_grants.sql`
-7. `20261005000000_certificate_storage_policies.sql`
-8. `20261004000000_demo_certificate_seed.sql` (optional; seeds three `[DEMO]` certificates for testing `/verify`)
+7. `20261004000000_demo_certificate_seed.sql` (optional; seeds three `[DEMO]` certificates for testing `/verify`)
+8. `20261005000000_certificate_storage_policies.sql`
 9. `20261006000000_public_api_hardening.sql`
+10. `20261006010000_certificate_verification_rpc.sql`
+11. `20261007000000_rate_limit_and_enrollment_hardening.sql`
 
 Certificate PDFs are rendered server-side with `@react-pdf/renderer` and stored in the private `certificates` Storage bucket. `SUPABASE_SERVICE_ROLE_KEY` is required for issuance (upload) and for `GET /api/admin/certificates/[id]/download`, which issues a 5-minute signed URL to signed-in admins only.
 
-Public form endpoints also use a server-side Supabase rate-limit table. The limits are 5 contact requests, 3 consultation requests, 3 startup applications, or 5 enrollment inquiries per IP address per 15 minutes. The email endpoint requires an admin session and is limited to 20 sends per admin per hour. Production hosting must supply a trusted `x-real-ip` or `cf-connecting-ip` request header for IP-based limits to work.
+Public form endpoints also use a server-side Supabase rate-limit table. The limits are 5 contact requests, 3 consultation requests, 3 startup applications, or 5 enrollment inquiries per IP address per 15 minutes. Certificate verification is limited to 30 lookups per IP address per 15 minutes. The email endpoint requires an admin session and is limited to 20 sends per admin per hour. Production hosting must supply a trusted `x-real-ip` or `cf-connecting-ip` request header for IP-based limits to work.
+
+The latest hardening migration revokes direct client inserts into public intake tables and active course enrollments. Intake is accepted only through the validated, rate-limited application routes; course access must be granted by a trusted administrative process.
 
 For a new database, use the Supabase CLI to link the project, inspect migration status, and apply pending migrations with `supabase db push`. If using the SQL Editor instead, run each migration once in the order above and do not also push the same migrations through the CLI. If earlier migrations were applied manually, reconcile the CLI migration history before using `db push`; do not blindly rerun SQL against a database that already has those changes. The timestamped Phase 3 migrations are authoritative; do not apply the removed legacy `0001` / `0002` learning-hub migrations. The admin dashboard also requires the signed-in admin account to have the `admin` role in `user_roles`.
 
