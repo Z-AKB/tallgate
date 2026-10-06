@@ -3,6 +3,7 @@
 import React, { useState } from "react"
 import Link from "next/link"
 import { MockEnrollment } from "@/lib/data/adminMockData"
+import { formatDate } from "@/lib/utils"
 import {
   HiOutlineMagnifyingGlass,
   HiOutlineUserGroup,
@@ -141,7 +142,7 @@ export default function EnrollmentsClient({
                     </td>
 
                     <td className="px-6 py-4 text-slate-500 text-[11px]">
-                      {new Date(item.enrolled_at).toLocaleDateString()}
+                      {formatDate(item.enrolled_at)}
                     </td>
 
                     <td className="px-6 py-4 text-right">

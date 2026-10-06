@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
-import { getErrorMessage } from "@/lib/utils"
+import { formatShortDate, getErrorMessage } from "@/lib/utils"
 import { HiOutlineMagnifyingGlass, HiOutlinePlus, HiOutlineXMark } from "react-icons/hi2"
 
 type User = {
@@ -176,7 +176,7 @@ export default function UsersClient({
                       </select>
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-500">
-                      {new Date(user.created_at).toLocaleDateString()}
+                      {formatShortDate(user.created_at)}
                     </td>
                   </tr>
                 ))

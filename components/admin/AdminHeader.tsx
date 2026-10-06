@@ -27,6 +27,7 @@ interface AdminHeaderProps {
   subtitle?: string
   initialName?: string
   initialEmail?: string
+  initialPhone?: string
 }
 
 const getBreadcrumbTitle = (pathname: string) => {
@@ -40,7 +41,13 @@ const getBreadcrumbTitle = (pathname: string) => {
   return "Admin Panel"
 }
 
-export default function AdminHeader({ title, subtitle, initialName, initialEmail }: AdminHeaderProps) {
+export default function AdminHeader({
+  title,
+  subtitle,
+  initialName,
+  initialEmail,
+  initialPhone,
+}: AdminHeaderProps) {
   const pathname = usePathname()
   const router = useRouter()
   const pageTitle = title || getBreadcrumbTitle(pathname)
@@ -54,8 +61,8 @@ export default function AdminHeader({ title, subtitle, initialName, initialEmail
   const [profile, setProfile] = useState({
     name: initialName || "Admin Lead",
     email: initialEmail || siteConfig.supportEmail,
-    role: "Operations & Systems Lead",
-    phone: "",
+    role: "Administrator",
+    phone: initialPhone || "",
   })
 
   const handleSaveProfile = async (e: React.FormEvent) => {
@@ -125,7 +132,7 @@ export default function AdminHeader({ title, subtitle, initialName, initialEmail
 
             {/* Compact Page Title for tablet widths */}
             <div className="hidden sm:block lg:hidden min-w-0">
-              <h2 className="text-sm font-bold text-white tracking-tight truncate">
+              <h2 className="text-sm font-bold text-white tracking-tight break-words">
                 {pageTitle}
               </h2>
             </div>
@@ -259,7 +266,7 @@ export default function AdminHeader({ title, subtitle, initialName, initialEmail
                       <input
                         type="text"
                         value={profile.role}
-                        onChange={(e) => setProfile({ ...profile, role: e.target.value })}
+                        readOnly
                         className="w-full text-xs pl-9 pr-3 py-2.5 rounded-lg bg-slate-800 border border-slate-700 text-white focus:outline-none focus:border-brand-primary"
                       />
                     </div>

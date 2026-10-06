@@ -2,6 +2,7 @@
 
 import React, { useState } from "react"
 import { MockMessage } from "@/lib/data/adminMockData"
+import { formatDate } from "@/lib/utils"
 import {
   HiOutlineMagnifyingGlass,
   HiOutlineEnvelope,
@@ -122,8 +123,8 @@ export default function MessagesClient({
                 msg.status === "unread" ? "bg-indigo-50/30" : ""
               }`}
             >
-              <div className="space-y-1 max-w-2xl">
-                <div className="flex items-center gap-3">
+              <div className="min-w-0 w-full space-y-1 sm:max-w-2xl">
+                <div className="flex flex-wrap items-center gap-3">
                   {msg.status === "unread" ? (
                     <span className="w-2.5 h-2.5 rounded-full bg-brand-primary"></span>
                   ) : (
@@ -136,7 +137,7 @@ export default function MessagesClient({
                   >
                     {msg.full_name}
                   </span>
-                  <span className="text-xs text-slate-400">• {msg.email}</span>
+                  <span className="text-xs text-slate-400 break-all">• {msg.email}</span>
                 </div>
 
                 <p
@@ -147,7 +148,7 @@ export default function MessagesClient({
                   {msg.subject}
                 </p>
 
-                <p className="text-xs text-slate-500 line-clamp-1">{msg.message}</p>
+                <p className="text-xs text-slate-500 whitespace-pre-wrap break-words">{msg.message}</p>
               </div>
 
               <div className="flex items-center gap-3 sm:flex-col sm:items-end justify-between">
@@ -165,9 +166,7 @@ export default function MessagesClient({
                   {msg.status}
                 </span>
                 <span className="text-[11px] text-slate-400">
-                  {new Date(msg.created_at).toLocaleDateString("en-GB", {
-                    timeZone: "UTC",
-                  })}
+                  {formatDate(msg.created_at)}
                 </span>
               </div>
             </div>

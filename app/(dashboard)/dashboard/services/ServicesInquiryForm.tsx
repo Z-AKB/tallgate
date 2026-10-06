@@ -85,7 +85,10 @@ export default function ServicesInquiryForm({ contact }: { contact: InquiryConta
             </p>
           </div>
 
-          <Link href="/dashboard" className="btn-secondary text-xs self-start sm:self-auto">
+          <Link
+            href="/dashboard"
+            className="self-start rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-primary/30 sm:self-auto"
+          >
             ← Back to Overview
           </Link>
         </div>
@@ -109,7 +112,7 @@ export default function ServicesInquiryForm({ contact }: { contact: InquiryConta
                 <h3 className="text-base font-bold text-slate-900 leading-snug">
                   {service.title}
                 </h3>
-                <p className="text-xs text-slate-600 mt-2 line-clamp-3 leading-relaxed">
+                <p className="text-xs text-slate-600 mt-2 leading-relaxed">
                   {service.shortDescription}
                 </p>
               </div>
@@ -119,10 +122,10 @@ export default function ServicesInquiryForm({ contact }: { contact: InquiryConta
                   Key Deliverables
                 </p>
                 <ul className="space-y-1.5 text-xs text-slate-700">
-                  {service.deliverables.slice(0, 3).map((item, idx) => (
+                  {service.deliverables.map((item, idx) => (
                     <li key={idx} className="flex items-start gap-2">
                       <HiOutlineCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                      <span className="line-clamp-1">{item}</span>
+                      <span>{item}</span>
                     </li>
                   ))}
                 </ul>
@@ -132,7 +135,7 @@ export default function ServicesInquiryForm({ contact }: { contact: InquiryConta
             <div className="pt-4 mt-4 border-t border-slate-100">
               <button
                 onClick={() => handleServiceInquiry(service.title)}
-                className="btn-secondary w-full justify-center text-xs py-2"
+                className="inline-flex w-full items-center justify-center rounded-lg bg-brand-primary px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-primary/90 focus:outline-none focus:ring-2 focus:ring-brand-primary/30"
               >
                 Request Service Info
               </button>
@@ -169,7 +172,7 @@ export default function ServicesInquiryForm({ contact }: { contact: InquiryConta
                 </p>
                 <button
                   onClick={() => setSelectedService(null)}
-                  className="btn-primary text-xs mt-3"
+                  className="mt-3 inline-flex items-center justify-center rounded-lg bg-brand-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-primary/90 focus:outline-none focus:ring-2 focus:ring-brand-primary/30"
                 >
                   Back to Dashboard
                 </button>
@@ -198,12 +201,16 @@ export default function ServicesInquiryForm({ contact }: { contact: InquiryConta
                   <button
                     type="button"
                     onClick={() => setSelectedService(null)}
-                    className="btn-ghost text-xs"
+                    className="inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400/30"
                     disabled={loading}
                   >
                     Cancel
                   </button>
-                  <button type="submit" disabled={loading} className="btn-primary text-xs flex items-center gap-1.5 disabled:opacity-60">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-brand-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-primary/90 focus:outline-none focus:ring-2 focus:ring-brand-primary/30 disabled:opacity-60"
+                  >
                     <HiOutlinePaperAirplane className="w-3.5 h-3.5" />
                     <span>{loading ? "Submitting…" : "Submit Request"}</span>
                   </button>

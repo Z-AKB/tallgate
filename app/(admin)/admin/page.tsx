@@ -319,7 +319,7 @@ export default async function AdminOverviewPage() {
                     )}
                   </div>
                   <p className="text-xs font-medium text-brand-primary">{item.service_interest}</p>
-                  <p className="text-[11px] text-slate-500 line-clamp-1">{item.project_scope}</p>
+                  <p className="text-[11px] text-slate-500 break-words">{item.project_scope}</p>
                 </div>
 
                 <div className="flex items-center gap-3 sm:flex-col sm:items-end justify-between border-t sm:border-0 pt-2 sm:pt-0 border-slate-200/60">
@@ -365,7 +365,7 @@ export default async function AdminOverviewPage() {
                       {startup.stage}
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-500 line-clamp-1">{startup.industry}</p>
+                  <p className="text-[11px] text-slate-500 break-words">{startup.industry}</p>
                 </div>
               ))}
             </div>

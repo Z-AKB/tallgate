@@ -16,6 +16,10 @@ export function formatNaira(amount: number | string): string {
   }).format(numeric)
 }
 
+export function formatNumber(number: number): string {
+  return new Intl.NumberFormat('en-NG').format(number)
+}
+
 export function formatDate(dateString: string): string {
   if (!dateString) return ''
   const date = new Date(dateString)
@@ -23,7 +27,18 @@ export function formatDate(dateString: string): string {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
+    timeZone: 'UTC',
   }).format(date)
+}
+
+export function formatShortDate(dateString: string): string {
+  if (!dateString) return ''
+  return new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(dateString))
 }
 
 export function isRecord(value: unknown): value is Record<string, unknown> {

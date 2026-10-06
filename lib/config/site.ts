@@ -36,7 +36,7 @@ export const siteConfig = {
   social: {
     twitter: "https://x.com/tallgate_ng",
     twitterHandle: "@tallgate_ng",
-    instagram: "https://www.instagram.com/tallgate_computing?stkn=bW1iNjMwd2w5aGNw",
+    instagram: "https://www.instagram.com/tallgate_computing?stkn=bW1iNjMwdw2aGNw",
   },
 } as const
 

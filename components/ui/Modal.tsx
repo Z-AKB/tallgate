@@ -77,7 +77,8 @@ export default function Modal({
                   <button
                     type="button"
                     onClick={onClose}
-                    className="rounded-lg p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 focus:outline-none transition-colors ml-auto"
+                    aria-label="Close dialog"
+                    className="ml-auto flex min-h-11 min-w-11 items-center justify-center rounded-lg p-3 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 focus:outline-none"
                   >
                     <HiX className="w-5 h-5" />
                   </button>

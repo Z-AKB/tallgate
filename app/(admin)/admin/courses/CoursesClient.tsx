@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
+import { formatNumber } from "@/lib/utils"
 import Link from "next/link"
 import { MockCourse } from "@/lib/data/adminMockData"
 import {
@@ -140,13 +141,13 @@ export default function CoursesClient({
                   {course.category}
                 </span>
                 <span className="text-xs font-bold text-slate-900">
-                  ₦{course.price_ngn.toLocaleString()}
+                  ₦{formatNumber(course.price_ngn)}
                 </span>
               </div>
 
               <div>
                 <h3 className="text-base font-bold text-slate-900">{course.title}</h3>
-                <p className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed break-words">
                   {course.short_description}
                 </p>
               </div>

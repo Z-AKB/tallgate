@@ -252,13 +252,30 @@ export async function POST(req: NextRequest) {
             { status: 500 }
           )
         }
+        const hostname = baseUrl.hostname.toLowerCase()
+        const isLocalHostname =
+          hostname === "localhost" ||
+          hostname.endsWith(".localhost") ||
+          hostname.endsWith(".local") ||
+          hostname.endsWith(".test") ||
+          hostname === "0.0.0.0" ||
+          /^127(?:\.\d{1,3}){3}$/.test(hostname) ||
+          hostname === "[::1]"
         if (
-          !["http:", "https:"].includes(baseUrl.protocol) ||
-          (process.env.NODE_ENV === "production" && baseUrl.protocol !== "https:")
+          baseUrl.protocol !== "https:" ||
+          isLocalHostname ||
+          baseUrl.username ||
+          baseUrl.password ||
+          baseUrl.pathname !== "/" ||
+          baseUrl.search ||
+          baseUrl.hash
         ) {
           return NextResponse.json(
-            { error: "NEXT_PUBLIC_SITE_URL must use HTTPS in production." },
-            { status: 500 }
+            {
+              error:
+                "NEXT_PUBLIC_SITE_URL must be a public HTTPS origin, not localhost or a development URL.",
+            },
+            { status: 503 }
           )
         }
 

@@ -2,6 +2,7 @@
 
 import React, { useState } from "react"
 import { MockMessage } from "@/lib/data/adminMockData"
+import { formatDate } from "@/lib/utils"
 import {
   HiOutlineMagnifyingGlass,
   HiOutlineEnvelope,
@@ -163,7 +164,7 @@ export default function MessagesClient({
                   {msg.status}
                 </span>
                 <span className="text-[11px] text-slate-400">
-                  {new Date(msg.created_at).toLocaleDateString()}
+                  {formatDate(msg.created_at)}
                 </span>
               </div>
             </div>

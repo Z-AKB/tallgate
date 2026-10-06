@@ -102,7 +102,10 @@ export default function CourseEnrollModal({ isOpen, onClose, course }: CourseEnr
               <FaWhatsapp className="w-4 h-4" />
               <span>Connect with Admissions on WhatsApp</span>
             </a>
-            <button onClick={handleClose} className="btn-secondary w-full">
+            <button
+              onClick={handleClose}
+              className="min-h-11 w-full rounded-lg border border-slate-300 bg-slate-100 px-4 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
+            >
               Done
             </button>
           </div>
@@ -140,7 +143,7 @@ export default function CourseEnrollModal({ isOpen, onClose, course }: CourseEnr
               value={formData.fullName}
               onChange={handleChange}
               placeholder="e.g. Fatima Sani"
-              className="form-input text-sm py-2"
+              className="form-input min-h-11 text-sm py-2"
             />
           </div>
 
@@ -158,7 +161,7 @@ export default function CourseEnrollModal({ isOpen, onClose, course }: CourseEnr
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="fatima@gmail.com"
-                className="form-input text-sm py-2"
+                className="form-input min-h-11 text-sm py-2"
               />
             </div>
 
@@ -175,7 +178,7 @@ export default function CourseEnrollModal({ isOpen, onClose, course }: CourseEnr
                 value={formData.phone}
                 onChange={handleChange}
                 placeholder="+234 800 000 0000"
-                className="form-input text-sm py-2"
+                className="form-input min-h-11 text-sm py-2"
               />
             </div>
           </div>
@@ -190,7 +193,7 @@ export default function CourseEnrollModal({ isOpen, onClose, course }: CourseEnr
                 name="schedulePreference"
                 value={formData.schedulePreference}
                 onChange={handleChange}
-                className="form-select text-xs py-2"
+                className="form-select min-h-11 text-xs py-2"
               >
                 <option value="Weekday Morning (9:00 AM - 12:00 PM)">Weekday Morning (9am - 12pm)</option>
                 <option value="Weekday Afternoon (1:00 PM - 4:00 PM)">Weekday Afternoon (1pm - 4pm)</option>
@@ -208,7 +211,7 @@ export default function CourseEnrollModal({ isOpen, onClose, course }: CourseEnr
                 name="learningMode"
                 value={formData.learningMode}
                 onChange={handleChange}
-                className="form-select text-xs py-2"
+                className="form-select min-h-11 text-xs py-2"
               >
                 <option value={`In-Person Lab (${siteConfig.campus})`}>In-Person Lab ({siteConfig.campus})</option>
                 <option value="Virtual / Hybrid (Live Online)">Virtual / Hybrid (Live Online)</option>
@@ -218,13 +221,17 @@ export default function CourseEnrollModal({ isOpen, onClose, course }: CourseEnr
           </div>
 
           <div className="pt-2 flex justify-end gap-2">
-            <button type="button" onClick={handleClose} className="btn-secondary text-xs">
+            <button
+              type="button"
+              onClick={handleClose}
+              className="min-h-11 rounded-lg border border-slate-300 bg-slate-100 px-4 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
+            >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="btn-primary text-xs px-5 disabled:opacity-50"
+              className="btn-primary min-h-11 text-xs px-5 disabled:opacity-50"
             >
               {loading ? "Submitting..." : "Submit Enrollment"}
             </button>

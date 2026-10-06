@@ -9,6 +9,7 @@ import {
 } from '@react-pdf/renderer'
 import type { ReactElement } from 'react'
 import { siteConfig } from '@/lib/config/site'
+import { formatCertificateIssueDate } from '@/lib/certificates/date'
 
 export interface CertificateData {
   recipient_name: string
@@ -206,13 +207,7 @@ export function CertificateDocument({
 }
 
 function formatIssueDate(issueDate: string) {
-  const parsed = new Date(`${issueDate}T00:00:00`)
-  if (Number.isNaN(parsed.getTime())) return issueDate
-  return new Intl.DateTimeFormat('en-GB', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  }).format(parsed)
+  return formatCertificateIssueDate(issueDate, "long")
 }
 
 export async function renderCertificatePdf(data: CertificateData): Promise<Buffer> {

@@ -6,11 +6,80 @@ import { usePathname } from "next/navigation"
 import Image from "next/image"
 import Logo from "@/components/layout/Logo"
 import { siteConfig } from "@/lib/config/site"
+import { createClient } from "@/lib/supabase/client"
 import { HiMenu, HiX, HiChevronDown, HiOutlinePhone, HiOutlineMail, HiOutlineLocationMarker } from "react-icons/hi"
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
+  const [dashboardHref, setDashboardHref] = useState<"/admin" | "/dashboard" | "/login" | null>(null)
   const pathname = usePathname()
+
+  useEffect(() => {
+    const supabase = createClient()
+    let isMounted = true
+    let receivedAuthEvent = false
+    let roleLookupId = 0
+
+    const updateDashboardHref = (userId: string | null) => {
+      const lookupId = ++roleLookupId
+      if (!userId) {
+        setDashboardHref("/login")
+        return
+      }
+
+      setDashboardHref(null)
+      void Promise.resolve().then(async () => {
+        const { data, error } = await supabase
+          .from("user_roles")
+          .select("roles(name)")
+          .eq("user_id", userId)
+
+        if (!isMounted || lookupId !== roleLookupId) return
+        if (error) {
+          console.error("Unable to resolve public-site dashboard destination:", error)
+          setDashboardHref("/dashboard")
+          return
+        }
+
+        const isAdmin = (data ?? []).some((assignment) => assignment.roles?.name === "admin")
+        setDashboardHref(isAdmin ? "/admin" : "/dashboard")
+      })
+    }
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      receivedAuthEvent = true
+      if (!isMounted) return
+      setIsAuthenticated(Boolean(session?.user))
+      updateDashboardHref(session?.user.id ?? null)
+    })
+
+    void supabase.auth
+      .getUser()
+      .then(({ data, error }) => {
+        if (!isMounted || receivedAuthEvent) return
+        if (error && error.name !== "AuthSessionMissingError") {
+          console.error("Unable to determine public-site auth state:", error)
+        }
+        const user = error ? null : data.user
+        setIsAuthenticated(Boolean(user))
+        updateDashboardHref(user?.id ?? null)
+      })
+      .catch((error: unknown) => {
+        if (!isMounted || receivedAuthEvent) return
+        console.error("Unable to determine public-site auth state:", error)
+        setIsAuthenticated(false)
+        updateDashboardHref(null)
+      })
+
+    return () => {
+      isMounted = false
+      roleLookupId += 1
+      subscription.unsubscribe()
+    }
+  }, [])
 
   useEffect(() => {
     if (!mobileMenuOpen) return
@@ -96,13 +165,17 @@ export default function Navbar() {
 
           {/* Desktop Right CTA */}
           <div className="hidden md:flex items-center space-x-3">
-            <Link
-              href="/login"
-              prefetch={true}
-              className="text-sm font-medium text-slate-300 hover:text-white px-3 py-2 transition-colors"
-            >
-              Sign In
-            </Link>
+            {dashboardHref === null ? (
+              <span className="w-16" aria-hidden="true" />
+            ) : (
+              <Link
+                href={dashboardHref}
+                prefetch={true}
+                className="text-sm font-medium text-slate-300 hover:text-white px-3 py-2 transition-colors"
+              >
+                {isAuthenticated ? "Dashboard" : "Sign In"}
+              </Link>
+            )}
             <Link
               href="/consultation"
               prefetch={true}
@@ -175,14 +248,16 @@ export default function Navbar() {
             >
               Book Business Consultation
             </Link>
-            <Link
-              href="/login"
-              prefetch={true}
-              onClick={() => setMobileMenuOpen(false)}
-              className="btn-secondary w-full justify-center"
-            >
-              Portal Sign In
-            </Link>
+            {isAuthenticated !== null && dashboardHref !== null && (
+              <Link
+                href={dashboardHref}
+                prefetch={true}
+                onClick={() => setMobileMenuOpen(false)}
+                className="btn-secondary w-full justify-center"
+              >
+                {isAuthenticated ? "Open Dashboard" : "Portal Sign In"}
+              </Link>
+            )}
             <div className="pt-2 text-xs text-slate-400 space-y-1">
               <p>📍 {siteConfig.address.short}</p>
               <p>📞 {siteConfig.phone.display}</p>

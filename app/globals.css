@@ -21,6 +21,17 @@
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
+  input,
+  textarea,
+  select {
+    @apply text-slate-900;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    @apply text-slate-400 opacity-100;
+  }
+
   h1, h2, h3, h4, h5, h6 {
     @apply font-semibold text-slate-900;
     line-height: 1.3;

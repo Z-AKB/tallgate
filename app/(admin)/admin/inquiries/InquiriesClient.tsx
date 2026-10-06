@@ -2,6 +2,7 @@
 
 import React, { useState } from "react"
 import { MockConsultation } from "@/lib/data/adminMockData"
+import { formatDate } from "@/lib/utils"
 import {
   HiOutlineMagnifyingGlass,
   HiOutlineFunnel,
@@ -153,9 +154,9 @@ export default function InquiriesClient({
                       </div>
                     </td>
 
-                    <td className="px-6 py-4 max-w-xs">
+                    <td className="px-6 py-4">
                       <span className="font-bold text-brand-primary block">{item.service_interest}</span>
-                      <p className="text-slate-500 text-[11px] mt-0.5 line-clamp-2">{item.project_scope}</p>
+                      <p className="text-slate-500 text-[11px] mt-0.5 break-words">{item.project_scope}</p>
                     </td>
 
                     <td className="px-6 py-4">
@@ -185,11 +186,7 @@ export default function InquiriesClient({
                     </td>
 
                     <td className="px-6 py-4 text-slate-500 text-[11px]">
-                      {new Date(item.created_at).toLocaleDateString(undefined, {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
+                      {formatDate(item.created_at)}
                     </td>
 
                     <td className="px-6 py-4 text-right">

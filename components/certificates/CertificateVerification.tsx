@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from "react"
 import SectionHeader from "@/components/ui/SectionHeader"
+import { formatCertificateIssueDate } from "@/lib/certificates/date"
 import {
   HiCheckCircle,
   HiOutlineSearch,
@@ -16,7 +17,7 @@ interface VerificationCertificate {
 }
 
 type LookupState = "idle" | "loading" | "valid" | "revoked" | "not_found" | "error"
-type VerificationVariant = "public" | "dashboard"
+type VerificationVariant = "public" | "dashboard" | "admin"
 
 export default function CertificateVerification({
   variant = "public",
@@ -27,11 +28,16 @@ export default function CertificateVerification({
   const [certificate, setCertificate] = useState<VerificationCertificate | null>(null)
   const [state, setState] = useState<LookupState>("idle")
   const [errorMessage, setErrorMessage] = useState("")
-  const isDashboard = variant === "dashboard"
+  const isDashboard = variant !== "public"
 
   const verifyCode = useCallback(async (rawCode: string) => {
     const normalizedCode = rawCode.trim().toUpperCase()
-    if (!normalizedCode) return
+    if (!normalizedCode) {
+      setCertificate(null)
+      setErrorMessage("Enter a certificate verification code.")
+      setState("error")
+      return
+    }
 
     setCode(normalizedCode)
     setCertificate(null)
@@ -87,10 +93,14 @@ export default function CertificateVerification({
         {isDashboard ? (
           <div className="max-w-3xl mb-8">
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-              Verify Certificate
+              {variant === "admin"
+                ? "Certificate Verification"
+                : "Verify Certificate"}
             </h1>
             <p className="text-sm text-slate-500 mt-1">
-              Check the authenticity and current status of a TallGate Academy certificate.
+              {variant === "admin"
+                ? "Look up a certificate by its verification code and confirm its current status."
+                : "Check the authenticity and current status of a TallGate Academy certificate."}
             </p>
           </div>
         ) : (
@@ -261,7 +271,7 @@ function CertificateDetails({
       <Detail label="Course / Track" value={certificate.course_title} variant={variant} />
       <Detail
         label="Issue Date"
-        value={new Date(`${certificate.issue_date}T00:00:00`).toLocaleDateString()}
+        value={formatCertificateIssueDate(certificate.issue_date)}
         variant={variant}
       />
       <Detail

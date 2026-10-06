@@ -5,6 +5,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import Logo from "@/components/layout/Logo"
 import SignOutButton from "@/components/auth/SignOutButton"
+import { getPortalPresentation } from "@/lib/auth/roles"
 import {
   HiOutlineSquares2X2,
   HiOutlineAcademicCap,
@@ -18,16 +19,17 @@ import {
 type UserDashboardHeaderProps = {
   displayName: string
   email: string
-  isAdmin?: boolean
+  roles: string[]
 }
 
 export default function UserDashboardHeader({
   displayName,
   email,
-  isAdmin = false,
+  roles,
 }: UserDashboardHeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const pathname = usePathname()
+  const { isAdmin, isLearner, portalLabel } = getPortalPresentation(roles)
   const initials = displayName
     .split(" ")
     .map((part) => part[0])
@@ -41,11 +43,15 @@ export default function UserDashboardHeader({
       href: "/dashboard",
       icon: HiOutlineSquares2X2,
     },
-    {
-      name: "More Courses",
-      href: "/dashboard/courses",
-      icon: HiOutlineAcademicCap,
-    },
+    ...(isLearner
+      ? [
+          {
+            name: "More Courses",
+            href: "/dashboard/courses",
+            icon: HiOutlineAcademicCap,
+          },
+        ]
+      : []),
     {
       name: "Our Other Services",
       href: "/dashboard/services",
@@ -71,7 +77,7 @@ export default function UserDashboardHeader({
             <Logo variant="light" href="/dashboard" />
             <div className="h-6 w-px bg-white/15 hidden sm:block" />
             <span className="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-[#202DB8]/30 text-indigo-100 border border-[#202DB8]/50 tracking-wide uppercase">
-              Student Portal
+              {portalLabel}
             </span>
           </div>
 
@@ -127,7 +133,7 @@ export default function UserDashboardHeader({
 
           <div className="flex md:hidden items-center gap-2">
             <span className="text-[10px] font-semibold bg-[#202DB8]/30 text-indigo-100 border border-[#202DB8]/50 px-2 py-0.5 rounded">
-              Portal
+              {portalLabel.replace(" Portal", "")}
             </span>
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}

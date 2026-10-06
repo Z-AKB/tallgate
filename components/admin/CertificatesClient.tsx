@@ -4,6 +4,7 @@ import React, { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { AdminCertificate } from "@/lib/data/adminRowMappers"
+import { formatCertificateIssueDate } from "@/lib/certificates/date"
 import {
   HiOutlineMagnifyingGlass,
   HiOutlineIdentification,
@@ -273,7 +274,7 @@ export default function CertificatesClient({
                     </td>
 
                     <td className="px-6 py-4 text-slate-500 text-[11px]">
-                      {new Date(cert.issue_date).toLocaleDateString()}
+                      {formatCertificateIssueDate(cert.issue_date)}
                     </td>
 
                     <td className="px-6 py-4">
@@ -309,9 +310,7 @@ export default function CertificatesClient({
                           </Link>
                         )}
                         <Link
-                          href={`/verify?code=${encodeURIComponent(cert.verification_code)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                          href={`/admin/verify?code=${encodeURIComponent(cert.verification_code)}`}
                           className="inline-flex items-center gap-1 text-xs font-semibold text-brand-primary hover:underline"
                         >
                           <span>Verify Lookup</span>

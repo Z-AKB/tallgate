@@ -81,9 +81,6 @@ export default function AboutPage() {
 <h1 className="text-3xl sm:text-5xl font-bold text-white tracking-tight leading-[1.1]">
               {siteConfig.tagline}
             </h1>
-            <p className="text-base sm:text-xl text-slate-200 leading-relaxed font-normal">
-              At <strong className="text-white">{siteConfig.companyName.toUpperCase()}</strong>, we believe that every business deserves the opportunity to grow, compete, and succeed in the digital economy. Through innovation, technology, and empowerment, we are building pathways that connect businesses to opportunities and people to possibilities.
-            </p>
             <div className="pt-4 space-y-4 text-slate-200">
               <p>TALLGATE LIMITED is a forward-thinking hybrid technology and service company dedicated to helping small and medium-sized businesses establish, strengthen, and scale their digital presence. We provide affordable, practical, and results-driven digital solutions that enable businesses to compete effectively in an increasingly digital economy.</p>
               <p>Founded on the belief that every business deserves access to modern digital tools, TALLGATE bridges the gap between traditional business operations and digital transformation. Through a combination of technology, strategic support, and skilled talent, we help businesses improve visibility, attract customers, increase sales, and achieve sustainable growth.</p>
@@ -265,12 +262,12 @@ export default function AboutPage() {
           <div className="card-base bg-white/[0.03] border border-white/10 p-6 space-y-4">
             <h3 className="text-lg font-bold text-white">Core Values</h3>
             <ol className="space-y-2 text-sm text-slate-200">
-              <li>1. Innovation</li>
-              <li>2. Excellence</li>
-              <li>3. Integrity</li>
-              <li>4. Empowerment</li>
-              <li>5. Customer Success</li>
-              <li>6. Collaboration</li>
+              <li><strong>Innovation</strong> — We continuously explore new technologies and creative approaches to solve business challenges.</li>
+              <li><strong>Excellence</strong> — We are committed to delivering high-quality services and measurable results.</li>
+              <li><strong>Integrity</strong> — We build trust through transparency, professionalism, and ethical business practices.</li>
+              <li><strong>Empowerment</strong> — We create opportunities for businesses, students, and communities to grow and thrive.</li>
+              <li><strong>Customer Success</strong> — Our clients&apos; success is the foundation of our success.</li>
+              <li><strong>Collaboration</strong> — We believe that strong partnerships drive sustainable growth and innovation.</li>
             </ol>
           </div>
         </div>

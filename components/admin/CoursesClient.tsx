@@ -3,6 +3,7 @@
 import React, { useState } from "react"
 import Link from "next/link"
 import { MockCourse } from "@/lib/data/adminMockData"
+import { formatNumber } from "@/lib/utils"
 import {
   HiOutlineMagnifyingGlass,
   HiOutlineStar,
@@ -136,7 +137,7 @@ export default function CoursesClient({
                   {course.category}
                 </span>
                 <span className="text-xs font-bold text-slate-900">
-                  ₦{course.price_ngn.toLocaleString()}
+                  ₦{formatNumber(course.price_ngn)}
                 </span>
               </div>
 
