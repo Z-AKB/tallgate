@@ -19,6 +19,7 @@ import {
   HiOutlineArrowRightOnRectangle,
   HiOutlineXMark,
   HiOutlineUsers,
+  HiOutlineBanknotes,
 } from "react-icons/hi2"
 
 interface NavItem {
@@ -28,16 +29,39 @@ interface NavItem {
   badge?: string
 }
 
-const navItems: NavItem[] = [
-  { name: "Overview", href: "/admin", icon: HiOutlineSquares2X2 },
-  { name: "Consultation Queue", href: "/admin/inquiries", icon: HiOutlineInboxStack, badge: "Leads" },
-  { name: "Startup Applications", href: "/admin/startups", icon: HiOutlineRocketLaunch, badge: "Hub" },
-  { name: "Course Catalog", href: "/admin/courses", icon: HiOutlineAcademicCap },
-  { name: "Materials & Live Classes", href: "/admin/course-content", icon: HiOutlineDocumentText },
-  { name: "Student Enrollments", href: "/admin/enrollments", icon: HiOutlineUserGroup },
-  { name: "Certificate Registry", href: "/admin/certificates", icon: HiOutlineIdentification },
-  { name: "Users & Roles", href: "/admin/users", icon: HiOutlineUsers },
-  { name: "General Inquiries", href: "/admin/messages", icon: HiOutlineChatBubbleLeftRight },
+interface NavGroup {
+  label: string
+  items: NavItem[]
+}
+
+// Groups are declared explicitly rather than sliced by index so that adding a
+// page cannot silently move an item into the wrong section.
+const navGroups: NavGroup[] = [
+  {
+    label: "Operations & Intake",
+    items: [
+      { name: "Overview", href: "/admin", icon: HiOutlineSquares2X2 },
+      { name: "Consultation Queue", href: "/admin/inquiries", icon: HiOutlineInboxStack, badge: "Leads" },
+      { name: "Startup Applications", href: "/admin/startups", icon: HiOutlineRocketLaunch, badge: "Hub" },
+    ],
+  },
+  {
+    label: "Academy & Credentials",
+    items: [
+      { name: "Course Catalog", href: "/admin/courses", icon: HiOutlineAcademicCap },
+      { name: "Materials & Live Classes", href: "/admin/course-content", icon: HiOutlineDocumentText },
+      { name: "Student Enrollments", href: "/admin/enrollments", icon: HiOutlineUserGroup },
+      { name: "Payment Requests", href: "/admin/payments", icon: HiOutlineBanknotes },
+      { name: "Certificate Registry", href: "/admin/certificates", icon: HiOutlineIdentification },
+    ],
+  },
+  {
+    label: "Communication",
+    items: [
+      { name: "Users & Roles", href: "/admin/users", icon: HiOutlineUsers },
+      { name: "General Inquiries", href: "/admin/messages", icon: HiOutlineChatBubbleLeftRight },
+    ],
+  },
 ]
 
 export default function AdminSidebar() {
@@ -75,103 +99,47 @@ export default function AdminSidebar() {
 
         {/* Navigation Links */}
         <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6">
-          <div>
-            <span className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-300">
-              Operations & Intake
-            </span>
-            <nav className="mt-2 space-y-1">
-              {navItems.slice(0, 3).map((item) => {
-                const isActive = pathname === item.href
-                const Icon = item.icon
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    onClick={() => setMobileOpen(false)}
-                    className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 ${
-                      isActive
-                        ? "bg-brand-primary text-white shadow-md shadow-brand-primary/25"
-                        : "text-slate-300 hover:text-white hover:bg-white/[0.06]"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Icon className={`w-5 h-5 ${isActive ? "text-white" : "text-slate-400"}`} />
-                      <span>{item.name}</span>
-                    </div>
-                    {item.badge && (
-                      <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
-                          isActive
-                            ? "bg-white/20 text-white"
-                            : "bg-slate-800 text-slate-300 border border-slate-700/50"
-                        }`}
-                      >
-                        {item.badge}
-                      </span>
-                    )}
-                  </Link>
-                )
-              })}
-            </nav>
-          </div>
-
-          <div>
-            <span className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-300">
-              Academy & Credentials
-            </span>
-            <nav className="mt-2 space-y-1">
-              {navItems.slice(3, 7).map((item) => {
-                const isActive = pathname === item.href
-                const Icon = item.icon
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    onClick={() => setMobileOpen(false)}
-                    className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 ${
-                      isActive
-                        ? "bg-brand-primary text-white shadow-md shadow-brand-primary/25"
-                        : "text-slate-300 hover:text-white hover:bg-white/[0.06]"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Icon className={`w-5 h-5 ${isActive ? "text-white" : "text-slate-400"}`} />
-                      <span>{item.name}</span>
-                    </div>
-                  </Link>
-                )
-              })}
-            </nav>
-          </div>
-
-          <div>
-            <span className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-300">
-              Communication
-            </span>
-            <nav className="mt-2 space-y-1">
-              {navItems.slice(7).map((item) => {
-                const isActive = pathname === item.href
-                const Icon = item.icon
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    onClick={() => setMobileOpen(false)}
-                    className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 ${
-                      isActive
-                        ? "bg-brand-primary text-white shadow-md shadow-brand-primary/25"
-                        : "text-slate-300 hover:text-white hover:bg-white/[0.06]"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Icon className={`w-5 h-5 ${isActive ? "text-white" : "text-slate-400"}`} />
-                      <span>{item.name}</span>
-                    </div>
-                  </Link>
-                )
-              })}
-            </nav>
-          </div>
+          {navGroups.map((group) => (
+            <div key={group.label}>
+              <span className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-300">
+                {group.label}
+              </span>
+              <nav className="mt-2 space-y-1">
+                {group.items.map((item) => {
+                  const isActive = pathname === item.href
+                  const Icon = item.icon
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      onClick={() => setMobileOpen(false)}
+                      className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 ${
+                        isActive
+                          ? "bg-brand-primary text-white shadow-md shadow-brand-primary/25"
+                          : "text-slate-300 hover:text-white hover:bg-white/[0.06]"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon className={`w-5 h-5 ${isActive ? "text-white" : "text-slate-400"}`} />
+                        <span>{item.name}</span>
+                      </div>
+                      {item.badge && (
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                            isActive
+                              ? "bg-white/20 text-white"
+                              : "bg-slate-800 text-slate-300 border border-slate-700/50"
+                          }`}
+                        >
+                          {item.badge}
+                        </span>
+                      )}
+                    </Link>
+                  )
+                })}
+              </nav>
+            </div>
+          ))}
         </div>
 
         {/* Footer Shortcut to Live App */}

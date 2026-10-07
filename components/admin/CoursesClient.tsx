@@ -3,81 +3,168 @@
 import React, { useState } from "react"
 import Link from "next/link"
 import { MockCourse } from "@/lib/data/adminMockData"
-import { formatNumber } from "@/lib/utils"
+import { formatNumber, getErrorMessage } from "@/lib/utils"
 import {
   HiOutlineMagnifyingGlass,
   HiOutlineStar,
   HiOutlineArrowTopRightOnSquare,
 } from "react-icons/hi2"
 
+type CourseAction = {
+  success: boolean
+  message?: string
+  error?: string
+}
+
+async function postCourseAction(action: string, payload: Record<string, unknown>) {
+  const res = await fetch("/api/admin/actions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action, payload }),
+  })
+  const data = (await res.json().catch(() => null)) as CourseAction | null
+  if (!res.ok) throw new Error(getErrorMessage(data, "The change could not be saved."))
+}
+
 export default function CoursesClient({
   initialCourses,
+  knownDomains,
 }: {
   initialCourses: MockCourse[]
+  knownDomains: string[]
 }) {
   const [courses, setCourses] = useState<MockCourse[]>(initialCourses)
   const [searchQuery, setSearchQuery] = useState("")
-  const [categoryFilter, setCategoryFilter] = useState("all")
+  const [domainFilter, setDomainFilter] = useState("all")
   const [isUpdating, setIsUpdating] = useState<string | null>(null)
+  const [domainDrafts, setDomainDrafts] = useState<Record<string, string>>(() =>
+    Object.fromEntries(initialCourses.map((course) => [course.id, course.category]))
+  )
+  const [savingDomainId, setSavingDomainId] = useState<string | null>(null)
+  const [notice, setNotice] = useState("")
+  const [error, setError] = useState("")
 
-  const categories = Array.from(new Set(courses.map((c) => c.category)))
+  const observedDomains = Array.from(
+    new Set(courses.map((course) => course.category).filter((category) => category.trim()))
+  )
+  const domainOptions = Array.from(new Set([...knownDomains, ...observedDomains])).sort((a, b) =>
+    a.localeCompare(b)
+  )
 
-  const filteredCourses = courses.filter((c) => {
+  const filteredCourses = courses.filter((course) => {
     const matchesSearch =
-      c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.short_description.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesCategory = categoryFilter === "all" || c.category === categoryFilter
-    return matchesSearch && matchesCategory
+      course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      course.short_description.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesDomain = domainFilter === "all" || course.category === domainFilter
+    return matchesSearch && matchesDomain
   })
 
-  const togglePublish = async (course: MockCourse) => {
-    const nextState = !course.is_published
-    setIsUpdating(course.id)
-    setCourses((prev) =>
-      prev.map((c) => (c.id === course.id ? { ...c, is_published: nextState } : c))
-    )
+  const groupedCourses = (() => {
+    if (domainFilter !== "all") {
+      return [{ domain: domainFilter, courses: filteredCourses }]
+    }
+    const buckets = new Map<string, MockCourse[]>()
+    for (const course of filteredCourses) {
+      const domain = course.category.trim() || "Unassigned"
+      const bucket = buckets.get(domain)
+      if (bucket) bucket.push(course)
+      else buckets.set(domain, [course])
+    }
+    return domainOptions
+      .filter((domain) => buckets.has(domain))
+      .map((domain) => ({ domain, courses: buckets.get(domain) ?? [] }))
+      .concat(
+        Array.from(buckets.entries())
+          .filter(([domain]) => !domainOptions.includes(domain))
+          .map(([domain, grouped]) => ({ domain, courses: grouped }))
+      )
+  })()
 
+  const applyCourseUpdate = (courseId: string, patch: Partial<MockCourse>) => {
+    setCourses((prev) => prev.map((c) => (c.id === courseId ? { ...c, ...patch } : c)))
+  }
+
+  const runToggle = async (
+    course: MockCourse,
+    action: "toggle_course_publish" | "toggle_course_popular",
+    patch: Partial<MockCourse>,
+    revert: Partial<MockCourse>
+  ) => {
+    setIsUpdating(course.id)
+    setError("")
+    setNotice("")
+    applyCourseUpdate(course.id, patch)
     try {
-      await fetch("/api/admin/actions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "toggle_course_publish",
-          payload: { id: course.id, is_published: nextState },
-        }),
-      })
+      await postCourseAction(action, { id: course.id, ...patch })
+      setNotice(
+        action === "toggle_course_publish"
+          ? `${course.title} is now ${patch.is_published ? "published" : "a draft"}.`
+          : `${course.title} is now ${patch.is_popular ? "featured" : "standard"}.`
+      )
     } catch (err) {
-      console.error("Error toggling course publish status:", err)
+      console.error(`Course action ${action} failed:`, err)
+      applyCourseUpdate(course.id, revert)
+      setError(getErrorMessage(err, "The course change could not be saved."))
     } finally {
       setIsUpdating(null)
     }
   }
 
-  const togglePopular = async (course: MockCourse) => {
-    const nextState = !course.is_popular
-    setIsUpdating(course.id)
-    setCourses((prev) =>
-      prev.map((c) => (c.id === course.id ? { ...c, is_popular: nextState } : c))
+  const togglePublish = (course: MockCourse) =>
+    runToggle(
+      course,
+      "toggle_course_publish",
+      { is_published: !course.is_published },
+      { is_published: course.is_published }
     )
 
+  const togglePopular = (course: MockCourse) =>
+    runToggle(
+      course,
+      "toggle_course_popular",
+      { is_popular: !course.is_popular },
+      { is_popular: course.is_popular }
+    )
+
+  const saveDomain = async (course: MockCourse) => {
+    const draft = (domainDrafts[course.id] ?? course.category).trim()
+    if (!draft) {
+      setError("Enter a domain name before saving.")
+      return
+    }
+    if (draft === course.category) return
+
+    setSavingDomainId(course.id)
+    setError("")
+    setNotice("")
     try {
-      await fetch("/api/admin/actions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "toggle_course_popular",
-          payload: { id: course.id, is_popular: nextState },
-        }),
-      })
+      await postCourseAction("update_course_domain", { id: course.id, category: draft })
+      applyCourseUpdate(course.id, { category: draft })
+      setNotice(`${course.title} moved to the ${draft} domain.`)
     } catch (err) {
-      console.error("Error toggling course popular status:", err)
+      console.error("Course domain update failed:", err)
+      setDomainDrafts((prev) => ({ ...prev, [course.id]: course.category }))
+      setError(getErrorMessage(err, "The domain could not be saved."))
     } finally {
-      setIsUpdating(null)
+      setSavingDomainId(null)
     }
   }
 
   return (
     <div className="space-y-6">
+      {(error || notice) && (
+        <p
+          role={error ? "alert" : "status"}
+          className={`rounded-xl border px-4 py-3 text-sm ${
+            error
+              ? "border-red-200 bg-red-50 text-red-800"
+              : "border-emerald-200 bg-emerald-50 text-emerald-800"
+          }`}
+        >
+          {error || notice}
+        </p>
+      )}
+
       {/* Control Header */}
       <div className="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-card space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -86,7 +173,7 @@ export default function CoursesClient({
               Academy Course Catalog & Curricula
             </h1>
             <p className="text-xs text-slate-500 mt-0.5">
-              Control course publication, spotlight popular tracks, and review curriculum pricing.
+              Assign each course to a domain, control publication, and jump to its lesson materials.
             </p>
           </div>
           <span className="text-xs font-bold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 self-start sm:self-auto">
@@ -108,15 +195,19 @@ export default function CoursesClient({
           </div>
 
           <div className="flex items-center gap-2">
+            <label htmlFor="domain-filter" className="text-xs font-semibold text-slate-500">
+              Domain
+            </label>
             <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
+              id="domain-filter"
+              value={domainFilter}
+              onChange={(e) => setDomainFilter(e.target.value)}
               className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200 focus:outline-none"
             >
               <option value="all">All Domains</option>
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
+              {domainOptions.map((domain) => (
+                <option key={domain} value={domain}>
+                  {domain} ({courses.filter((course) => course.category === domain).length})
                 </option>
               ))}
             </select>
@@ -124,84 +215,142 @@ export default function CoursesClient({
         </div>
       </div>
 
-      {/* Courses Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {filteredCourses.map((course) => (
-          <div
-            key={course.id}
-            className="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-card hover:border-slate-300 transition-all flex flex-col justify-between space-y-4"
-          >
-            <div className="space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-brand-light text-brand-primary border border-brand-primary/20">
-                  {course.category}
-                </span>
-                <span className="text-xs font-bold text-slate-900">
-                  ₦{formatNumber(course.price_ngn)}
-                </span>
-              </div>
+      <datalist id="course-domain-options">
+        {domainOptions.map((domain) => (
+          <option key={domain} value={domain} />
+        ))}
+      </datalist>
 
-              <div>
-                <h3 className="text-base font-bold text-slate-900">{course.title}</h3>
-                <p className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">
-                  {course.short_description}
-                </p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 pt-2 border-t border-slate-100">
-                <span>⏱ {course.duration}</span>
-                <span>•</span>
-                <span>🎓 {course.level}</span>
-                <span>•</span>
-                <span className="font-semibold text-slate-700">
-                  👥 {course.enrollment_count} Enrolled
-                </span>
-              </div>
+      {groupedCourses.length === 0 ? (
+        <div className="bg-white rounded-2xl p-8 border border-slate-200/90 shadow-card text-center text-sm text-slate-500">
+          No courses match the current search and domain filter.
+        </div>
+      ) : (
+        groupedCourses.map((group) => (
+          <div key={group.domain} className="space-y-4">
+            <div className="flex items-center gap-3">
+              <h2 className="text-xs font-bold uppercase tracking-widest text-slate-500">
+                {group.domain}
+              </h2>
+              <span className="text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200 rounded px-1.5 py-0.5">
+                {group.courses.length}
+              </span>
+              <div className="h-px flex-1 bg-slate-200" />
             </div>
 
-            {/* Admin Toggles & Public Link */}
-            <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                {/* Publish Toggle */}
-                <button
-                  onClick={() => togglePublish(course)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                    course.is_published
-                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
-                      : "bg-slate-100 text-slate-500 hover:bg-slate-200"
-                  }`}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {group.courses.map((course) => (
+                <div
+                  key={course.id}
+                  className="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-card hover:border-slate-300 transition-all flex flex-col justify-between space-y-4"
                 >
-                  {course.is_published ? "● Published" : "○ Draft"}
-                </button>
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-brand-primary">
+                        <span className="sr-only">Domain for {course.title}</span>
+                        <input
+                          list="course-domain-options"
+                          value={domainDrafts[course.id] ?? course.category}
+                          onChange={(e) =>
+                            setDomainDrafts((prev) => ({ ...prev, [course.id]: e.target.value }))
+                          }
+                          disabled={savingDomainId === course.id}
+                          maxLength={80}
+                          placeholder="Assign domain"
+                          className="w-36 rounded-md border border-brand-primary/20 bg-brand-light px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary disabled:opacity-60"
+                        />
+                        {(domainDrafts[course.id] ?? course.category).trim() !==
+                          course.category.trim() && (
+                          <button
+                            type="button"
+                            onClick={() => saveDomain(course)}
+                            disabled={savingDomainId === course.id}
+                            className="rounded bg-brand-primary px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white hover:opacity-90 disabled:opacity-50"
+                          >
+                            {savingDomainId === course.id ? "Saving" : "Save"}
+                          </button>
+                        )}
+                      </label>
+                      <span className="text-xs font-bold text-slate-900">
+                        ₦{formatNumber(course.price_ngn)}
+                      </span>
+                    </div>
 
-                {/* Popular Toggle */}
-                <button
-                  onClick={() => togglePopular(course)}
-                  className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
-                    course.is_popular
-                      ? "bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100"
-                      : "bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-600"
-                  }`}
-                  title="Spotlight on Landing / Hub"
-                >
-                  <HiOutlineStar className={`w-3.5 h-3.5 ${course.is_popular ? "fill-amber-500 text-amber-500" : ""}`} />
-                  <span>{course.is_popular ? "Featured" : "Standard"}</span>
-                </button>
-              </div>
+                    <div>
+                      <h3 className="text-base font-bold text-slate-900">{course.title}</h3>
+                      <p className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">
+                        {course.short_description}
+                      </p>
+                    </div>
 
-              <Link
-                href={`/learning-hub`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-xs font-semibold text-brand-primary hover:underline"
-              >
-                <span>Live Preview</span>
-                <HiOutlineArrowTopRightOnSquare className="w-3.5 h-3.5" />
-              </Link>
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 pt-2 border-t border-slate-100">
+                      <span>⏱ {course.duration}</span>
+                      <span>•</span>
+                      <span>🎓 {course.level}</span>
+                      <span>•</span>
+                      <span className="font-semibold text-slate-700">
+                        👥 {course.enrollment_count} Enrolled
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Admin Toggles & Links */}
+                  <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      {/* Publish Toggle */}
+                      <button
+                        onClick={() => togglePublish(course)}
+                        disabled={isUpdating === course.id}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-60 ${
+                          course.is_published
+                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
+                            : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                        }`}
+                      >
+                        {course.is_published ? "● Published" : "○ Draft"}
+                      </button>
+
+                      {/* Popular Toggle */}
+                      <button
+                        onClick={() => togglePopular(course)}
+                        disabled={isUpdating === course.id}
+                        className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 disabled:opacity-60 ${
+                          course.is_popular
+                            ? "bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100"
+                            : "bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-600"
+                        }`}
+                        title="Spotlight on Landing / Hub"
+                      >
+                        <HiOutlineStar className={`w-3.5 h-3.5 ${course.is_popular ? "fill-amber-500 text-amber-500" : ""}`} />
+                        <span>{course.is_popular ? "Featured" : "Standard"}</span>
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <Link
+                        href={`/admin/course-content?course=${course.id}`}
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-brand-primary"
+                      >
+                        <span>Materials</span>
+                        <HiOutlineArrowTopRightOnSquare className="h-3.5 w-3.5" />
+                      </Link>
+                      <Link
+                        href={`/learning-hub`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-brand-primary hover:underline"
+                      >
+                        <span>Live Preview</span>
+                        <HiOutlineArrowTopRightOnSquare className="h-3.5 w-3.5" />
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-        ))}
-      </div>
+        ))
+      )}
     </div>
   )
 }

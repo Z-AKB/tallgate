@@ -31,6 +31,7 @@ export default function UsersClient({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [roleError, setRoleError] = useState<string | null>(null)
+  const [pendingUserId, setPendingUserId] = useState<string | null>(null)
 
   const filteredUsers = users.filter((u) => {
     const matchesSearch =
@@ -65,8 +66,10 @@ export default function UsersClient({
   }
 
   const handleRoleChange = async (userId: string, newRole: string) => {
+    if (pendingUserId) return
     const previousUsers = [...users]
     setRoleError(null)
+    setPendingUserId(userId)
     setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u)))
     try {
       const res = await fetch("/api/admin/actions", {
@@ -77,7 +80,7 @@ export default function UsersClient({
           payload: { user_id: userId, role: newRole },
         }),
       })
-      const data = await res.json().catch(() => ({}))
+      const data = await res.json().catch(() => null)
       if (!res.ok) {
         throw new Error(
           getErrorMessage(data, `Failed to update role to ${newRole}.`)
@@ -86,6 +89,8 @@ export default function UsersClient({
     } catch (err: unknown) {
       setRoleError(getErrorMessage(err, "Failed to update role."))
       setUsers(previousUsers)
+    } finally {
+      setPendingUserId(null)
     }
   }
 
@@ -163,17 +168,24 @@ export default function UsersClient({
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <select
-                        value={user.role}
-                        onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                        className="text-xs px-2 py-1 rounded border border-slate-200 bg-white focus:outline-none focus:ring-1 focus:ring-brand-primary"
-                      >
-                        {availableRoles.map((r) => (
-                          <option key={r} value={r}>
-                            {r.charAt(0).toUpperCase() + r.slice(1)}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={user.role}
+                          onChange={(e) => handleRoleChange(user.id, e.target.value)}
+                          disabled={pendingUserId !== null}
+                          aria-label={`Role for ${user.full_name}`}
+                          className="text-xs px-2 py-1 rounded border border-slate-200 bg-white focus:outline-none focus:ring-1 focus:ring-brand-primary disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          {availableRoles.map((r) => (
+                            <option key={r} value={r}>
+                              {r.charAt(0).toUpperCase() + r.slice(1)}
+                            </option>
+                          ))}
+                        </select>
+                        {pendingUserId === user.id && (
+                          <span className="text-xs text-slate-400">Saving...</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-500">
                       {formatShortDate(user.created_at)}

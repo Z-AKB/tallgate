@@ -2,6 +2,7 @@ import React from "react"
 import Link from "next/link"
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/server"
 import { mockCourses, type MockCourse } from "@/lib/data/adminMockData"
+import { coursesData } from "@/lib/data/courses"
 import { toCourse } from "@/lib/data/adminRowMappers"
 import CoursesClient from "@/components/admin/CoursesClient"
 
@@ -9,6 +10,11 @@ export const metadata = {
   title: "Course Curriculum Management | TallGate Admin",
   description: "Author, publish, and maintain the Learning Hub course catalogue.",
 }
+
+// The public catalogue in lib/data/courses.ts is the platform's own list of
+// domains. Seeding the domain picker from it keeps the admin curriculum and
+// the Learning Hub aligned instead of inventing labels per screen.
+const knownDomains = Array.from(new Set(coursesData.map((course) => course.category)))
 
 export default async function AdminCoursesPage() {
   const supabase = await createClient()
@@ -59,7 +65,7 @@ export default async function AdminCoursesPage() {
           {dataWarning}
         </div>
       )}
-      <CoursesClient initialCourses={courses} />
+      <CoursesClient initialCourses={courses} knownDomains={knownDomains} />
     </div>
   )
 }

@@ -6,7 +6,7 @@ import QRCode from "qrcode"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { requireAdminApi } from "@/lib/auth/guards"
-import { readJsonObject } from "@/lib/api/request"
+import { readJsonObject, isValidEmailAddress, isNonEmptyText, isOptionalText } from "@/lib/api/request"
 import { renderCertificatePdf } from "@/lib/certificates/generateCertificatePdf"
 import type { Database } from "@/types/supabase"
 import { getErrorMessage, isNonEmptyString, isOneOf, isRecord } from "@/lib/utils"
@@ -23,10 +23,14 @@ type CourseUpdate = Database["public"]["Tables"]["courses"]["Update"]
 type CertificateUpdate = Database["public"]["Tables"]["certificates"]["Update"]
 type ContactMessageUpdate = Database["public"]["Tables"]["contact_messages"]["Update"]
 type CertificateInsert = Database["public"]["Tables"]["certificates"]["Insert"]
+type PaymentInsert = Database["public"]["Tables"]["payment_requests"]["Insert"]
+type PaymentUpdate = Database["public"]["Tables"]["payment_requests"]["Update"]
 
 type ConsultationStatus = Database["public"]["Tables"]["consultation_requests"]["Row"]["status"]
 type StartupApplicationStatus = Database["public"]["Tables"]["startup_applications"]["Row"]["status"]
 type MessageStatus = Database["public"]["Tables"]["contact_messages"]["Row"]["status"]
+type PaymentStatus = Database["public"]["Tables"]["payment_requests"]["Row"]["status"]
+type PaymentMethod = Database["public"]["Tables"]["payment_requests"]["Row"]["method"]
 
 const CONSULTATION_STATUSES: readonly ConsultationStatus[] = [
   "pending",
@@ -44,6 +48,9 @@ const STARTUP_APPLICATION_STATUSES: readonly StartupApplicationStatus[] = [
 ]
 
 const MESSAGE_STATUSES: readonly MessageStatus[] = ["unread", "read", "responded", "archived"]
+
+const PAYMENT_STATUSES: readonly PaymentStatus[] = ["pending", "confirmed", "declined", "refunded"]
+const PAYMENT_METHODS: readonly PaymentMethod[] = ["bank_transfer", "card", "cash", "other"]
 
 type CertificateRow = Database["public"]["Tables"]["certificates"]["Row"]
 
@@ -97,6 +104,79 @@ async function removeCertificateFile(
   if (error) {
     console.error(`Failed to remove orphaned certificate file ${storagePath}:`, error)
   }
+}
+
+type RoleAssignmentResult = { error: null; status?: undefined } | { error: string; status: 400 | 503 }
+
+/**
+ * Replaces a user's single role assignment without relying on an
+ * `on conflict (user_id)` target: the composite `unique(user_id, role_id)`
+ * constraint and the later `unique(user_id)` constraint make upserts either
+ * ambiguous or impossible on databases where the follow-up migration has not
+ * been applied. Reads, deletes and inserts explicitly instead so the write
+ * succeeds on both schema revisions and collapses any duplicate assignments
+ * left behind by older upserts.
+ */
+async function assignUserRole(
+  adminSupabase: ReturnType<typeof createAdminClient>,
+  userId: string,
+  roleId: string
+): Promise<RoleAssignmentResult> {
+  const { data: profile, error: profileError } = await adminSupabase
+    .from("profiles")
+    .select("id")
+    .eq("id", userId)
+    .maybeSingle()
+
+  if (profileError) {
+    console.error("Role assignment profile lookup failed:", profileError)
+    return { error: profileError.message, status: 503 }
+  }
+  if (!profile) {
+    return { error: "This user's profile no longer exists, so the role cannot be assigned.", status: 400 }
+  }
+
+  const { data: assignments, error: readError } = await adminSupabase
+    .from("user_roles")
+    .select("role_id")
+    .eq("user_id", userId)
+
+  if (readError) {
+    console.error("Role assignment lookup failed:", readError)
+    return { error: readError.message, status: 503 }
+  }
+
+  const existing = assignments ?? []
+  if (existing.length === 1 && existing[0].role_id === roleId) {
+    return { error: null }
+  }
+
+  if (existing.length > 0) {
+    const { error: deleteError } = await adminSupabase.from("user_roles").delete().eq("user_id", userId)
+    if (deleteError) {
+      console.error("Role assignment cleanup failed:", deleteError)
+      return { error: deleteError.message, status: 503 }
+    }
+  }
+
+  const { error: insertError } = await adminSupabase
+    .from("user_roles")
+    .insert({ user_id: userId, role_id: roleId })
+
+  if (insertError) {
+    console.error("Role assignment insert failed:", insertError)
+    if (existing.length > 0) {
+      const { error: restoreError } = await adminSupabase.from("user_roles").insert(
+        existing.map((row) => ({ user_id: userId, role_id: row.role_id }))
+      )
+      if (restoreError) {
+        console.error("Failed to restore the previous role assignment:", restoreError)
+      }
+    }
+    return { error: insertError.message, status: 503 }
+  }
+
+  return { error: null }
 }
 
 export async function POST(req: NextRequest) {
@@ -177,10 +257,21 @@ export async function POST(req: NextRequest) {
 
         const updateData: CourseUpdate = { is_published }
 
-        const { error } = await supabase.from("courses").update(updateData).eq("id", id)
+        const { data: updated, error } = await supabase
+          .from("courses")
+          .update(updateData)
+          .eq("id", id)
+          .select("id")
+          .maybeSingle()
 
         if (error) {
           return NextResponse.json({ error: error.message }, { status: 400 })
+        }
+        if (!updated) {
+          return NextResponse.json(
+            { error: "Course status was not changed: the update matched no rows. Check that the admin course update migration has been applied." },
+            { status: 409 }
+          )
         }
         return NextResponse.json({ success: true, message: "Course status updated" })
       }
@@ -196,12 +287,56 @@ export async function POST(req: NextRequest) {
 
         const updateData: CourseUpdate = { is_popular }
 
-        const { error } = await supabase.from("courses").update(updateData).eq("id", id)
+        const { data: updated, error } = await supabase
+          .from("courses")
+          .update(updateData)
+          .eq("id", id)
+          .select("id")
+          .maybeSingle()
 
         if (error) {
           return NextResponse.json({ error: error.message }, { status: 400 })
         }
+        if (!updated) {
+          return NextResponse.json(
+            { error: "Course popularity was not changed: the update matched no rows. Check that the admin course update migration has been applied." },
+            { status: 409 }
+          )
+        }
         return NextResponse.json({ success: true, message: "Course popularity updated" })
+      }
+
+      case "update_course_domain": {
+        const { id, category } = payload
+        if (!isNonEmptyString(id)) {
+          return NextResponse.json({ error: "A course id is required." }, { status: 400 })
+        }
+        if (!isNonEmptyString(category) || category.trim().length > 80) {
+          return NextResponse.json(
+            { error: "A domain name of 80 characters or fewer is required." },
+            { status: 400 }
+          )
+        }
+
+        const updateData: CourseUpdate = { category: category.trim() }
+
+        const { data: updated, error } = await supabase
+          .from("courses")
+          .update(updateData)
+          .eq("id", id)
+          .select("id")
+          .maybeSingle()
+
+        if (error) {
+          return NextResponse.json({ error: error.message }, { status: 400 })
+        }
+        if (!updated) {
+          return NextResponse.json(
+            { error: "Course domain was not changed: the update matched no rows. Check that the admin course update migration has been applied." },
+            { status: 409 }
+          )
+        }
+        return NextResponse.json({ success: true, message: "Course domain updated" })
       }
 
       case "issue_certificate": {
@@ -519,6 +654,122 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: true, message: "Message status updated" })
       }
 
+      case "create_payment_request": {
+        const { full_name, email, phone, amount, currency, method, reference, note, course_id, user_id } =
+          payload
+
+        if (!isNonEmptyText(full_name, 120) || !isValidEmailAddress(email)) {
+          return NextResponse.json(
+            { error: "A customer name and a valid email address are required." },
+            { status: 400 }
+          )
+        }
+        const parsedAmount = typeof amount === "string" ? Number(amount) : amount
+        if (typeof parsedAmount !== "number" || !Number.isFinite(parsedAmount) || parsedAmount < 0) {
+          return NextResponse.json(
+            { error: "Enter an amount of zero or more." },
+            { status: 400 }
+          )
+        }
+        if (phone !== undefined && phone !== null && !isOptionalText(phone, 40)) {
+          return NextResponse.json({ error: "Phone must be 40 characters or fewer." }, { status: 400 })
+        }
+        if (method !== undefined && method !== null && !isOneOf(PAYMENT_METHODS, method)) {
+          return NextResponse.json({ error: "Invalid payment method." }, { status: 400 })
+        }
+        if (reference !== undefined && reference !== null && !isOptionalText(reference, 120)) {
+          return NextResponse.json({ error: "Reference must be 120 characters or fewer." }, { status: 400 })
+        }
+        if (note !== undefined && note !== null && !isOptionalText(note, 500)) {
+          return NextResponse.json({ error: "Note must be 500 characters or fewer." }, { status: 400 })
+        }
+
+        let linkedUserId: string | null = isNonEmptyString(user_id) ? user_id : null
+        if (!linkedUserId) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("id")
+            .eq("email", email.trim().toLowerCase())
+            .maybeSingle()
+          linkedUserId = profile?.id ?? null
+        }
+
+        const insertData: PaymentInsert = {
+          full_name: full_name.trim(),
+          email: email.trim().toLowerCase(),
+          phone: isNonEmptyString(phone) ? phone.trim() : null,
+          amount: Math.round(parsedAmount * 100) / 100,
+          currency: isNonEmptyString(currency) ? currency.trim().toUpperCase().slice(0, 3) : "NGN",
+          method: isOneOf(PAYMENT_METHODS, method) ? method : "bank_transfer",
+          reference: isNonEmptyString(reference) ? reference.trim() : null,
+          note: isNonEmptyString(note) ? note.trim() : null,
+          course_id: isNonEmptyString(course_id) ? course_id : null,
+          user_id: linkedUserId,
+          status: "pending",
+        }
+
+        const { data: created, error: insertError } = await supabase
+          .from("payment_requests")
+          .insert(insertData)
+          .select("id")
+          .single()
+
+        if (insertError) {
+          console.error("Payment request insert failed:", insertError)
+          return NextResponse.json({ error: insertError.message }, { status: 400 })
+        }
+        return NextResponse.json({
+          success: true,
+          message: "Payment request recorded",
+          id: created.id,
+        })
+      }
+
+      case "update_payment_status": {
+        const { id, status, note, reference } = payload
+        if (!isNonEmptyString(id)) {
+          return NextResponse.json({ error: "A payment request id is required." }, { status: 400 })
+        }
+        if (!isOneOf(PAYMENT_STATUSES, status)) {
+          return NextResponse.json({ error: "Invalid payment status." }, { status: 400 })
+        }
+        if (note !== undefined && note !== null && !isOptionalText(note, 500)) {
+          return NextResponse.json({ error: "Note must be 500 characters or fewer." }, { status: 400 })
+        }
+        if (reference !== undefined && reference !== null && !isOptionalText(reference, 120)) {
+          return NextResponse.json({ error: "Reference must be 120 characters or fewer." }, { status: 400 })
+        }
+
+        const updateData: PaymentUpdate = {
+          status,
+          updated_at: new Date().toISOString(),
+          reviewed_by: admin.user.id,
+          reviewed_at: new Date().toISOString(),
+        }
+        if (note !== undefined) updateData.note = isNonEmptyString(note) ? note.trim() : null
+        if (reference !== undefined) {
+          updateData.reference = isNonEmptyString(reference) ? reference.trim() : null
+        }
+
+        const { data: updated, error } = await supabase
+          .from("payment_requests")
+          .update(updateData)
+          .eq("id", id)
+          .select("id")
+          .maybeSingle()
+
+        if (error) {
+          return NextResponse.json({ error: error.message }, { status: 400 })
+        }
+        if (!updated) {
+          return NextResponse.json(
+            { error: "Payment status was not changed: the request was not found." },
+            { status: 404 }
+          )
+        }
+        return NextResponse.json({ success: true, message: "Payment status updated" })
+      }
+
       case "create_user": {
         const { email, password, full_name, role } = payload
         if (
@@ -594,17 +845,12 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        const { error: assignError } = await adminSupabase
-          .from("user_roles")
-          .upsert(
-            { user_id: newUserId, role_id: roleData.id },
-            { onConflict: "user_id" }
-          )
+        const { error: assignError } = await assignUserRole(adminSupabase, newUserId, roleData.id)
 
         if (assignError) {
           console.error("Created user's role could not be assigned:", assignError)
           return NextResponse.json(
-            { error: "User was created, but the role could not be assigned." },
+            { error: `User was created, but the role could not be assigned: ${assignError}` },
             { status: 503 }
           )
         }
@@ -635,20 +881,25 @@ export async function POST(req: NextRequest) {
           .single()
 
         if (roleError || !roleData) {
-          return NextResponse.json({ error: "Role not found" }, { status: 400 })
+          if (roleError && roleError.code !== "PGRST116") {
+            console.error("Role lookup failed:", roleError)
+            return NextResponse.json(
+              { error: `Role was not changed: ${roleError.message}` },
+              { status: 503 }
+            )
+          }
+          return NextResponse.json(
+            { error: `Role was not changed: "${role}" is not a configured role.` },
+            { status: 400 }
+          )
         }
 
-        const { error: assignError } = await adminSupabase
-          .from("user_roles")
-          .upsert(
-            { user_id, role_id: roleData.id },
-            { onConflict: "user_id" }
-          )
+        const assignResult = await assignUserRole(adminSupabase, user_id, roleData.id)
 
-        if (assignError) {
+        if (assignResult.error) {
           return NextResponse.json(
-            { error: `Role was not changed: ${assignError.message}` },
-            { status: 503 }
+            { error: `Role was not changed: ${assignResult.error}` },
+            { status: assignResult.status ?? 503 }
           )
         }
 

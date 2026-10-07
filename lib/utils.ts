@@ -54,5 +54,10 @@ export function isOneOf<T extends string>(allowed: readonly T[], value: unknown)
 }
 
 export function getErrorMessage(error: unknown, fallback = 'Internal server error'): string {
-  return error instanceof Error ? error.message : fallback
+  if (error instanceof Error && error.message.trim()) return error.message
+  if (isRecord(error)) {
+    const message = error.error ?? error.message
+    if (typeof message === 'string' && message.trim()) return message
+  }
+  return fallback
 }

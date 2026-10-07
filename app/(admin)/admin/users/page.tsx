@@ -47,13 +47,27 @@ export default async function AdminUsersPage() {
       loadWarning = "User records could not be loaded from Supabase."
     } else {
       users = (profiles ?? []).map((p) => {
-        const roleObj = p.user_roles?.roles
+        // PostgREST resolves the profiles -> user_roles embedding as a single
+        // object only while unique(user_id) exists; without it the same query
+        // returns an array. Normalise both shapes so the displayed role is
+        // never silently downgraded to the "learner" fallback.
+        const embedded = p.user_roles as unknown as
+          | { roles?: { name?: string | null } | { name?: string | null }[] }
+          | { roles?: { name?: string | null } | { name?: string | null }[] }[]
+          | null
+        const entry = Array.isArray(embedded) ? embedded[0] : embedded
+        const roles = entry?.roles as
+          | { name?: string | null }
+          | { name?: string | null }[]
+          | undefined
+        const roleEntry = Array.isArray(roles) ? roles[0] : roles
+        const roleName = roleEntry?.name
         return {
           id: p.id,
           full_name: p.full_name,
           email: p.email,
           created_at: p.created_at,
-          role: roleObj ? roleObj.name : "learner",
+          role: typeof roleName === "string" && roleName.trim() ? roleName : "learner",
         }
       })
     }
@@ -77,8 +91,8 @@ export default async function AdminUsersPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Users & Roles</h1>
-        <p className="text-sm text-slate-500 mt-1">
+        <h1 className="text-2xl font-bold text-white tracking-tight">Users & Roles</h1>
+        <p className="text-sm text-slate-300 mt-1">
           Manage system users, assign roles, and create new accounts.
         </p>
       </div>

@@ -15,6 +15,8 @@ export type Json =
  *   supabase/migrations/20261002000000_certificate_storage_path.sql
  *   supabase/migrations/20261007100000_enforce_single_role_per_user.sql
  *   supabase/migrations/20261007110000_course_documents_and_live_sessions.sql
+ *   supabase/migrations/20261007120000_admin_course_lesson_writes.sql
+ *   supabase/migrations/20261007130000_payment_requests.sql
  *
  * Tables that exist only in earlier revisions (enrollments, categories) and
  * columns dropped by later migrations (lessons.content_markdown) have been
@@ -505,6 +507,85 @@ export interface Database {
           {
             foreignKeyName: "course_enrollments_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_requests: {
+        Row: {
+          id: string
+          user_id: string | null
+          course_id: string | null
+          full_name: string
+          email: string
+          phone: string | null
+          amount: number
+          currency: string
+          method: 'bank_transfer' | 'card' | 'cash' | 'other'
+          reference: string | null
+          status: 'pending' | 'confirmed' | 'declined' | 'refunded'
+          note: string | null
+          reviewed_by: string | null
+          reviewed_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          course_id?: string | null
+          full_name: string
+          email: string
+          phone?: string | null
+          amount: number
+          currency?: string
+          method?: 'bank_transfer' | 'card' | 'cash' | 'other'
+          reference?: string | null
+          status?: 'pending' | 'confirmed' | 'declined' | 'refunded'
+          note?: string | null
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          course_id?: string | null
+          full_name?: string
+          email?: string
+          phone?: string | null
+          amount?: number
+          currency?: string
+          method?: 'bank_transfer' | 'card' | 'cash' | 'other'
+          reference?: string | null
+          status?: 'pending' | 'confirmed' | 'declined' | 'refunded'
+          note?: string | null
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_requests_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
