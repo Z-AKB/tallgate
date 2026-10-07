@@ -5,6 +5,7 @@ const NAV_ITEMS = [
   { href: "/dashboard/progress", label: "Progress" },
   { href: "/dashboard/bookmarks", label: "Bookmarks" },
   { href: "/dashboard/certificates", label: "Certificates" },
+  { href: "/dashboard/support", label: "Support" },
   { href: "/dashboard/settings", label: "Settings" },
 ] as const;
 
@@ -15,11 +16,11 @@ const NAV_ITEMS = [
  */
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="container-fluid flex-grow-1">
-      <div className="row">
-        <aside className="col-12 col-md-3 col-lg-2 bg-navy py-4 px-0 min-vh-100">
+    <div className="container-fluid flex-grow-1 d-flex flex-column">
+      <div className="row flex-grow-1">
+        <aside className="col-12 col-md-3 col-lg-2 bg-navy py-4 px-0">
           <div className="px-3 mb-4">
-            <Link href="/" className="fs-5 fw-semibold text-white">
+            <Link href="/dashboard" className="fs-5 fw-semibold text-white">
               TallGate
             </Link>
           </div>
@@ -37,6 +38,18 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         </aside>
         <main className="col-12 col-md-9 col-lg-10 py-4">{children}</main>
       </div>
+      <footer className="row border-top py-3">
+        <div className="col-md-8 text-muted-tg small">
+          © {new Date().getFullYear()} TallGate Limited. Learner &amp; Client
+          Portal.
+        </div>
+        <nav
+          className="col-md-4 d-flex justify-content-md-end gap-3 small"
+          aria-label="Dashboard support links"
+        >
+          <Link href="/dashboard/support">Support</Link>
+        </nav>
+      </footer>
     </div>
   );
 }

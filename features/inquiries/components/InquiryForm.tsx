@@ -5,7 +5,11 @@ import { submitInquiry, type InquiryState } from "../actions/submitInquiry";
 
 const initialState: InquiryState = { status: "idle" };
 
-export function InquiryForm() {
+export function InquiryForm({
+  supportOnly = false,
+}: {
+  supportOnly?: boolean;
+}) {
   const [state, formAction, pending] = useActionState(
     submitInquiry,
     initialState
@@ -61,26 +65,32 @@ export function InquiryForm() {
           </label>
           <input id="phone" name="phone" type="tel" className="form-control" />
         </div>
-        <div className="col-md-6">
-          <label htmlFor="inquiry_type" className="form-label">
-            What is this about?
-          </label>
-          <select
-            id="inquiry_type"
-            name="inquiry_type"
-            className="form-select"
-            defaultValue="consultation"
-          >
-            <option value="consultation">Consultation request</option>
-            <option value="business_inquiry">Business inquiry</option>
-            <option value="support">Support</option>
-          </select>
-        </div>
+        {supportOnly ? (
+          <input type="hidden" name="inquiry_type" value="support" />
+        ) : (
+          <div className="col-md-6">
+            <label htmlFor="inquiry_type" className="form-label">
+              What is this about?
+            </label>
+            <select
+              id="inquiry_type"
+              name="inquiry_type"
+              className="form-select"
+              defaultValue="consultation"
+            >
+              <option value="consultation">Consultation request</option>
+              <option value="business_inquiry">Business inquiry</option>
+              <option value="support">Support</option>
+            </select>
+          </div>
+        )}
       </div>
 
       <div className="mb-4">
         <label htmlFor="message" className="form-label">
-          Tell us about your project or question
+          {supportOnly
+            ? "How can we help?"
+            : "Tell us about your project or question"}
         </label>
         <textarea
           id="message"
@@ -95,8 +105,9 @@ export function InquiryForm() {
         {pending ? "Sending…" : "Submit request"}
       </button>
       <p className="text-muted-tg small mt-3 mb-0">
-        This is a request form, not a live calendar — a team member will
-        follow up by email or phone to schedule.
+        {supportOnly
+          ? "A member of our support team will follow up by email or phone."
+          : "This is a request form, not a live calendar — a team member will follow up by email or phone to schedule."}
       </p>
     </form>
   );

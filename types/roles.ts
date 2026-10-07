@@ -1,11 +1,6 @@
 /**
- * User roles — backed by a `user_roles` JOIN TABLE in Postgres, not a single
- * enum column on `profiles`. This supports multi-role users (e.g. a Learner
- * who is also a Startup Founder) without a schema migration later.
- *
- * MVP ships a single `admin` role with full access (see
- * tallgate-open-items-resolution.md, Section 1) — sub-role scoping is
- * deferred until admin headcount grows past a handful of people.
+ * Roles are stored in `user_roles`, with the database enforcing one role per
+ * user. Changing a role replaces the existing row.
  */
 export type UserRole =
   | "visitor"

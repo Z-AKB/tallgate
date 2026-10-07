@@ -14,11 +14,24 @@ export async function submitStartupApplication(
 ): Promise<ApplicationState> {
   const user = await requireUser("/startups/apply");
 
-  const businessName = String(formData.get("business_name") ?? "").trim();
-  const pitchSummary = String(formData.get("pitch_summary") ?? "").trim();
+  const businessNameValue = formData.get("business_name");
+  const pitchSummaryValue = formData.get("pitch_summary");
+  const businessName =
+    typeof businessNameValue === "string" ? businessNameValue.trim() : "";
+  const pitchSummary =
+    typeof pitchSummaryValue === "string" ? pitchSummaryValue.trim() : "";
 
-  if (!businessName || !pitchSummary) {
-    return { status: "error", message: "Business name and pitch summary are required." };
+  if (
+    !businessName ||
+    businessName.length > 160 ||
+    !pitchSummary ||
+    pitchSummary.length > 10_000
+  ) {
+    return {
+      status: "error",
+      message:
+        "Provide a business name and pitch summary within the allowed length.",
+    };
   }
 
   const supabase = await createClient();
@@ -30,6 +43,7 @@ export async function submitStartupApplication(
   });
 
   if (error) {
+    console.error("Startup application submission failed:", error);
     return {
       status: "error",
       message: "Something went wrong submitting your application. Please try again.",

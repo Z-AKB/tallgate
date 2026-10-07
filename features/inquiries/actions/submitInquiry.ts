@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/database/server";
+import { isValidEmailAddress } from "@/lib/utils";
 
 export interface InquiryState {
   status: "idle" | "success" | "error";
@@ -17,14 +18,34 @@ export async function submitInquiry(
   _prevState: InquiryState,
   formData: FormData
 ): Promise<InquiryState> {
-  const name = String(formData.get("name") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim();
-  const phone = String(formData.get("phone") ?? "").trim();
-  const inquiryType = String(formData.get("inquiry_type") ?? "consultation");
-  const message = String(formData.get("message") ?? "").trim();
+  const nameValue = formData.get("name");
+  const emailValue = formData.get("email");
+  const phoneValue = formData.get("phone");
+  const inquiryTypeValue = formData.get("inquiry_type");
+  const messageValue = formData.get("message");
+  const name = typeof nameValue === "string" ? nameValue.trim() : "";
+  const email = typeof emailValue === "string" ? emailValue.trim() : "";
+  const phone = typeof phoneValue === "string" ? phoneValue.trim() : "";
+  const inquiryType =
+    typeof inquiryTypeValue === "string" && inquiryTypeValue
+      ? inquiryTypeValue
+      : "consultation";
+  const message = typeof messageValue === "string" ? messageValue.trim() : "";
 
-  if (!name || !email || !message) {
-    return { status: "error", message: "Name, email, and message are required." };
+  if (
+    !name ||
+    name.length > 120 ||
+    !isValidEmailAddress(email) ||
+    !message ||
+    message.length > 10_000 ||
+    phone.length > 40 ||
+    !["consultation", "business_inquiry", "support"].includes(inquiryType)
+  ) {
+    return {
+      status: "error",
+      message:
+        "Provide a valid name, email address, inquiry type, and message within the allowed length.",
+    };
   }
 
   const supabase = await createClient();
@@ -38,6 +59,7 @@ export async function submitInquiry(
   });
 
   if (error) {
+    console.error("Inquiry submission failed:", error);
     return {
       status: "error",
       message:

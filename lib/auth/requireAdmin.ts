@@ -2,13 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/database/server";
 import { requireUser } from "./requireUser";
 
-/**
- * Admin guard — single flat `admin` role for MVP (per
- * tallgate-open-items-resolution.md, Section 1). Checks the user_roles
- * join table rather than a role column on profiles, so this doesn't need
- * to change when sub-roles (admin_content, admin_reviewer) are introduced
- * post-MVP.
- */
+/** Checks the user's single role in the `user_roles` table. */
 export async function requireAdmin(nextPath: string) {
   const user = await requireUser(nextPath);
   const supabase = await createClient();

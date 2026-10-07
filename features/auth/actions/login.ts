@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/database/server";
+import { isValidEmailAddress } from "@/lib/utils";
 
 export interface LoginState {
   error?: string;
@@ -17,10 +18,15 @@ export async function loginWithPassword(
   _prevState: LoginState,
   formData: FormData
 ): Promise<LoginState> {
-  const email = String(formData.get("email") ?? "").trim();
-  const password = String(formData.get("password") ?? "");
+  const emailValue = formData.get("email");
+  const passwordValue = formData.get("password");
+  const email = typeof emailValue === "string" ? emailValue.trim() : "";
+  const password = typeof passwordValue === "string" ? passwordValue : "";
 
-  if (!email || !password) {
+  if (!isValidEmailAddress(email)) {
+    return { error: "Enter a valid email address." };
+  }
+  if (!password || password.length > 128) {
     return { error: "Enter your email and password." };
   }
 
