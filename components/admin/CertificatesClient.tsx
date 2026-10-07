@@ -16,16 +16,20 @@ import {
 
 export default function CertificatesClient({
   initialCertificates,
+  learners,
   dataWarning,
   loadFailed = false,
   prefilledRecipient,
   prefilledCourse,
+  initialIssueDate,
 }: {
   initialCertificates: AdminCertificate[]
+  learners: Array<{ id: string; full_name: string; email: string }>
   dataWarning: string
   loadFailed?: boolean
   prefilledRecipient?: string
   prefilledCourse?: string
+  initialIssueDate: string
 }) {
   const [certificates, setCertificates] = useState<AdminCertificate[]>(initialCertificates)
   const [searchQuery, setSearchQuery] = useState("")
@@ -37,10 +41,13 @@ export default function CertificatesClient({
   } | null>(null)
   const [requestError, setRequestError] = useState("")
 
-  const [recipientName, setRecipientName] = useState(prefilledRecipient || "")
+  const [learnerQuery, setLearnerQuery] = useState(prefilledRecipient || "")
+  const [selectedLearner, setSelectedLearner] = useState<
+    { id: string; full_name: string; email: string } | null
+  >(null)
   const [courseTitle, setCourseTitle] = useState(prefilledCourse || "")
   const [grade, setGrade] = useState("Distinction")
-  const [issueDate, setIssueDate] = useState(new Date().toISOString().split("T")[0])
+  const [issueDate, setIssueDate] = useState(initialIssueDate)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const filteredCertificates = certificates.filter((c) => {
@@ -54,9 +61,23 @@ export default function CertificatesClient({
     )
   })
 
+  const matchingLearners = learners
+    .filter((learner) => {
+      const query = learnerQuery.trim().toLowerCase()
+      return (
+        !query ||
+        learner.full_name.toLowerCase().includes(query) ||
+        learner.email.toLowerCase().includes(query)
+      )
+    })
+    .slice(0, 8)
+
   const handleIssueCertificate = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!recipientName.trim() || !courseTitle) return
+    if (!selectedLearner || !courseTitle.trim()) {
+      setRequestError("Select an existing learner account and enter a course title.")
+      return
+    }
 
     setIsSubmitting(true)
     setRequestError("")
@@ -68,7 +89,7 @@ export default function CertificatesClient({
         body: JSON.stringify({
           action: "issue_certificate",
           payload: {
-            recipient_name: recipientName,
+            user_id: selectedLearner.id,
             course_title: courseTitle,
             grade,
             issue_date: issueDate,
@@ -97,7 +118,8 @@ export default function CertificatesClient({
       })
       setIsSubmitting(false)
       setIsModalOpen(false)
-      setRecipientName("")
+      setLearnerQuery("")
+      setSelectedLearner(null)
     } catch (error) {
       console.error("Error issuing certificate:", error)
       setRequestError(
@@ -360,17 +382,56 @@ export default function CertificatesClient({
             <form onSubmit={handleIssueCertificate} className="space-y-4">
               <div>
                 <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1">
-                  Recipient Full Name:
+                  Learner Account:
                   <span className="ml-1 font-normal text-slate-500">(required)</span>
                 </label>
                 <input
-                  type="text"
+                  type="search"
                   required
-                  placeholder="Recipient full name as it should appear on the certificate"
-                  value={recipientName}
-                  onChange={(e) => setRecipientName(e.target.value)}
+                  placeholder="Search learner by name or email"
+                  value={selectedLearner ? `${selectedLearner.full_name} (${selectedLearner.email})` : learnerQuery}
+                  onChange={(e) => {
+                    setSelectedLearner(null)
+                    setLearnerQuery(e.target.value)
+                  }}
                   className="w-full p-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-brand-primary focus:outline-none"
                 />
+                {selectedLearner ? (
+                  <div className="mt-2 flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
+                    <span>{selectedLearner.full_name} · {selectedLearner.email}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedLearner(null)
+                        setLearnerQuery("")
+                      }}
+                      className="font-semibold underline"
+                    >
+                      Change
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mt-1 max-h-36 overflow-y-auto rounded-lg border border-slate-200 bg-white">
+                    {matchingLearners.length > 0 ? matchingLearners.map((learner) => (
+                      <button
+                        key={learner.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedLearner(learner)
+                          setLearnerQuery("")
+                        }}
+                        className="block w-full border-b border-slate-100 px-3 py-2 text-left last:border-b-0 hover:bg-indigo-50"
+                      >
+                        <span className="block text-xs font-semibold text-slate-900">{learner.full_name}</span>
+                        <span className="block text-[11px] text-slate-500">{learner.email}</span>
+                      </button>
+                    )) : (
+                      <p className="px-3 py-2 text-xs text-slate-500">
+                        {learners.length ? "No learner accounts match." : "No learner accounts are available."}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div>
@@ -431,7 +492,7 @@ export default function CertificatesClient({
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !selectedLearner || learners.length === 0}
                   className="px-5 py-2.5 bg-brand-primary hover:bg-brand-primary-hover text-white rounded-xl text-xs font-bold shadow-md transition-colors"
                 >
                   {isSubmitting ? "Issuing..." : "Confirm & Issue Certificate"}

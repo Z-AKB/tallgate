@@ -1,4 +1,5 @@
 import React from "react"
+import Link from "next/link"
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/server"
 import { mockCourses, type MockCourse } from "@/lib/data/adminMockData"
 import { toCourse } from "@/lib/data/adminRowMappers"
@@ -44,6 +45,12 @@ export default async function AdminCoursesPage() {
 
   return (
     <div className="space-y-6">
+      <Link
+        href="/admin/course-content"
+        className="inline-flex rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-xs font-semibold text-indigo-800 hover:bg-indigo-100"
+      >
+        Manage lesson materials and live classes
+      </Link>
       {dataWarning && (
         <div
           role="alert"

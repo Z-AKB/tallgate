@@ -53,6 +53,7 @@ type IssuedCertificate = Pick<
   | "certificate_number"
   | "verification_code"
   | "recipient_name"
+  | "user_id"
   | "course_title"
   | "issue_date"
   | "grade"
@@ -205,7 +206,6 @@ export async function POST(req: NextRequest) {
 
       case "issue_certificate": {
         const {
-          recipient_name,
           course_title,
           course_id,
           user_id,
@@ -222,15 +222,65 @@ export async function POST(req: NextRequest) {
         }
 
         if (
-          typeof recipient_name !== "string" ||
-          !recipient_name.trim() ||
-          recipient_name.trim().length > 200 ||
+          !isNonEmptyString(user_id) ||
           typeof course_title !== "string" ||
           !course_title.trim() ||
           course_title.trim().length > 200
         ) {
           return NextResponse.json(
-            { error: "Recipient name and course title are required." },
+            { error: "Select a learner account and provide a course title." },
+            { status: 400 }
+          )
+        }
+
+        const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+        if (!uuidPattern.test(user_id)) {
+          return NextResponse.json({ error: "Select a valid learner account." }, { status: 400 })
+        }
+
+        let certificateAdminClient: ReturnType<typeof createAdminClient>
+        try {
+          certificateAdminClient = createAdminClient()
+        } catch (error: unknown) {
+          console.error("Certificate learner lookup is unavailable:", error)
+          return NextResponse.json(
+            { error: "Certificate issuance is temporarily unavailable." },
+            { status: 503 }
+          )
+        }
+
+        const { data: learnerRole, error: learnerRoleError } = await certificateAdminClient
+          .from("roles")
+          .select("id")
+          .eq("name", "learner")
+          .maybeSingle()
+        if (learnerRoleError || !learnerRole) {
+          console.error("Certificate issuance could not resolve learner role:", learnerRoleError)
+          return NextResponse.json({ error: "Learner accounts could not be verified." }, { status: 503 })
+        }
+
+        const [{ data: learnerProfile, error: profileError }, { data: roleAssignment, error: assignmentError }] =
+          await Promise.all([
+            certificateAdminClient
+              .from("profiles")
+              .select("full_name")
+              .eq("id", user_id)
+              .maybeSingle(),
+            certificateAdminClient
+              .from("user_roles")
+              .select("user_id")
+              .eq("user_id", user_id)
+              .eq("role_id", learnerRole.id)
+              .maybeSingle(),
+          ])
+
+        if (profileError || assignmentError) {
+          console.error("Certificate learner account verification failed:", { profileError, assignmentError })
+          return NextResponse.json({ error: "Learner account could not be verified." }, { status: 503 })
+        }
+        if (!learnerProfile || !roleAssignment) {
+          return NextResponse.json(
+            { error: "Certificates can only be issued to existing learner accounts." },
             { status: 400 }
           )
         }
@@ -294,8 +344,7 @@ export async function POST(req: NextRequest) {
           issueDate = issue_date
         }
 
-        const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-        for (const [field, value] of [["course_id", course_id], ["user_id", user_id]] as const) {
+        for (const [field, value] of [["course_id", course_id]] as const) {
           if (value !== undefined && value !== null && value !== "" &&
               (typeof value !== "string" || !uuidPattern.test(value))) {
             return NextResponse.json({ error: `${field} must be a valid UUID.` }, { status: 400 })
@@ -303,13 +352,13 @@ export async function POST(req: NextRequest) {
         }
 
         const certificateInput: Omit<CertificateInsert, "verification_code"> = {
-          recipient_name: recipient_name.trim(),
+          recipient_name: learnerProfile.full_name,
+          user_id,
           course_title: course_title.trim(),
           grade: typeof grade === "string" && grade.trim() ? grade.trim().slice(0, 100) : "Distinction",
           issue_date: issueDate,
           is_valid: true,
           ...(typeof course_id === "string" && course_id ? { course_id } : {}),
-          ...(typeof user_id === "string" && user_id ? { user_id } : {}),
         }
 
         let issuedCertificate: IssuedCertificate | null = null
@@ -335,7 +384,7 @@ export async function POST(req: NextRequest) {
             .from("certificates")
             .insert({ ...certificateInput, verification_code: generatedCode })
             .select(
-              "id, certificate_number, verification_code, recipient_name, course_title, issue_date, grade, is_valid, created_at"
+              "id, certificate_number, verification_code, user_id, recipient_name, course_title, issue_date, grade, is_valid, created_at"
             )
             .single()
 
@@ -472,13 +521,18 @@ export async function POST(req: NextRequest) {
 
       case "create_user": {
         const { email, password, full_name, role } = payload
-        if (!isNonEmptyString(email) || !isNonEmptyString(password) || !isNonEmptyString(full_name)) {
+        if (
+          !isNonEmptyString(email) ||
+          !isNonEmptyString(password) ||
+          (full_name !== undefined && full_name !== null && typeof full_name !== "string")
+        ) {
           return NextResponse.json(
-            { error: "Email, password and full name are required." },
+            { error: "Email and password are required; full name must be text when provided." },
             { status: 400 }
           )
         }
         const roleName = isNonEmptyString(role) ? role : "learner"
+        const fullName = isNonEmptyString(full_name) ? full_name.trim() : null
 
         let adminSupabase
         try {
@@ -487,45 +541,6 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ error: getErrorMessage(error) }, { status: 503 })
         }
 
-        // 1. Create auth user
-        const { data: authData, error: authError } = await adminSupabase.auth.admin.createUser({
-          email,
-          password,
-          email_confirm: true
-        })
-
-        if (authError || !authData.user) {
-          return NextResponse.json({ error: authError?.message || "Failed to create user" }, { status: 400 })
-        }
-const newUserId = authData.user.id
-
-        // The auth user exists from this point on, so any later failure must
-        // delete it again or an unusable account is left behind.
-        const rollbackAuthUser = async (reason: string) => {
-          const { error: cleanupError } = await adminSupabase.auth.admin.deleteUser(newUserId)
-          if (cleanupError) {
-            console.error(
-              `Failed to delete orphaned auth user ${newUserId} after: ${reason}:`,
-              cleanupError
-            )
-          } else {
-            console.error(`Deleted orphaned auth user ${newUserId} after: ${reason}`)
-          }
-        }
-
-        // 2. Create profile
-        const { error: profileError } = await adminSupabase.from("profiles").insert({
-          id: newUserId,
-          full_name,
-          email
-        })
-
-        if (profileError) {
-          await rollbackAuthUser(`profile insert failed (${profileError.message})`)
-          return NextResponse.json({ error: profileError.message }, { status: 400 })
-        }
-
-        // 3. Assign role
         const { data: roleData, error: roleError } = await adminSupabase
           .from("roles")
           .select("id")
@@ -533,18 +548,65 @@ const newUserId = authData.user.id
           .single()
 
         if (roleError || !roleData) {
-          await rollbackAuthUser(`role lookup failed for "${roleName}"`)
           return NextResponse.json({ error: "Role not found" }, { status: 400 })
         }
 
-        const { error: assignError } = await adminSupabase.from("user_roles").insert({
-          user_id: newUserId,
-          role_id: roleData.id
+        const { data: authData, error: authError } = await adminSupabase.auth.admin.createUser({
+          email: email.trim().toLowerCase(),
+          password,
+          email_confirm: true,
+          user_metadata: fullName ? { full_name: fullName } : {},
         })
 
+        if (authError || !authData.user) {
+          return NextResponse.json({ error: authError?.message || "Failed to create user" }, { status: 400 })
+        }
+
+        const newUserId = authData.user.id
+        if (fullName) {
+          const { data: createdProfile, error: profileReadError } = await adminSupabase
+            .from("profiles")
+            .select("full_name")
+            .eq("id", newUserId)
+            .single()
+
+          if (profileReadError || !createdProfile) {
+            console.error("Created user's trigger-managed profile could not be read:", profileReadError)
+            return NextResponse.json(
+              { error: "User was created, but its profile could not be verified." },
+              { status: 503 }
+            )
+          }
+
+          if (createdProfile.full_name !== fullName) {
+            const { error: profileUpdateError } = await adminSupabase
+              .from("profiles")
+              .update({ full_name: fullName })
+              .eq("id", newUserId)
+
+            if (profileUpdateError) {
+              console.error("Created user's profile name could not be updated:", profileUpdateError)
+              return NextResponse.json(
+                { error: "User was created, but the profile name could not be updated." },
+                { status: 503 }
+              )
+            }
+          }
+        }
+
+        const { error: assignError } = await adminSupabase
+          .from("user_roles")
+          .upsert(
+            { user_id: newUserId, role_id: roleData.id },
+            { onConflict: "user_id" }
+          )
+
         if (assignError) {
-          await rollbackAuthUser(`role assignment failed (${assignError.message})`)
-          return NextResponse.json({ error: assignError.message }, { status: 400 })
+          console.error("Created user's role could not be assigned:", assignError)
+          return NextResponse.json(
+            { error: "User was created, but the role could not be assigned." },
+            { status: 503 }
+          )
         }
 
         return NextResponse.json({ success: true, message: "User created successfully" })
@@ -576,65 +638,17 @@ const newUserId = authData.user.id
           return NextResponse.json({ error: "Role not found" }, { status: 400 })
         }
 
-        // Snapshot the current assignments first. A user_roles row cascades on
-        // profile delete, so the old ids are all that is needed to put them back.
-        const { data: existingAssignments, error: readError } = await adminSupabase
+        const { error: assignError } = await adminSupabase
           .from("user_roles")
-          .select("role_id")
-          .eq("user_id", user_id)
-
-        if (readError) {
-          return NextResponse.json({ error: readError.message }, { status: 503 })
-        }
-
-        const previousRoleIds = (existingAssignments ?? []).map((r) => r.role_id)
-
-        // A discard here is silently ignored by PostgREST unless we check it,
-        // which previously hid a failed delete and then left the insert to
-        // collide with the surviving rows.
-        const { error: deleteError } = await adminSupabase
-          .from("user_roles")
-          .delete()
-          .eq("user_id", user_id)
-
-        if (deleteError) {
-          return NextResponse.json(
-            { error: `Existing role assignments could not be removed: ${deleteError.message}` },
-            { status: 400 }
+          .upsert(
+            { user_id, role_id: roleData.id },
+            { onConflict: "user_id" }
           )
-        }
 
-        const { error: insertError } = await adminSupabase.from("user_roles").insert({
-          user_id,
-          role_id: roleData.id
-        })
-
-        if (insertError) {
-          const rolesToRestore = previousRoleIds.filter((id) => id !== roleData.id)
-
-          if (rolesToRestore.length > 0) {
-            const { error: restoreError } = await adminSupabase
-              .from("user_roles")
-              .insert(rolesToRestore.map((role_id) => ({ user_id, role_id })))
-
-            if (restoreError) {
-              console.error(
-                `Failed to restore ${rolesToRestore.length} role assignment(s) for ${user_id}:`,
-                restoreError
-              )
-              return NextResponse.json(
-                {
-                  error: `Role was not changed and previous assignments could not be restored. Manual repair required.`,
-                  detail: restoreError.message,
-                },
-                { status: 500 }
-              )
-            }
-          }
-
+        if (assignError) {
           return NextResponse.json(
-            { error: `Role was not changed: ${insertError.message}` },
-            { status: 400 }
+            { error: `Role was not changed: ${assignError.message}` },
+            { status: 503 }
           )
         }
 

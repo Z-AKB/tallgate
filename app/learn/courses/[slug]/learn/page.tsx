@@ -9,7 +9,6 @@ import {
   HiOutlinePlay,
   HiOutlineDocumentText,
   HiOutlineClock,
-  HiOutlineCheckCircle,
   HiOutlineExclamationCircle,
   HiOutlineAcademicCap,
 } from "react-icons/hi"
@@ -31,7 +30,7 @@ interface ModuleWithLessons {
   lessons: Array<{
     id: string
     title: string
-    content_type: "video" | "text"
+    content_type: "video" | "text" | "document"
     duration_seconds: number | null
     duration_minutes?: number
     sort_order: number
@@ -314,6 +313,36 @@ export default async function LessonPlayerPage({
                       <p className="text-slate-400 italic">No text content available for this lesson.</p>
                     )}
                   </div>
+                </div>
+              )}
+
+              {/* ACCESS GRANTED: PDF/PPTX DOWNLOAD */}
+              {activeLesson && accessResult?.access === "granted" && accessResult.contentType === "document" && (
+                <div className="p-6 sm:p-8 space-y-5">
+                  <div className="flex items-center gap-2 border-b border-white/10 pb-4">
+                    <span className="badge-neutral text-[11px]">Course Material</span>
+                    {activeLesson.is_preview && (
+                      <span className="badge-success text-[11px]">Free Preview</span>
+                    )}
+                    <span className="text-xs text-slate-400 flex items-center gap-1 ml-auto">
+                      <HiOutlineClock className="w-3.5 h-3.5" />
+                      {formatDuration(activeLesson.duration_seconds, activeLesson.duration_minutes)}
+                    </span>
+                  </div>
+                  <h2 className="text-2xl font-bold text-white tracking-tight">
+                    {activeLesson.title}
+                  </h2>
+                  <p className="text-sm text-slate-300">
+                    Download the lesson handout to view it in your PDF or presentation app.
+                  </p>
+                  <a
+                    href={accessResult.signedUrl}
+                    download={accessResult.fileName}
+                    className="btn-primary inline-flex items-center justify-center gap-2 text-sm"
+                  >
+                    <HiOutlineDocumentText className="w-4 h-4" />
+                    Download {accessResult.fileName.toLowerCase().endsWith(".pptx") ? "PPTX" : "PDF"}
+                  </a>
                 </div>
               )}
 

@@ -3,7 +3,13 @@ import { createClient } from "@/lib/database/server";
 export type LessonAccessResult =
   | { access: "denied" }
   | { access: "granted"; contentType: "text"; body: string }
-  | { access: "granted"; contentType: "video"; signedUrl: string };
+  | { access: "granted"; contentType: "video"; signedUrl: string }
+  | {
+      access: "granted"
+      contentType: "document"
+      signedUrl: string
+      fileName: string
+    };
 
 export async function getLessonContent(
   lessonId: string
@@ -52,13 +58,27 @@ export async function getLessonContent(
     return { access: "denied" };
   }
 
+  const isDocument = lesson.content_type === "document";
   const { data: signed, error } = await supabase.storage
     .from("course-content")
-    .createSignedUrl(content.content_url, 60 * 60); // 1 hour
+    .createSignedUrl(
+      content.content_url,
+      60 * 60,
+      isDocument ? { download: true } : undefined
+    )
 
   if (error || !signed) {
-    console.error("Unable to sign lesson video URL:", error)
-    throw new Error("Unable to load lesson video.")
+    console.error("Unable to sign lesson content URL:", error)
+    throw new Error("Unable to load lesson content.")
+  }
+
+  if (isDocument) {
+    return {
+      access: "granted",
+      contentType: "document",
+      signedUrl: signed.signedUrl,
+      fileName: content.content_url.split("/").at(-1) || "course-material",
+    };
   }
 
   return {

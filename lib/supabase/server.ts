@@ -2,6 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import type { Database } from '@/types/supabase'
+import { supabaseCookieOptions } from '@/lib/supabase/cookieOptions'
 
 export function isSupabaseConfigured() {
   return Boolean(
@@ -20,6 +21,7 @@ export async function createClient() {
     supabaseUrl,
     supabaseAnonKey,
     {
+      cookieOptions: supabaseCookieOptions,
       cookies: {
         getAll() {
           return cookieStore.getAll()

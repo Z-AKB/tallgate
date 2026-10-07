@@ -47,7 +47,7 @@ export default async function AdminUsersPage() {
       loadWarning = "User records could not be loaded from Supabase."
     } else {
       users = (profiles ?? []).map((p) => {
-        const roleObj = p.user_roles?.[0]?.roles
+        const roleObj = p.user_roles?.roles
         return {
           id: p.id,
           full_name: p.full_name,

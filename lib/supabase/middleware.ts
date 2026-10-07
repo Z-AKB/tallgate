@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 import type { Database } from "@/types/supabase"
+import { supabaseCookieOptions } from "@/lib/supabase/cookieOptions"
 
 const PROTECTED_PREFIXES = ["/dashboard", "/admin", "/learn", "/api/admin"]
 const AUTH_PATHS = ["/login", "/register"]
@@ -27,6 +28,7 @@ export async function updateSession(request: NextRequest) {
   }
 
   const supabase = createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+    cookieOptions: supabaseCookieOptions,
     cookies: {
       getAll() {
         return request.cookies.getAll()

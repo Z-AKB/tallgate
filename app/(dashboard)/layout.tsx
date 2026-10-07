@@ -2,6 +2,7 @@ import React from "react"
 import UserDashboardHeader from "@/components/dashboard/UserDashboardHeader"
 import Link from "next/link"
 import { requireUser } from "@/lib/auth/guards"
+import { redirect } from "next/navigation"
 import { siteConfig } from "@/lib/config/site"
 import { getPortalPresentation } from "@/lib/auth/roles"
 
@@ -18,6 +19,9 @@ export default async function UserDashboardLayout({
   const user = await requireUser()
   const displayName = user.profile?.full_name || user.email || "Account"
   const portal = getPortalPresentation(user.roles)
+  if (portal.isAdmin) {
+    redirect("/admin")
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-brand-canvas text-slate-900 antialiased">

@@ -13,6 +13,8 @@ export type Json =
  *   supabase/migrations/20260930000000_certificate_registry.sql
  *   supabase/migrations/20261001000000_lesson_progress.sql
  *   supabase/migrations/20261002000000_certificate_storage_path.sql
+ *   supabase/migrations/20261007100000_enforce_single_role_per_user.sql
+ *   supabase/migrations/20261007110000_course_documents_and_live_sessions.sql
  *
  * Tables that exist only in earlier revisions (enrollments, categories) and
  * columns dropped by later migrations (lessons.content_markdown) have been
@@ -112,7 +114,7 @@ export interface Database {
           {
             foreignKeyName: "user_roles_user_id_fkey"
             columns: ["user_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -354,7 +356,7 @@ export interface Database {
           id: string
           module_id: string
           title: string
-          content_type: 'video' | 'text'
+          content_type: 'video' | 'text' | 'document'
           duration_minutes: number
           order_index: number
           is_preview: boolean
@@ -364,7 +366,7 @@ export interface Database {
           id?: string
           module_id: string
           title: string
-          content_type?: 'video' | 'text'
+          content_type?: 'video' | 'text' | 'document'
           duration_minutes?: number
           order_index?: number
           is_preview?: boolean
@@ -374,7 +376,7 @@ export interface Database {
           id?: string
           module_id?: string
           title?: string
-          content_type?: 'video' | 'text'
+          content_type?: 'video' | 'text' | 'document'
           duration_minutes?: number
           order_index?: number
           is_preview?: boolean
@@ -411,6 +413,54 @@ export interface Database {
             foreignKeyName: "lesson_content_lesson_id_fkey"
             columns: ["lesson_id"]
             isOneToOne: true
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      live_sessions: {
+        Row: {
+          id: string
+          course_id: string
+          title: string
+          scheduled_at: string
+          join_url: string
+          recording_lesson_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          course_id: string
+          title: string
+          scheduled_at: string
+          join_url: string
+          recording_lesson_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          course_id?: string
+          title?: string
+          scheduled_at?: string
+          join_url?: string
+          recording_lesson_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_sessions_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "live_sessions_recording_lesson_id_fkey"
+            columns: ["recording_lesson_id"]
+            isOneToOne: false
             referencedRelation: "lessons"
             referencedColumns: ["id"]
           },

@@ -27,7 +27,6 @@ export default async function DashboardPage() {
       : summaryCardCount === 2
         ? "sm:grid-cols-2"
         : "sm:grid-cols-3"
-
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200">
@@ -137,6 +136,87 @@ export default async function DashboardPage() {
                   </li>
                 ))}
               </ul>
+            )}
+            {overview.learningResourcesWarning && (
+              <p role="alert" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                {overview.learningResourcesWarning}
+              </p>
+            )}
+            {(overview.courseMaterials.length > 0 ||
+              overview.upcomingSessions.length > 0 ||
+              overview.recordedPastSessions.length > 0) && (
+              <div className="space-y-4 border-t border-slate-100 pt-4">
+                {overview.courseMaterials.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wide text-slate-600">Course materials</h4>
+                    <ul className="mt-2 space-y-2">
+                      {overview.courseMaterials.map((material) => (
+                        <li key={material.lesson_id} className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                          <span className="text-slate-700">
+                            {material.course_title} · {material.lesson_title}
+                          </span>
+                          <a
+                            href={material.download_url}
+                            download={material.file_name}
+                            className="font-semibold text-brand-primary underline"
+                          >
+                            Download {material.file_name.toLowerCase().endsWith(".pptx") ? "PPTX" : "PDF"}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {overview.upcomingSessions.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wide text-slate-600">Upcoming live classes (UTC)</h4>
+                    <ul className="mt-2 space-y-2">
+                      {overview.upcomingSessions.map((session) => (
+                        <li key={session.id} className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                          <span className="text-slate-700">
+                            {session.course_title} · {session.title} · {new Intl.DateTimeFormat("en-GB", {
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                              timeZone: "UTC",
+                            }).format(new Date(session.scheduled_at))} UTC
+                          </span>
+                          <a
+                            href={session.join_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-semibold text-brand-primary underline"
+                          >
+                            Join
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {overview.recordedPastSessions.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wide text-slate-600">Past class recordings</h4>
+                    <ul className="mt-2 space-y-2">
+                      {overview.recordedPastSessions.map((session) => (
+                        <li key={session.id} className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                          <span className="text-slate-700">
+                            {session.course_title} · {session.title}
+                            {session.recording_title ? ` · ${session.recording_title}` : ""}
+                          </span>
+                          {session.recording_lesson_id && (
+                            <Link
+                              href={`/learn/courses/${session.course_slug}/learn?lessonId=${session.recording_lesson_id}`}
+                              className="font-semibold text-brand-primary underline"
+                            >
+                              Watch recording
+                            </Link>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         ) : null}

@@ -13,6 +13,7 @@ import {
   HiOutlineAcademicCap,
   HiOutlineUserGroup,
   HiOutlineIdentification,
+  HiOutlineDocumentText,
   HiOutlineChatBubbleLeftRight,
   HiOutlineArrowTopRightOnSquare,
   HiOutlineArrowRightOnRectangle,
@@ -32,6 +33,7 @@ const navItems: NavItem[] = [
   { name: "Consultation Queue", href: "/admin/inquiries", icon: HiOutlineInboxStack, badge: "Leads" },
   { name: "Startup Applications", href: "/admin/startups", icon: HiOutlineRocketLaunch, badge: "Hub" },
   { name: "Course Catalog", href: "/admin/courses", icon: HiOutlineAcademicCap },
+  { name: "Materials & Live Classes", href: "/admin/course-content", icon: HiOutlineDocumentText },
   { name: "Student Enrollments", href: "/admin/enrollments", icon: HiOutlineUserGroup },
   { name: "Certificate Registry", href: "/admin/certificates", icon: HiOutlineIdentification },
   { name: "Users & Roles", href: "/admin/users", icon: HiOutlineUsers },
@@ -118,7 +120,7 @@ export default function AdminSidebar() {
               Academy & Credentials
             </span>
             <nav className="mt-2 space-y-1">
-              {navItems.slice(3, 6).map((item) => {
+              {navItems.slice(3, 7).map((item) => {
                 const isActive = pathname === item.href
                 const Icon = item.icon
                 return (
@@ -147,7 +149,7 @@ export default function AdminSidebar() {
               Communication
             </span>
             <nav className="mt-2 space-y-1">
-              {navItems.slice(6).map((item) => {
+              {navItems.slice(7).map((item) => {
                 const isActive = pathname === item.href
                 const Icon = item.icon
                 return (

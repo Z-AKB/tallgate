@@ -29,6 +29,7 @@ export type AdminCertificate = {
   grade: string
   is_valid: boolean
   storage_path: string | null
+  user_id: string | null
   created_at: string
 }
 
@@ -97,6 +98,7 @@ export function toCertificate(row: CertificateRow): AdminCertificate {
     grade: row.grade ?? "N/A",
     is_valid: row.is_valid,
     storage_path: row.storage_path,
+    user_id: row.user_id,
     created_at: row.created_at,
   }
 }

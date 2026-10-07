@@ -209,12 +209,9 @@ export default function UsersClient({
 
             <form onSubmit={handleCreateUser} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Full Name
-<span className="ml-1 font-normal text-slate-500">(required)</span>
-          </label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Full Name (optional)</label>
                 <input
                   type="text"
-                  required
                   value={createForm.full_name}
                   onChange={(e) => setCreateForm({ ...createForm, full_name: e.target.value })}
                   className="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-primary"
