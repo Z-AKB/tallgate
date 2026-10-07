@@ -1,124 +1,148 @@
-/**
- * Static seed data for the Services catalogue. Matches Phase 3's `services`
- * table shape (title, slug, description, category) so this can be swapped
- * for a Supabase query with no component changes once the table is
- * populated in the admin panel.
- */
-export interface Service {
-  slug: string;
-  title: string;
-  category: string;
-  summary: string;
-  description: string;
+export interface ServiceOffering {
+  slug: string
+  title: string
+  shortDescription: string
+  fullDescription: string
+  category: string
+  icon: string
+  deliverables: string[]
+  targetAudience: string
+  technologies: string[]
+  keyBenefits: string[]
 }
 
-export const services: Service[] = [
+export const servicesData: ServiceOffering[] = [
   {
-    slug: "software-development",
-    title: "Software Development",
-    category: "Development",
-    summary: "Custom software built around how your business actually operates.",
-    description:
-      "We design and build custom software — internal tools, customer-facing platforms, and systems that connect to what you already use. Every engagement starts with a scoping conversation, not a generic package.",
+    slug: 'custom-software-development',
+    title: 'Custom Software Development',
+    category: 'Engineering',
+    icon: 'CodeBracketIcon',
+    shortDescription: 'Bespoke enterprise applications, scalable APIs, and mission-critical software built for high-growth businesses.',
+    fullDescription: 'We design, architect, and build resilient, production-ready software tailored to your exact operational workflows. From modular SaaS platforms to high-throughput backend services, our engineering practices follow strict clean architecture and automated CI/CD pipelines.',
+    targetAudience: 'Startups, SMEs, Financial Institutions, and Enterprise Organizations',
+    technologies: ['Next.js', 'React', 'Node.js', 'Go', 'Python', 'PostgreSQL', 'Docker', 'Kubernetes'],
+    deliverables: [
+      'Requirements analysis & architectural blueprints',
+      'Scalable microservices or modular monolith backend',
+      'Clean, accessible web application frontend',
+      'Automated testing suites (Unit, Integration, E2E)',
+      'Production deployment with automated CI/CD',
+      'Full source code ownership & comprehensive technical documentation'
+    ],
+    keyBenefits: [
+      'Eliminate software licensing fees with owned IP',
+      'Scale effortlessly as transaction volumes grow',
+      'Bank-grade security and robust error recovery'
+    ]
   },
   {
-    slug: "web-development",
-    title: "Web Development",
-    category: "Development",
-    summary: "Fast, accessible websites and web applications.",
-    description:
-      "From marketing sites to full web applications, we build on modern frameworks with performance and accessibility as defaults, not afterthoughts — important on the mid-tier Android, 4G connections common across the region.",
+    slug: 'web-mobile-engineering',
+    title: 'Web & Mobile Engineering',
+    category: 'Engineering',
+    icon: 'DevicePhoneMobileIcon',
+    shortDescription: 'High-performance cross-platform mobile apps and responsive web platforms optimized for the African market.',
+    fullDescription: 'Create engaging digital experiences with lightning-fast mobile and web applications designed for low-latency, bandwidth-conscious environments across Nigeria and West Africa.',
+    targetAudience: 'Fintechs, Logistics Companies, E-commerce Brands, Healthcare Providers',
+    technologies: ['React Native', 'Flutter', 'Next.js', 'TypeScript', 'Tailwind CSS', 'GraphQL'],
+    deliverables: [
+      'Cross-platform iOS and Android mobile apps',
+      'Progressive Web Apps (PWAs) with offline sync support',
+      'Optimized API integration and state management',
+      'App Store and Google Play publishing and compliance',
+      'Post-launch performance monitoring and analytics integration'
+    ],
+    keyBenefits: [
+      'Reach mobile users on Android and iOS with a single codebase',
+      'Performance-conscious page loads for constrained network connections',
+      'Native push notifications and offline caching'
+    ]
   },
   {
-    slug: "mobile-development",
-    title: "Mobile Development",
-    category: "Development",
-    summary: "iOS and Android apps for customers and internal teams.",
-    description:
-      "Native and cross-platform mobile apps, built to match how your users actually use their phones — offline-tolerant, data-conscious, and tested on the devices your market runs.",
+    slug: 'cloud-devops-infrastructure',
+    title: 'Cloud & DevOps Infrastructure',
+    category: 'Infrastructure',
+    icon: 'CloudArrowUpIcon',
+    shortDescription: 'Secure cloud migrations, automated infrastructure-as-code, and resilient architecture on AWS, GCP & Azure.',
+    fullDescription: 'Modernize your infrastructure with robust cloud engineering. We eliminate single points of failure, optimize cloud spending, and automate delivery pipelines to let your team ship faster with confidence.',
+    targetAudience: 'Tech Companies, Scaling Startups, Medium-to-Large Enterprises',
+    technologies: ['AWS', 'Google Cloud', 'Microsoft Azure', 'Terraform', 'Docker', 'Kubernetes', 'GitHub Actions'],
+    deliverables: [
+      'Cloud infrastructure audit and cost-optimization plan',
+      'Infrastructure as Code (Terraform / Pulumi)',
+      'Automated CI/CD pipelines for staging and production',
+      'High-availability database clustering and automated backups',
+      '24/7 logging, metrics, and alerting setup (Prometheus/Grafana/Sentry)'
+    ],
+    keyBenefits: [
+      'Identify opportunities to optimize cloud spending',
+      'Reduce manual server updates and deployment risk',
+      'Achieve enterprise-grade business continuity and disaster recovery'
+    ]
   },
   {
-    slug: "ui-ux-design",
-    title: "UI/UX Design",
-    category: "Design",
-    summary: "Interfaces designed for clarity, not decoration.",
-    description:
-      "Research-informed interface design for web and mobile products — wireframes, prototypes, and design systems that hold up as your product grows past its first release.",
+    slug: 'cybersecurity-compliance',
+    title: 'Cybersecurity & Compliance',
+    category: 'Security',
+    icon: 'ShieldCheckIcon',
+    shortDescription: 'Vulnerability assessments, penetration testing, NDPR compliance, and threat mitigation for digital assets.',
+    fullDescription: 'Safeguard your applications, customer data, and network perimeter from malicious actors. We conduct deep security audits, provide NDPR/GDPR compliance guidance, and implement enterprise-grade zero-trust architectures.',
+    targetAudience: 'Fintechs, Edtechs, Corporate Businesses, Government Contractors',
+    technologies: ['OWASP ZAP', 'Burp Suite', 'Wireshark', 'Kali Linux', 'Cloudflare', 'SIEM Tools'],
+    deliverables: [
+      'Comprehensive Web & Mobile Application Penetration Testing',
+      'Network vulnerability scanning and remediation roadmap',
+      'Nigeria Data Protection Regulation (NDPR) compliance assessment',
+      'Security policy formulation and employee awareness training',
+      'Incident response and digital forensics support'
+    ],
+    keyBenefits: [
+      'Protect brand reputation and customer trust against breaches',
+      'Pass regulatory audits and fintech compliance requirements',
+      'Immediate mitigation of high-risk vulnerabilities'
+    ]
   },
   {
-    slug: "cloud-solutions",
-    title: "Cloud Solutions",
-    category: "Infrastructure",
-    summary: "Cloud infrastructure sized to your business, not oversized.",
-    description:
-      "Architecture, migration, and ongoing management of cloud infrastructure — right-sized for where your business is today, with a clear path to scale rather than premature complexity.",
+    slug: 'ai-business-automation',
+    title: 'AI & Business Automation',
+    category: 'AI & Data',
+    icon: 'CpuChipIcon',
+    shortDescription: 'Custom LLM integrations, intelligent workflow automation, and predictive data systems for more efficient operations.',
+    fullDescription: 'Harness practical Artificial Intelligence and intelligent robotic process automation (RPA) to automate repetitive administrative tasks, customer communications, document processing, and data analytics.',
+    targetAudience: 'Operations Teams, Customer Support Centers, Logistics, Startups',
+    technologies: ['OpenAI API', 'LangChain', 'Python', 'FastAPI', 'Make / n8n', 'PostgreSQL pgvector'],
+    deliverables: [
+      'Custom AI assistant trained on your proprietary company data',
+      'Automated document extraction and invoice processing',
+      'CRM and ERP workflow integrations',
+      'Predictive analytics dashboards for revenue and operations',
+      'Team training and AI governance protocols'
+    ],
+    keyBenefits: [
+      'Reduce time spent on repetitive tasks',
+      'Automated customer inquiry handling tailored to your domain',
+      'Data-driven decision making with real-time business telemetry'
+    ]
   },
   {
-    slug: "networking",
-    title: "Networking",
-    category: "Infrastructure",
-    summary: "Reliable network infrastructure for offices and facilities.",
-    description:
-      "Design, setup, and support for business networking — wired and wireless infrastructure, VPNs, and the unglamorous reliability work that keeps a business connected.",
-  },
-  {
-    slug: "cybersecurity",
-    title: "Cybersecurity",
-    category: "Security",
-    summary: "Practical security for businesses that aren't security companies.",
-    description:
-      "Security assessments, hardening, and incident response scoped to how a small-to-mid-size business actually operates — not enterprise theatre you'll never use.",
-  },
-  {
-    slug: "artificial-intelligence",
-    title: "Artificial Intelligence",
-    category: "Emerging Tech",
-    summary: "Applied AI features, not AI for its own sake.",
-    description:
-      "Integrating AI capabilities — automation, search, classification, generation — into real products and workflows, evaluated on whether they solve an actual business problem.",
-  },
-  {
-    slug: "blockchain",
-    title: "Blockchain",
-    category: "Emerging Tech",
-    summary: "Blockchain development where it's genuinely the right tool.",
-    description:
-      "Smart contract and blockchain-backed application development for the specific cases where decentralization or verifiability is the actual requirement, not the pitch.",
-  },
-  {
-    slug: "business-automation",
-    title: "Business Automation",
-    category: "Operations",
-    summary: "Removing manual, repetitive work from your operations.",
-    description:
-      "Workflow automation across the tools you already run — reducing manual data entry, repetitive approvals, and the operational drag that caps how much a small team can handle.",
-  },
-  {
-    slug: "digital-transformation",
-    title: "Digital Transformation",
-    category: "Operations",
-    summary: "Moving paper-and-spreadsheet processes onto real systems.",
-    description:
-      "A structured path from manual, disconnected processes to integrated digital systems — sequenced so the business keeps running while the transition happens.",
-  },
-  {
-    slug: "technical-consulting",
-    title: "Technical Consulting",
-    category: "Advisory",
-    summary: "An outside technical opinion before you commit budget.",
-    description:
-      "Architecture reviews, technology selection, and technical due diligence — useful before a large build, a hire, or a vendor decision you don't want to get wrong.",
-  },
-  {
-    slug: "training",
-    title: "Training",
-    category: "Advisory",
-    summary: "Practical technical training for teams, not just individuals.",
-    description:
-      "Structured training engagements for teams adopting a new tool, platform, or practice — distinct from Learning Hub's self-paced courses, this is delivered directly to your organization.",
-  },
-];
-
-export function getServiceBySlug(slug: string) {
-  return services.find((s) => s.slug === slug);
-}
+    slug: 'technical-consulting-advisory',
+    title: 'Technical Advisory & Architecture',
+    category: 'Consulting',
+    icon: 'BriefcaseIcon',
+    shortDescription: 'Fractional CTO services, software architecture review, tech team vetting, and strategic technology roadmaps.',
+    fullDescription: 'Get senior technology leadership without the overhead of a full-time executive. We guide founders and business leaders on software architecture, technology selection, team hiring, and vendor evaluation.',
+    targetAudience: 'Non-technical Founders, Executive Boards, Investors, Growing Startups',
+    technologies: ['Architecture Blueprints', 'Tech Due Diligence', 'System Design', 'Agile Governance'],
+    deliverables: [
+      'Comprehensive System Architecture Reviews',
+      'Technical Due Diligence reports for investors and acquisitions',
+      'Vendor code audits and milestone verification',
+      'Fractional CTO guidance and bi-weekly strategic reviews',
+      'Developer hiring and technical interview panels'
+    ],
+    keyBenefits: [
+      'Avoid costly architectural mistakes and tech debt early',
+      'Make informed technology investments backed by senior engineers',
+      'Accelerate product development velocity with proven engineering standards'
+    ]
+  }
+]

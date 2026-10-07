@@ -1,10 +1,12 @@
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation"
 
-/**
- * No courses exist yet — every slug 404s honestly rather than rendering
- * fabricated course content. Becomes a real overview page once courses
- * are queried from Supabase.
- */
-export default function CourseOverviewPage() {
-  notFound();
+export default async function CourseDetailIndexRedirect({
+  params,
+}: {
+  params: Promise<{ slug: string }>
+}) {
+  const { slug } = await params
+  // Redirect to the public marketing page.
+  // The actual lesson player is at `/learn/courses/[slug]/learn`.
+  redirect(`/learning-hub/${slug}`)
 }

@@ -1,59 +1,64 @@
-# TallGate
+This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
-TallGate is a technology platform for Nigerian and West African tech
-careers and businesses — one place to learn a skill, build a startup, and
-get technical help.
+## Getting Started
 
-## Stack
-
-- **Frontend:** Next.js (App Router) + TypeScript
-- **Styling:** Bootstrap 5 (CSS/grid/utilities only — no `bootstrap.bundle.js`;
-  interactive components like modals and dropdowns are custom React
-  components using React state, not Bootstrap's vanilla JS, to avoid the two
-  fighting over the same DOM)
-- **Backend/DB:** Supabase (Postgres + Row-Level Security + Auth + Storage +
-  Edge Functions)
-- **Forms:** React Hook Form + Zod
-
-## Design tokens
-
-Brand colors live as CSS custom properties in `app/globals.css` and are also
-exported from `config/site.ts` for use in TypeScript/JS (e.g. chart colors,
-inline styles). They're additionally mapped onto Bootstrap's own `--bs-*`
-variables so standard Bootstrap components (`.btn-primary`, `.alert-success`,
-etc.) pick up the TallGate palette automatically.
-
-| Token | Value | Usage |
-|---|---|---|
-| `--color-navy` | `#031544` | Header, footer, brand framing |
-| `--color-primary` | `#202db8` | Buttons, links, primary actions |
-| `--color-background` | `#f6f8ff` | Page background |
-| `--color-success` / `-warning` / `-danger` | — | Status fields (applications, requests, inquiries) |
-
-## Folder structure
-
-Feature-based structure — see `TallGate — Full System Structure.md` in the
-project files for the full rationale. Key directories:
-
-- `app/` — routes (App Router), grouped by marketing/auth/dashboard/admin etc.
-- `components/` — shared, mostly presentational UI
-- `features/` — domain logic grouped by feature (auth, learning, startups, ...)
-- `lib/` — infrastructure (database clients, auth helpers, storage, search)
-- `types/` — shared TypeScript types, including `UserRole`
-
-## Getting started
+First, run the development server:
 
 ```bash
-npm install
-cp .env.example .env.local   # fill in Supabase project URL + anon key
 npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
-## Status
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-The initial backend schema and row-level security policies are defined in
-`supabase/migrations/`. Apply them to the intended Supabase project using
-the instructions in `docs/database/README.md`. Auth, contact inquiry, and
-startup application flows are present; learning catalogue, enrollment,
-lesson progress, and certificate issuance still need their own schema and
-implementation.
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+
+This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+
+## Backend Setup
+
+The app requires Node.js 20.9.0 or newer.
+
+Copy `.env.example` to `.env.local` and set the Supabase project URL and publishable/anon key. Set `NEXT_PUBLIC_SITE_URL` to the public site origin; certificate QR links use this value. `SUPABASE_SERVICE_ROLE_KEY` is required server-side for admin operations and durable API rate limiting. Never expose it to browser code or commit `.env.local`.
+
+Before using the database-backed forms, learning content, or certificate registry, apply the migrations in `supabase/migrations` to the intended Supabase project in this order:
+
+1. `20260828000000_phase3_schema.sql`
+2. `20260829000000_lesson_content_gating.sql`
+3. `20260930000000_certificate_registry.sql`
+4. `20261001000000_lesson_progress.sql`
+5. `20261002000000_certificate_storage_path.sql`
+6. `20261003000000_storage_buckets_and_grants.sql`
+7. `20261004000000_demo_certificate_seed.sql` (optional; seeds three `[DEMO]` certificates for testing `/verify`)
+8. `20261005000000_certificate_storage_policies.sql`
+9. `20261006000000_public_api_hardening.sql`
+10. `20261006010000_certificate_verification_rpc.sql`
+11. `20261007000000_rate_limit_and_enrollment_hardening.sql`
+
+Certificate PDFs are rendered server-side with `@react-pdf/renderer` and stored in the private `certificates` Storage bucket. `SUPABASE_SERVICE_ROLE_KEY` is required for issuance (upload) and for `GET /api/admin/certificates/[id]/download`, which issues a 5-minute signed URL to signed-in admins only.
+
+Public form endpoints also use a server-side Supabase rate-limit table. The limits are 5 contact requests, 3 consultation requests, 3 startup applications, or 5 enrollment inquiries per IP address per 15 minutes. Certificate verification is limited to 30 lookups per IP address per 15 minutes. The email endpoint requires an admin session and is limited to 20 sends per admin per hour. Production hosting must supply a trusted `x-real-ip` or `cf-connecting-ip` request header for IP-based limits to work.
+
+The latest hardening migration revokes direct client inserts into public intake tables and active course enrollments. Intake is accepted only through the validated, rate-limited application routes; course access must be granted by a trusted administrative process.
+
+For a new database, use the Supabase CLI to link the project, inspect migration status, and apply pending migrations with `supabase db push`. If using the SQL Editor instead, run each migration once in the order above and do not also push the same migrations through the CLI. If earlier migrations were applied manually, reconcile the CLI migration history before using `db push`; do not blindly rerun SQL against a database that already has those changes. The timestamped Phase 3 migrations are authoritative; do not apply the removed legacy `0001` / `0002` learning-hub migrations. The admin dashboard also requires the signed-in admin account to have the `admin` role in `user_roles`.
+
+## Learn More
+
+To learn more about Next.js, take a look at the following resources:
+
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+
+## Deploy on Vercel
+
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.

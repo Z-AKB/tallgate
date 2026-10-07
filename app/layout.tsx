@@ -1,20 +1,56 @@
 import type { Metadata } from "next";
-import { siteConfig } from "@/config/site";
+import { Inter } from "next/font/google";
+import NavigationProgressBar from "@/components/ui/NavigationProgressBar";
+import { siteConfig } from "@/lib/config/site";
 import "./globals.css";
 
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
-  title: {
-    default: `${siteConfig.name} — ${siteConfig.tagline}`,
-    template: `%s | ${siteConfig.name}`,
+  title: `${siteConfig.name} | ${siteConfig.tagline}`,
+  description: siteConfig.description,
+  keywords: [
+    "Software Development Nigeria",
+    "Tech Consulting Abuja",
+    "Cloud Architecture West Africa",
+    "Cybersecurity Audit Nigeria",
+    "TallGate Academy",
+    "Computer Training Abuja",
+    "Startup Hub Nigeria"
+  ],
+  authors: [{ name: siteConfig.companyName }],
+  openGraph: {
+    type: "website",
+    locale: "en_NG",
+    url: siteConfig.url,
+    title: `${siteConfig.name} | ${siteConfig.tagline}`,
+    description: "Enterprise software development, cybersecurity, cloud solutions, and technology education across West Africa.",
+    siteName: siteConfig.name,
   },
-  description:
-    "TallGate is the technology platform for Nigerian and West African tech careers and businesses — learn a skill, build a startup, and get technical help, all in one place.",
+  twitter: {
+    card: "summary_large_image",
+    creator: siteConfig.social.twitterHandle,
+    site: siteConfig.social.twitterHandle,
+    title: `${siteConfig.name} | Technology Partner & Academy`,
+    description: "Enterprise software, cybersecurity, and practical tech training in Abuja, Nigeria.",
+  },
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en" className={inter.variable}>
+      <body className="min-h-screen bg-brand-canvas text-slate-900 antialiased flex flex-col">
+        <NavigationProgressBar />
+        {children}
+      </body>
     </html>
   );
 }
