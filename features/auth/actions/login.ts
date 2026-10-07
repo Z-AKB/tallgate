@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/database/server";
-import { isValidEmailAddress } from "@/lib/utils";
+import { isValidEmailAddress } from "@/lib/api/request";
 
 export interface LoginState {
   error?: string;

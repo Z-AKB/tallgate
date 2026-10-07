@@ -9,12 +9,11 @@ export async function requireAdmin(nextPath: string) {
 
   const { data } = await supabase
     .from("user_roles")
-    .select("role")
+    .select("roles(name)")
     .eq("user_id", user.id)
-    .eq("role", "admin")
     .maybeSingle();
 
-  if (!data) {
+  if (data?.roles?.name !== "admin") {
     redirect("/dashboard");
   }
 

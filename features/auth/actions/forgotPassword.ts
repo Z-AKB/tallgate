@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/database/server";
-import { isValidEmailAddress } from "@/lib/utils";
+import { isValidEmailAddress } from "@/lib/api/request";
 
 export interface ForgotPasswordState {
   status: "idle" | "success" | "error";

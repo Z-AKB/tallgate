@@ -35,10 +35,27 @@ export async function submitStartupApplication(
   }
 
   const supabase = await createClient();
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name, phone")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const email = user.email ?? "";
+  const founderName =
+    profile?.full_name?.trim() || email.split("@")[0] || "Applicant";
+
   const { error } = await supabase.from("startup_applications").insert({
-    founder_id: user.id,
-    business_name: businessName,
-    pitch_summary: pitchSummary,
+    user_id: user.id,
+    company_name: businessName,
+    founder_name: founderName,
+    email,
+    phone: profile?.phone ?? "",
+    industry: "other",
+    stage: "idea",
+    problem_statement: pitchSummary,
+    solution_description: pitchSummary,
     status: "submitted",
   });
 

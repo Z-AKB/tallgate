@@ -17,7 +17,7 @@ export default async function CertificatePage({ params }: CertificatePageProps) 
 
   const { data: certificate } = await supabase
     .from("certificates")
-    .select("id, certificate_number, issued_at")
+    .select("id, certificate_number, issue_date")
     .eq("id", id)
     .maybeSingle();
 
@@ -37,7 +37,7 @@ export default async function CertificatePage({ params }: CertificatePageProps) 
               Certificate #{certificate.certificate_number}
             </h1>
             <p className="text-muted-tg mb-0">
-              Issued {new Date(certificate.issued_at).toLocaleDateString()}
+              Issued {new Date(certificate.issue_date).toLocaleDateString()}
             </p>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createClient } from "@/lib/database/server";
+import { getCurrentUser } from "@/lib/auth/guards";
 
 const NAV_LINKS = [
   { href: "/services", label: "Services" },
@@ -11,30 +11,10 @@ const NAV_LINKS = [
 ] as const;
 
 export async function SiteHeader() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
+  const currentUser = await getCurrentUser();
 
-  if (authError && authError.name !== "AuthSessionMissingError") {
-    console.error("Unable to determine site-header auth state:", authError);
-  }
-
-  let dashboardHref = "/dashboard";
-  if (user) {
-    const { data: userRole, error: roleError } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    if (roleError) {
-      console.error("Unable to resolve site-header dashboard destination:", roleError);
-    } else if (userRole?.role === "admin") {
-      dashboardHref = "/admin";
-    }
-  }
+  const dashboardHref = currentUser?.roles.includes("admin") ? "/admin" : "/dashboard";
+  const user = currentUser;
 
   return (
     <header className="bg-navy py-3">
