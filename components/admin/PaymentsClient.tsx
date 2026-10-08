@@ -119,13 +119,30 @@ export default function PaymentsClient({
 
   const handleStatusChange = async (request: PaymentRequest, nextStatus: PaymentStatus) => {
     if (pendingId || nextStatus === request.status) return
+    const allowedTransitions: Record<PaymentStatus, PaymentStatus[]> = {
+      pending: ["confirmed", "declined"],
+      confirmed: ["refunded"],
+      declined: ["confirmed"],
+      refunded: [],
+    }
+    if (!(allowedTransitions[request.status] ?? []).includes(nextStatus)) return
     const previousRequests = [...requests]
     setPendingId(request.id)
     setError(null)
     setNotice(null)
     setRequests((current) =>
       current.map((entry) =>
-        entry.id === request.id ? { ...entry, status: nextStatus, updated_at: new Date().toISOString() } : entry
+        entry.id === request.id
+          ? {
+              ...entry,
+              status: nextStatus,
+              updated_at: new Date().toISOString(),
+              reviewed_at:
+                nextStatus === "confirmed" || nextStatus === "declined" || nextStatus === "refunded"
+                  ? new Date().toISOString()
+                  : entry.reviewed_at,
+            }
+          : entry
       )
     )
     try {
@@ -143,12 +160,16 @@ export default function PaymentsClient({
   const handleCreate = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const amount = Number(form.amount)
-    if (!form.full_name.trim() || !form.email.trim()) {
-      setCreateError("Customer name and email are required.")
+    if (form.full_name.trim().length < 2) {
+      setCreateError("Customer name must be at least 2 characters.")
       return
     }
-    if (!Number.isFinite(amount) || amount < 0) {
-      setCreateError("Enter an amount of zero or more.")
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim()) || form.email.trim().length > 200) {
+      setCreateError("Enter a valid email address.")
+      return
+    }
+    if (!Number.isFinite(amount) || amount < 0 || amount > 99999999.99) {
+      setCreateError("Amount must be between 0 and 99,999,999.99.")
       return
     }
 

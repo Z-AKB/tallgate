@@ -11,10 +11,10 @@ export const metadata = {
   description: "Author, publish, and maintain the Learning Hub course catalogue.",
 }
 
-// The public catalogue in lib/data/courses.ts is the platform's own list of
-// domains. Seeding the domain picker from it keeps the admin curriculum and
-// the Learning Hub aligned instead of inventing labels per screen.
-const knownDomains = Array.from(new Set(coursesData.map((course) => course.category)))
+// The public catalogue in lib/data/courses.ts is the fallback list of domains.
+// Once Supabase answers, the admin-managed `course_categories` table is
+// authoritative so the admin curriculum and the Learning Hub stay aligned.
+const fallbackDomains = Array.from(new Set(coursesData.map((course) => course.category)))
 
 export default async function AdminCoursesPage() {
   const supabase = await createClient()
@@ -24,6 +24,7 @@ export default async function AdminCoursesPage() {
   // project. Once Supabase answers, its result is authoritative even when it
   // is empty: a zero-row table must render as empty, never as seeded rows.
   let courses: MockCourse[] = useMockData ? mockCourses : []
+  let knownDomains: string[] = fallbackDomains
   let dataWarning = ""
 
   if (!isSupabaseConfigured()) {
@@ -32,16 +33,25 @@ export default async function AdminCoursesPage() {
       : "Courses are unavailable because Supabase is not configured."
   } else {
     try {
-      const { data, error } = await supabase
-        .from("courses")
-        .select("*")
-        .order("created_at", { ascending: false })
+      const [coursesResult, categoriesResult] = await Promise.all([
+        supabase.from("courses").select("*").order("created_at", { ascending: false }),
+        supabase
+          .from("course_categories")
+          .select("name")
+          .order("display_order", { ascending: true }),
+      ])
 
-      if (error) {
-        console.error("Admin courses query failed:", error)
+      if (coursesResult.error) {
+        console.error("Admin courses query failed:", coursesResult.error)
         dataWarning = "Courses could not be loaded. This catalogue may be incomplete."
       } else {
-        courses = (data ?? []).map(toCourse)
+        courses = (coursesResult.data ?? []).map(toCourse)
+      }
+
+      if (categoriesResult.error) {
+        console.error("Admin course categories query failed:", categoriesResult.error)
+      } else if (categoriesResult.data && categoriesResult.data.length > 0) {
+        knownDomains = categoriesResult.data.map((category) => category.name)
       }
     } catch (err) {
       console.error("Admin courses query failed:", err)

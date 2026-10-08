@@ -39,6 +39,11 @@ Before using the database-backed forms, learning content, or certificate registr
 9. `20261006000000_public_api_hardening.sql`
 10. `20261006010000_certificate_verification_rpc.sql`
 11. `20261007000000_rate_limit_and_enrollment_hardening.sql`
+12. `20261007100000_enforce_single_role_per_user.sql`
+13. `20261007110000_course_documents_and_live_sessions.sql`
+14. `20261007120000_admin_course_lesson_writes.sql`
+15. `20261007130000_payment_requests.sql`
+16. `20261007140000_course_categories.sql`
 
 Certificate PDFs are rendered server-side with `@react-pdf/renderer` and stored in the private `certificates` Storage bucket. `SUPABASE_SERVICE_ROLE_KEY` is required for issuance (upload) and for `GET /api/admin/certificates/[id]/download`, which issues a 5-minute signed URL to signed-in admins only.
 

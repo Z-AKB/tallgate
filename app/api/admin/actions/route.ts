@@ -109,13 +109,10 @@ async function removeCertificateFile(
 type RoleAssignmentResult = { error: null; status?: undefined } | { error: string; status: 400 | 503 }
 
 /**
- * Replaces a user's single role assignment without relying on an
- * `on conflict (user_id)` target: the composite `unique(user_id, role_id)`
- * constraint and the later `unique(user_id)` constraint make upserts either
- * ambiguous or impossible on databases where the follow-up migration has not
- * been applied. Reads, deletes and inserts explicitly instead so the write
- * succeeds on both schema revisions and collapses any duplicate assignments
- * left behind by older upserts.
+ * Assigns a user's single role with one atomic upsert. The
+ * `20261007100000_enforce_single_role_per_user.sql` migration replaces the
+ * old `unique(user_id, role_id)` constraint with `unique(user_id)`, which
+ * makes `on conflict (user_id)` the correct, race-free write target.
  */
 async function assignUserRole(
   adminSupabase: ReturnType<typeof createAdminClient>,
@@ -136,44 +133,13 @@ async function assignUserRole(
     return { error: "This user's profile no longer exists, so the role cannot be assigned.", status: 400 }
   }
 
-  const { data: assignments, error: readError } = await adminSupabase
+  const { error: upsertError } = await adminSupabase
     .from("user_roles")
-    .select("role_id")
-    .eq("user_id", userId)
+    .upsert({ user_id: userId, role_id: roleId }, { onConflict: "user_id" })
 
-  if (readError) {
-    console.error("Role assignment lookup failed:", readError)
-    return { error: readError.message, status: 503 }
-  }
-
-  const existing = assignments ?? []
-  if (existing.length === 1 && existing[0].role_id === roleId) {
-    return { error: null }
-  }
-
-  if (existing.length > 0) {
-    const { error: deleteError } = await adminSupabase.from("user_roles").delete().eq("user_id", userId)
-    if (deleteError) {
-      console.error("Role assignment cleanup failed:", deleteError)
-      return { error: deleteError.message, status: 503 }
-    }
-  }
-
-  const { error: insertError } = await adminSupabase
-    .from("user_roles")
-    .insert({ user_id: userId, role_id: roleId })
-
-  if (insertError) {
-    console.error("Role assignment insert failed:", insertError)
-    if (existing.length > 0) {
-      const { error: restoreError } = await adminSupabase.from("user_roles").insert(
-        existing.map((row) => ({ user_id: userId, role_id: row.role_id }))
-      )
-      if (restoreError) {
-        console.error("Failed to restore the previous role assignment:", restoreError)
-      }
-    }
-    return { error: insertError.message, status: 503 }
+  if (upsertError) {
+    console.error("Role assignment upsert failed:", upsertError)
+    return { error: upsertError.message, status: 503 }
   }
 
   return { error: null }
@@ -658,16 +624,27 @@ export async function POST(req: NextRequest) {
         const { full_name, email, phone, amount, currency, method, reference, note, course_id, user_id } =
           payload
 
-        if (!isNonEmptyText(full_name, 120) || !isValidEmailAddress(email)) {
+        if (!isNonEmptyText(full_name, 120) || full_name.trim().length < 2) {
           return NextResponse.json(
-            { error: "A customer name and a valid email address are required." },
+            { error: "A customer name of at least 2 characters is required." },
+            { status: 400 }
+          )
+        }
+        if (!isValidEmailAddress(email) || String(email).length > 200) {
+          return NextResponse.json(
+            { error: "A valid email address of up to 200 characters is required." },
             { status: 400 }
           )
         }
         const parsedAmount = typeof amount === "string" ? Number(amount) : amount
-        if (typeof parsedAmount !== "number" || !Number.isFinite(parsedAmount) || parsedAmount < 0) {
+        if (
+          typeof parsedAmount !== "number" ||
+          !Number.isFinite(parsedAmount) ||
+          parsedAmount < 0 ||
+          parsedAmount > 99_999_999.99
+        ) {
           return NextResponse.json(
-            { error: "Enter an amount of zero or more." },
+            { error: "Amount must be between 0 and 99,999,999.99." },
             { status: 400 }
           )
         }
@@ -684,14 +661,24 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ error: "Note must be 500 characters or fewer." }, { status: 400 })
         }
 
-        let linkedUserId: string | null = isNonEmptyString(user_id) ? user_id : null
-        if (!linkedUserId) {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("id")
-            .eq("email", email.trim().toLowerCase())
-            .maybeSingle()
-          linkedUserId = profile?.id ?? null
+        if (currency !== undefined && currency !== null && !isNonEmptyString(currency)) {
+          return NextResponse.json({ error: "Currency must be a string." }, { status: 400 })
+        }
+        const trimmedCurrency = isNonEmptyString(currency) ? currency.trim().toUpperCase() : "NGN"
+        if (!/^[A-Z]{3}$/.test(trimmedCurrency)) {
+          return NextResponse.json({ error: "Currency must be a 3-letter code." }, { status: 400 })
+        }
+        if (course_id !== undefined && course_id !== null && course_id !== "") {
+          const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+          if (!isNonEmptyString(course_id) || !uuidPattern.test(course_id)) {
+            return NextResponse.json({ error: "Select a valid course." }, { status: 400 })
+          }
+        }
+        if (user_id !== undefined && user_id !== null && user_id !== "") {
+          const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+          if (!isNonEmptyString(user_id) || !uuidPattern.test(user_id)) {
+            return NextResponse.json({ error: "Select a valid user." }, { status: 400 })
+          }
         }
 
         const insertData: PaymentInsert = {
@@ -699,12 +686,12 @@ export async function POST(req: NextRequest) {
           email: email.trim().toLowerCase(),
           phone: isNonEmptyString(phone) ? phone.trim() : null,
           amount: Math.round(parsedAmount * 100) / 100,
-          currency: isNonEmptyString(currency) ? currency.trim().toUpperCase().slice(0, 3) : "NGN",
+          currency: trimmedCurrency,
           method: isOneOf(PAYMENT_METHODS, method) ? method : "bank_transfer",
           reference: isNonEmptyString(reference) ? reference.trim() : null,
           note: isNonEmptyString(note) ? note.trim() : null,
-          course_id: isNonEmptyString(course_id) ? course_id : null,
-          user_id: linkedUserId,
+          course_id: isNonEmptyString(course_id) && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(course_id) ? course_id : null,
+          user_id: /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(user_id ?? "")) ? String(user_id) : null,
           status: "pending",
         }
 
@@ -740,11 +727,45 @@ export async function POST(req: NextRequest) {
           return NextResponse.json({ error: "Reference must be 120 characters or fewer." }, { status: 400 })
         }
 
+        const allowedTransitions: Record<PaymentStatus, PaymentStatus[]> = {
+          pending: ["confirmed", "declined"],
+          confirmed: ["refunded"],
+          declined: ["confirmed"],
+          refunded: [],
+        }
+
+        const nextStatus = status as PaymentStatus
+        const { data: current, error: currentError } = await supabase
+          .from("payment_requests")
+          .select("status")
+          .eq("id", id)
+          .maybeSingle()
+        if (currentError) {
+          return NextResponse.json({ error: currentError.message }, { status: 400 })
+        }
+        if (!current) {
+          return NextResponse.json(
+            { error: "Payment status was not changed: the request was not found." },
+            { status: 404 }
+          )
+        }
+        const allowed = allowedTransitions[current.status as PaymentStatus] ?? []
+        if (!allowed.includes(nextStatus)) {
+          return NextResponse.json(
+            { error: `Cannot change status from ${current.status} to ${nextStatus}.` },
+            { status: 400 }
+          )
+        }
+
         const updateData: PaymentUpdate = {
-          status,
+          status: nextStatus,
           updated_at: new Date().toISOString(),
           reviewed_by: admin.user.id,
-          reviewed_at: new Date().toISOString(),
+        }
+        if (nextStatus === "confirmed" || nextStatus === "declined" || nextStatus === "refunded") {
+          updateData.reviewed_at = new Date().toISOString()
+        } else {
+          updateData.reviewed_at = null
         }
         if (note !== undefined) updateData.note = isNonEmptyString(note) ? note.trim() : null
         if (reference !== undefined) {
@@ -845,13 +866,15 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        const { error: assignError } = await assignUserRole(adminSupabase, newUserId, roleData.id)
+        const assignResult = await assignUserRole(adminSupabase, newUserId, roleData.id)
 
-        if (assignError) {
-          console.error("Created user's role could not be assigned:", assignError)
+        if (assignResult.error) {
+          console.error("Created user's role could not be assigned:", assignResult.error)
           return NextResponse.json(
-            { error: `User was created, but the role could not be assigned: ${assignError}` },
-            { status: 503 }
+            {
+              error: `User was created, but the role could not be assigned: ${assignResult.error}. Assign the role from the users list.`,
+            },
+            { status: assignResult.status ?? 503 }
           )
         }
 
@@ -863,6 +886,16 @@ export async function POST(req: NextRequest) {
         if (!isNonEmptyString(user_id) || !isNonEmptyString(role)) {
           return NextResponse.json(
             { error: "A user id and role name are required." },
+            { status: 400 }
+          )
+        }
+        const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+        if (!uuidPattern.test(user_id)) {
+          return NextResponse.json({ error: "Select a valid user." }, { status: 400 })
+        }
+        if (user_id === admin.user.id) {
+          return NextResponse.json(
+            { error: "You cannot change your own role." },
             { status: 400 }
           )
         }

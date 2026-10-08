@@ -4,7 +4,6 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: [
       "react-icons",
-      "@heroicons/react",
       "@headlessui/react",
     ],
   },

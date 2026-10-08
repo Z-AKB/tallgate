@@ -86,14 +86,32 @@ function contentTypeFor(fileName: string) {
   return null
 }
 
+const MAX_UPLOAD_BYTES = 50 * 1024 * 1024
+
+function exceedsUploadLimit(fileSize: number) {
+  return fileSize > MAX_UPLOAD_BYTES
+}
+
+function uploadLimitMessage() {
+  return `Files larger than ${MAX_UPLOAD_BYTES / (1024 * 1024)} MB are not supported.`
+}
+
 function relativePathOf(file: File) {
   const withPath = (file as File & { webkitRelativePath?: string }).webkitRelativePath
   return withPath && withPath.trim() ? withPath : file.name
 }
 
+const SUPPORTED_EXTENSIONS = ["pdf", "pptx"]
+
+function stripSupportedExtension(value: string) {
+  const extension = fileExtension(value)
+  return SUPPORTED_EXTENSIONS.includes(extension)
+    ? value.slice(0, -(extension.length + 1))
+    : value
+}
+
 function normalizeLabel(value: string) {
   return value
-    .replace(/\.[^.]+$/, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
     .trim()
@@ -106,19 +124,21 @@ function stripLeadingNumber(value: string) {
 
 function lessonTitleFromFile(relativePath: string) {
   const leaf = relativePath.split("/").filter(Boolean).pop() ?? "Material"
-  const cleaned = stripLeadingNumber(normalizeLabel(leaf)).trim()
+  const cleaned = stripLeadingNumber(normalizeLabel(stripSupportedExtension(leaf))).trim()
   if (!cleaned) return "Untitled material"
   return cleaned.charAt(0).toUpperCase() + cleaned.slice(1)
 }
 
 function buildObjectPath(courseId: string, lessonId: string, relativePath: string) {
-  const segments = relativePath
-    .split("/")
-    .filter(Boolean)
-    .map((segment) => segment.replace(/[^A-Za-z0-9._-]/g, "_"))
-  const leaf = (segments.at(-1) ?? "material").slice(-100)
-  const parents = segments.slice(0, -1).slice(-2).map((segment) => segment.slice(0, 40))
-  return `${courseId}/${lessonId}/${crypto.randomUUID()}-${[...parents, leaf].join("/")}`
+  const segments = relativePath.split("/").filter(Boolean)
+  const leaf = (segments.at(-1) ?? "material")
+    .replace(/[\u0000-\u001f/]/g, "_")
+    .slice(-100)
+  const parents = segments
+    .slice(0, -1)
+    .slice(-2)
+    .map((segment) => segment.replace(/[^A-Za-z0-9._-]/g, "_").slice(0, 40))
+  return `${courseId}/${lessonId}/${crypto.randomUUID()}/${[...parents, leaf].join("/")}`
 }
 
 function buildLessonLookup(lessonsInCourse: Lesson[]) {
@@ -140,11 +160,13 @@ function buildLessonLookup(lessonsInCourse: Lesson[]) {
 
 function matchLessonToFileName(fileName: string, lookup: Map<string, Lesson[]>) {
   const leaf = fileName.split("/").filter(Boolean).pop() ?? fileName
+  const strippedLeaf = stripSupportedExtension(leaf)
+  const strippedPath = stripSupportedExtension(fileName)
   const candidates = [
-    normalizeLabel(leaf),
-    normalizeLabel(fileName),
-    stripLeadingNumber(normalizeLabel(leaf)),
-    stripLeadingNumber(normalizeLabel(fileName)),
+    normalizeLabel(strippedLeaf),
+    normalizeLabel(strippedPath),
+    stripLeadingNumber(normalizeLabel(strippedLeaf)),
+    stripLeadingNumber(normalizeLabel(strippedPath)),
   ].filter(Boolean)
 
   const seen = new Set<string>()
@@ -207,7 +229,11 @@ function statusClasses(status: FolderItem["status"]) {
   }
 }
 
-type AttachResult = { replacedFile: boolean; cleanupWarning: boolean }
+type AttachResult = {
+  replacedFile: boolean
+  cleanupWarning: boolean
+  preservedText: boolean
+}
 
 export default function CourseContentAdminClient({
   initialCourseId,
@@ -366,7 +392,11 @@ export default function CourseContentAdminClient({
       const { error: contentError } = await supabase
         .from("lesson_content")
         .upsert(
-          { lesson_id: targetLesson.id, content_url: objectPath, content_body: null },
+          {
+            lesson_id: targetLesson.id,
+            content_url: objectPath,
+            content_body: previousContent?.content_body ?? null,
+          },
           { onConflict: "lesson_id" }
         )
       if (contentError) throw contentError
@@ -410,7 +440,11 @@ export default function CourseContentAdminClient({
         course_id: targetLesson.course_id,
       })
 
-      return { replacedFile: Boolean(previousContent?.content_url), cleanupWarning }
+      return {
+        replacedFile: Boolean(previousContent?.content_url),
+        cleanupWarning,
+        preservedText: Boolean(previousContent?.content_body),
+      }
     } catch (attachError) {
       if (previousContent) {
         const restoreResult = await supabase
@@ -449,6 +483,10 @@ export default function CourseContentAdminClient({
       setError("Only PDF and PPTX files are supported.")
       return
     }
+    if (exceedsUploadLimit(file.size)) {
+      setError(uploadLimitMessage())
+      return
+    }
 
     setIsUploading(true)
     try {
@@ -460,8 +498,12 @@ export default function CourseContentAdminClient({
         result.cleanupWarning
           ? "The new document is attached, but the previous storage file could not be removed."
           : result.replacedFile
-            ? "The lesson document was replaced."
-            : "Course document uploaded and attached to the lesson."
+            ? result.preservedText
+              ? "The lesson document was replaced (existing text content was preserved)."
+              : "The lesson document was replaced."
+            : result.preservedText
+              ? "Course document uploaded and attached to the lesson (existing text content was preserved)."
+              : "Course document uploaded and attached to the lesson."
       )
     } catch (uploadError: unknown) {
       console.error("Course document upload failed:", uploadError)
@@ -477,8 +519,16 @@ export default function CourseContentAdminClient({
     setFolderProgress({ done: 0, total: 0 })
     const lookup = buildLessonLookup(lessonsInCourse)
 
-    const planned: FolderItem[] = selectedFiles.map((selectedFile, index) => {
+    const planned: FolderItem[] = []
+    const seen = new Set<string>()
+    for (let index = 0; index < selectedFiles.length; index++) {
+      const selectedFile = selectedFiles[index]
       const fileName = relativePathOf(selectedFile)
+      const key = fileName
+      if (seen.has(key)) {
+        continue
+      }
+      seen.add(key)
       const base: FolderItem = {
         key: `${index}-${fileName}`,
         file: selectedFile,
@@ -492,37 +542,46 @@ export default function CourseContentAdminClient({
       }
 
       if (!contentTypeFor(fileName)) {
-        return {
+        planned.push({
           ...base,
           status: "skipped",
           message: "Only PDF and PPTX files are supported.",
-        }
+        })
+        continue
+      }
+
+      if (exceedsUploadLimit(selectedFile.size)) {
+        planned.push({ ...base, status: "skipped", message: uploadLimitMessage() })
+        continue
       }
 
       const matched = matchLessonToFileName(fileName, lookup)
       if (matched.lesson) {
-        return {
+        planned.push({
           ...base,
           lessonId: matched.lesson.id,
           lessonTitle: matched.lesson.title,
           message: "Ready",
-        }
+        })
+        continue
       }
 
       if (createMissing) {
         if (modulesInCourse.length === 0) {
-          return {
+          planned.push({
             ...base,
             status: "skipped",
             message: "This course has no module, so a new lesson cannot be created.",
-          }
+          })
+          continue
         }
         const title = lessonTitleFromFile(fileName)
-        return { ...base, createLesson: true, lessonTitle: `${title} (new lesson)`, message: "Ready" }
+        planned.push({ ...base, createLesson: true, lessonTitle: title, message: "Ready" })
+        continue
       }
 
-      return { ...base, status: "skipped", message: matched.reason ?? "No matching lesson." }
-    })
+      planned.push({ ...base, status: "skipped", message: matched.reason ?? "No matching lesson." })
+    }
 
     setFolderItems(planned)
     const ready = planned.filter((item) => item.status === "pending").length
@@ -530,6 +589,8 @@ export default function CourseContentAdminClient({
       setError("The selected folder contains no files.")
     } else if (ready === 0) {
       setError("None of the files in this folder can be attached to a lesson.")
+    } else {
+      setError("")
     }
   }
 
@@ -555,13 +616,8 @@ export default function CourseContentAdminClient({
     return created
   }
 
-  const uploadFolder = async () => {
-    if (isUploadingFolder || folderItems.length === 0) return
-    const targets = folderItems.filter((item) => item.status === "pending")
-    if (targets.length === 0) {
-      setError("There are no ready files to upload.")
-      return
-    }
+  const runUploads = async (targets: FolderItem[]) => {
+    if (isUploadingFolder || targets.length === 0) return
 
     setError("")
     setNotice("")
@@ -579,12 +635,12 @@ export default function CourseContentAdminClient({
             .filter((lesson) => lesson.module_id === firstModule.id)
             .reduce((max, lesson) => Math.max(max, lesson.order_index), -1) + 1
 
-    for (const item of targets) {
-      setFolderItems((current) =>
-        current.map((entry) =>
-          entry.key === item.key ? { ...entry, status: "uploading", message: "Uploading..." } : entry
+      for (const item of targets) {
+        setFolderItems((current) =>
+          current.map((entry) =>
+            entry.key === item.key ? { ...entry, status: "uploading", message: "Uploading..." } : entry
+          )
         )
-      )
 
       let createdLessonId: string | null = null
       try {
@@ -654,10 +710,28 @@ export default function CourseContentAdminClient({
     const summary = `Uploaded ${uploaded} file${uploaded === 1 ? "" : "s"}` +
       `${failed ? `, ${failed} failed` : ""}` +
       `${skipped ? `, ${skipped} skipped` : ""}.`
-    setNotice(summary)
-    if (failed > 0 || skipped > 0) {
-      setError("")
+      setNotice(summary)
+      if (failed > 0) setError("")
+  }
+
+  const uploadFolder = () => {
+    if (isUploadingFolder) return
+    const targets = folderItems.filter((item) => item.status === "pending")
+    if (targets.length === 0) {
+      setError("There are no ready files to upload.")
+      return
     }
+    return runUploads(targets)
+  }
+
+  const retryFailedUploads = () => {
+    if (isUploadingFolder) return
+    const targets = folderItems.filter((item) => item.status === "failed")
+    if (targets.length === 0) {
+      setError("There are no failed uploads to retry.")
+      return
+    }
+    return runUploads(targets)
   }
 
   const startEditingSession = (session: SessionView) => {
@@ -747,16 +821,15 @@ export default function CourseContentAdminClient({
   return (
     <div className="space-y-8">
       {(error || notice) && (
-        <p
-          role={error ? "alert" : "status"}
-          className={`rounded-xl border px-4 py-3 text-sm ${
+      <div
+          className={`mb-3 rounded-lg border px-3 py-2 text-xs ${
             error
               ? "border-red-200 bg-red-50 text-red-800"
               : "border-emerald-200 bg-emerald-50 text-emerald-800"
           }`}
         >
           {error || notice}
-        </p>
+        </div>
       )}
 
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
@@ -856,7 +929,7 @@ export default function CourseContentAdminClient({
           </label>
           <button
             type="submit"
-            disabled={isUploading || courses.length === 0 || lessonsInCourse.length === 0}
+            disabled={isUploading || courses.length === 0 || !lessonId || !file}
             className="btn-primary text-xs disabled:opacity-50 md:col-span-3 md:justify-self-end"
           >
             {isUploading ? "Uploading..." : "Upload and attach"}
@@ -911,7 +984,7 @@ export default function CourseContentAdminClient({
           />
           <button
             type="button"
-            disabled={isUploadingFolder || lessonsInCourse.length === 0}
+            disabled={isUploadingFolder || courseId === ""}
             onClick={() => folderInputRef.current?.click()}
             className="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-xs font-semibold text-indigo-800 hover:bg-indigo-100 disabled:opacity-50"
           >
@@ -922,7 +995,9 @@ export default function CourseContentAdminClient({
             {selectedCourse
               ? `Target course: ${selectedCourse.title}`
               : "Select a course first."}
-            {lessonsInCourse.length === 0 ? " This course has no lessons yet." : ""}
+            {lessonsInCourse.length === 0 && courseId
+              ? " This course has no lessons yet."
+              : ""}
           </span>
         </div>
 
@@ -953,6 +1028,16 @@ export default function CourseContentAdminClient({
                     ? `Uploading ${folderProgress.done}/${folderProgress.total}...`
                     : `Upload ${pendingFolderItems.length} file${pendingFolderItems.length === 1 ? "" : "s"}`}
                 </button>
+                {failedFolderCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={retryFailedUploads}
+                    disabled={isUploadingFolder}
+                    className="inline-flex items-center gap-1 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-900 hover:bg-amber-100 disabled:opacity-50"
+                  >
+                    Retry {failedFolderCount} failed
+                  </button>
+                )}
               </div>
             </div>
 

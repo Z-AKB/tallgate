@@ -17,32 +17,35 @@ export async function SiteHeader() {
   const user = currentUser;
 
   return (
-    <header className="bg-navy py-3">
-      <div className="container d-flex justify-content-between align-items-center">
-        <Link href="/" className="fs-4 fw-semibold text-white">
+    <header className="bg-brand-navy py-3">
+      <div className="mx-auto max-w-7xl px-4 flex items-center justify-between gap-4">
+        <Link href="/" className="text-lg font-semibold text-white shrink-0">
           TallGate
         </Link>
 
-        <nav className="d-none d-lg-flex gap-4">
+        <nav className="hidden lg:flex items-center gap-6">
           {NAV_LINKS.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className="text-white text-opacity-75"
+              className="text-sm text-white/75 hover:text-white transition-colors"
             >
               {link.label}
             </Link>
           ))}
         </nav>
 
-        <div className="d-flex align-items-center gap-3">
+        <div className="flex items-center gap-3 shrink-0">
           <Link
             href={user ? dashboardHref : "/login"}
-            className="text-white text-opacity-75 d-none d-sm-inline"
+            className="hidden sm:inline text-sm text-white/75 hover:text-white transition-colors"
           >
             {user ? (dashboardHref === "/admin" ? "Admin dashboard" : "Dashboard") : "Sign in"}
           </Link>
-          <Link href="/contact" className="btn btn-primary btn-sm">
+          <Link
+            href="/contact"
+            className="rounded-full bg-white/10 border border-white/15 px-4 py-2 text-sm font-medium text-white hover:bg-white/20 transition-all"
+          >
             Book a consultation
           </Link>
         </div>

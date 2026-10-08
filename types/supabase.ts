@@ -267,6 +267,27 @@ export interface Database {
           },
         ]
       }
+      course_categories: {
+        Row: {
+          id: string
+          name: string
+          display_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          display_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          display_order?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
       courses: {
         Row: {
           id: string

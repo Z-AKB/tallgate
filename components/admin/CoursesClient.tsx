@@ -52,16 +52,17 @@ export default function CoursesClient({
   )
 
   const filteredCourses = courses.filter((course) => {
+    const category = (course.category ?? "").trim()
     const matchesSearch =
       course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       course.short_description.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesDomain = domainFilter === "all" || course.category === domainFilter
+    const matchesDomain = domainFilter === "all" || category === domainFilter.trim()
     return matchesSearch && matchesDomain
   })
 
   const groupedCourses = (() => {
     if (domainFilter !== "all") {
-      return [{ domain: domainFilter, courses: filteredCourses }]
+      return [{ domain: domainFilter.trim() || "Unassigned", courses: filteredCourses }]
     }
     const buckets = new Map<string, MockCourse[]>()
     for (const course of filteredCourses) {
@@ -90,6 +91,7 @@ export default function CoursesClient({
     patch: Partial<MockCourse>,
     revert: Partial<MockCourse>
   ) => {
+    if (isUpdating) return
     setIsUpdating(course.id)
     setError("")
     setNotice("")
@@ -132,7 +134,8 @@ export default function CoursesClient({
       setError("Enter a domain name before saving.")
       return
     }
-    if (draft === course.category) return
+    if (draft === (course.category ?? "").trim()) return
+    if (savingDomainId) return
 
     setSavingDomainId(course.id)
     setError("")
@@ -205,11 +208,16 @@ export default function CoursesClient({
               className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200 focus:outline-none"
             >
               <option value="all">All Domains</option>
-              {domainOptions.map((domain) => (
-                <option key={domain} value={domain}>
-                  {domain} ({courses.filter((course) => course.category === domain).length})
-                </option>
-              ))}
+              {domainOptions.map((domain) => {
+                const count = courses.filter(
+                  (course) => (course.category || "").trim() === domain
+                ).length
+                return (
+                  <option key={domain} value={domain}>
+                    {domain} ({count})
+                  </option>
+                )
+              })}
             </select>
           </div>
         </div>
@@ -237,9 +245,13 @@ export default function CoursesClient({
               </span>
               <div className="h-px flex-1 bg-slate-200" />
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {group.courses.map((course) => (
+            {group.courses.length === 0 ? (
+              <div className="rounded-lg border border-slate-200 bg-white p-4 text-xs text-slate-500">
+                No courses in this domain match the current search.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {group.courses.map((course) => (
                 <div
                   key={course.id}
                   className="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-card hover:border-slate-300 transition-all flex flex-col justify-between space-y-4"
@@ -348,6 +360,7 @@ export default function CoursesClient({
                 </div>
               ))}
             </div>
+            )}
           </div>
         ))
       )}

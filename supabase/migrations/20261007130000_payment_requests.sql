@@ -38,19 +38,21 @@ revoke all on public.payment_requests from anon;
 revoke all on public.payment_requests from authenticated;
 grant select, insert, update on public.payment_requests to authenticated;
 
--- Owners can read their own record; admins read and manage everything.
+drop policy if exists "Users can read own payment requests" on public.payment_requests;
 create policy "Users can read own payment requests"
   on public.payment_requests
   for select
   to authenticated
   using (auth.uid() = user_id or public.is_admin());
 
+drop policy if exists "Admins can create payment requests" on public.payment_requests;
 create policy "Admins can create payment requests"
   on public.payment_requests
   for insert
   to authenticated
   with check (public.is_admin());
 
+drop policy if exists "Admins can manage payment requests" on public.payment_requests;
 create policy "Admins can manage payment requests"
   on public.payment_requests
   for update
