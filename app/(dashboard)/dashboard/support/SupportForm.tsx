@@ -77,7 +77,7 @@ export default function DashboardSupportForm({
             setSubmitted(false)
             setFormData((current) => ({ ...current, message: "" }))
           }}
-          className="btn-secondary text-xs"
+          className="btn-secondary-light text-xs"
         >
           Send another request
         </button>

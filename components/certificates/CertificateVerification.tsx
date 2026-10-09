@@ -90,17 +90,22 @@ export default function CertificateVerification({
   return (
     <div className="py-8 sm:py-10">
       <div className="max-w-4xl mx-auto">
-        {isDashboard ? (
+        {variant === "admin" ? (
+          <div className="max-w-3xl mb-8">
+            <h1 className="text-2xl font-bold text-white tracking-tight">
+              Certificate Verification
+            </h1>
+            <p className="text-sm text-slate-300 mt-1">
+              Look up a certificate by its verification code and confirm its current status.
+            </p>
+          </div>
+        ) : isDashboard ? (
           <div className="max-w-3xl mb-8">
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
-              {variant === "admin"
-                ? "Certificate Verification"
-                : "Verify Certificate"}
+              Verify Certificate
             </h1>
             <p className="text-sm text-slate-500 mt-1">
-              {variant === "admin"
-                ? "Look up a certificate by its verification code and confirm its current status."
-                : "Check the authenticity and current status of a TallGate Academy certificate."}
+              Check the authenticity and current status of a TallGate Academy certificate.
             </p>
           </div>
         ) : (

@@ -106,7 +106,7 @@ export default async function DashboardCertificatesPage() {
               </div>
               <Link
                 href={`/verify?code=${encodeURIComponent(certificate.verification_code)}`}
-                className="btn-secondary text-xs self-start"
+                className="btn-secondary-light text-xs self-start"
               >
                 View verification
               </Link>

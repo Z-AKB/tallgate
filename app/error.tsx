@@ -28,7 +28,7 @@ export default function GlobalError({
         <button type="button" onClick={reset} className="btn-primary text-sm">
           Try again
         </button>
-        <Link href="/" className="btn-secondary text-sm">
+        <Link href="/" className="btn-secondary-light text-sm">
           Back to home
         </Link>
       </div>

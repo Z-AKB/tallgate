@@ -54,10 +54,10 @@ export default async function DashboardSettingsPage() {
           <Link href="/dashboard/profile" className="btn-primary text-xs">
             Edit profile details
           </Link>
-          <Link href="/dashboard/certificates" className="btn-secondary text-xs">
+          <Link href="/dashboard/certificates" className="btn-secondary-light text-xs">
             My certificates
           </Link>
-          <Link href="/dashboard/support" className="btn-secondary text-xs">
+          <Link href="/dashboard/support" className="btn-secondary-light text-xs">
             Contact support
           </Link>
         </div>
@@ -69,7 +69,7 @@ export default async function DashboardSettingsPage() {
           Sign out of this device. You can sign back in any time with your email and password.
         </p>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <SignOutButton className="btn-secondary text-xs">Sign out</SignOutButton>
+          <SignOutButton className="btn-secondary-light text-xs">Sign out</SignOutButton>
           <p className="text-[11px] text-slate-400">
             Need help? <a href={`mailto:${siteConfig.supportEmail}`} className="underline">{siteConfig.supportEmail}</a>
           </p>

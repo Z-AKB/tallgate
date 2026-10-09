@@ -47,7 +47,7 @@ export default async function DashboardPage() {
               More Courses & Programs
             </Link>
           ) : null}
-          <Link href="/dashboard/services" className="btn-secondary text-xs">
+          <Link href="/dashboard/services" className="btn-secondary-light text-xs">
             Our Other Services
           </Link>
         </div>
@@ -107,7 +107,7 @@ export default async function DashboardPage() {
                 <p className="text-[11px] text-slate-500 max-w-sm mx-auto">
                   Browse our engineering, cybersecurity, and digital tracks to begin learning.
                 </p>
-                <Link href="/dashboard/courses" className="btn-secondary text-xs mt-3 inline-block">
+                <Link href="/dashboard/courses" className="btn-secondary-light text-xs mt-3 inline-block">
                   Browse Available Courses
                 </Link>
               </div>
@@ -237,7 +237,7 @@ export default async function DashboardPage() {
             <p className="text-[11px] text-slate-500 max-w-sm mx-auto">
               From bespoke web/mobile development and cloud engineering to IT consulting and security audits.
             </p>
-            <Link href="/dashboard/services" className="btn-secondary text-xs mt-3 inline-block">
+            <Link href="/dashboard/services" className="btn-secondary-light text-xs mt-3 inline-block">
               View Our Other Services
             </Link>
           </div>

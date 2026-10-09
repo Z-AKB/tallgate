@@ -94,7 +94,7 @@ export default function UserCoursesPage() {
             </p>
           </div>
 
-          <Link href="/dashboard" className="btn-secondary text-xs self-start sm:self-auto">
+          <Link href="/dashboard" className="btn-secondary-light text-xs self-start sm:self-auto">
             ← Back to Overview
           </Link>
         </div>
@@ -217,7 +217,7 @@ export default function UserCoursesPage() {
               <div className="pt-4 mt-4 border-t border-slate-100">
                 <button
                   onClick={() => openEnroll(prog.title)}
-                  className="btn-secondary w-full justify-center text-xs py-2"
+                  className="btn-secondary-light w-full justify-center text-xs py-2"
                 >
                   Apply for Track
                 </button>
@@ -314,7 +314,7 @@ export default function UserCoursesPage() {
                   <button
                     type="button"
                     onClick={() => setEnrolledCourse(null)}
-                    className="btn-ghost text-xs"
+                    className="btn-ghost-light text-xs"
                     disabled={enrollLoading}
                   >
                     Cancel

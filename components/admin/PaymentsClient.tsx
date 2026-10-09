@@ -516,7 +516,7 @@ export default function PaymentsClient({
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="btn-ghost text-xs"
+                  className="btn-ghost-light text-xs"
                   disabled={isSubmitting}
                 >
                   Cancel
