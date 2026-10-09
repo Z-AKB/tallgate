@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/database/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { requireUser } from "@/lib/auth/requireUser";
 
 export interface ApplicationState {
@@ -46,7 +47,21 @@ export async function submitStartupApplication(
   const founderName =
     profile?.full_name?.trim() || email.split("@")[0] || "Applicant";
 
-  const { error } = await supabase.from("startup_applications").insert({
+  // Direct PostgREST inserts into startup_applications are revoked from
+  // authenticated users and granted only to service_role, so the validated,
+  // authenticated submission uses the trusted server client for the write.
+  let admin: ReturnType<typeof createAdminClient>;
+  try {
+    admin = createAdminClient();
+  } catch (error) {
+    console.error("Startup application admin client unavailable:", error);
+    return {
+      status: "error",
+      message: "Something went wrong submitting your application. Please try again.",
+    };
+  }
+
+  const { error } = await admin.from("startup_applications").insert({
     user_id: user.id,
     company_name: businessName,
     founder_name: founderName,
