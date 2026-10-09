@@ -87,9 +87,9 @@ export default function HeroSection() {
           {/* Right Column: Authentic Engineering & Strategy Team Photo */}
           <div className="lg:col-span-5">
             <div className="relative mx-auto max-w-lg lg:max-w-none">
-              <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-white/10 aspect-[4/3] bg-slate-900">
+              <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-white/10 aspect-square bg-slate-900">
                 <Image
-                  src="/assets/images/hero-team.jpg"
+                  src="/assets/images/hero-team-2026.jpg"
                   alt="TallGate Engineering and Technology Strategy Team in Abuja"
                   fill
                   className="object-cover hover:scale-105 transition-transform duration-500"
