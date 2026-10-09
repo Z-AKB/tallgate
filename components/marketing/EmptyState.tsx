@@ -12,13 +12,15 @@ interface EmptyStateProps {
  */
 export function EmptyState({ title, description }: EmptyStateProps) {
   return (
-    <div className="container py-5">
-      <div className="row justify-content-center text-center py-5">
-        <div className="col-lg-6">
-          <h2 className="h4 fw-semibold text-navy mb-2">{title}</h2>
-          <p className="text-muted-tg mb-0">{description}</p>
-        </div>
+    <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
+      <div className="site-panel mx-auto max-w-2xl rounded-2xl p-8 text-center sm:p-12">
+        <h2 className="mb-2 text-lg font-semibold text-white sm:text-xl">
+          {title}
+        </h2>
+        <p className="text-sm leading-relaxed text-slate-300 sm:text-base">
+          {description}
+        </p>
       </div>
-    </div>
+    </section>
   );
 }

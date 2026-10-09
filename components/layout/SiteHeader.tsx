@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth/guards";
+import { SiteMobileNav } from "@/components/layout/SiteMobileNav";
 
 const NAV_LINKS = [
   { href: "/services", label: "Services" },
   { href: "/portfolio", label: "Portfolio" },
-  { href: "/learn", label: "Learning Hub" },
+  { href: "/learning-hub", label: "Learning Hub" },
   { href: "/startups", label: "Startup Hub" },
   { href: "/blog", label: "Blog" },
   { href: "/contact", label: "Contact" },
@@ -44,10 +45,15 @@ export async function SiteHeader() {
           </Link>
           <Link
             href="/contact"
-            className="rounded-full bg-white/10 border border-white/15 px-4 py-2 text-sm font-medium text-white hover:bg-white/20 transition-all"
+            className="hidden sm:inline-flex rounded-full bg-white/10 border border-white/15 px-4 py-2 text-sm font-medium text-white hover:bg-white/20 transition-all"
           >
             Book a consultation
           </Link>
+          <SiteMobileNav
+            links={NAV_LINKS}
+            dashboardHref={dashboardHref}
+            isAuthenticated={Boolean(user)}
+          />
         </div>
       </div>
     </header>

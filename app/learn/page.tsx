@@ -26,23 +26,24 @@ export default function LearnHomePage() {
         description="Browse the catalogue below — no account needed until you're ready to enroll."
       />
 
-      <section className="py-5">
-        <div className="container">
-          <h2 className="h5 fw-semibold text-navy mb-3">Categories</h2>
-          <div className="d-flex flex-wrap gap-2 mb-5">
-            {CATEGORIES.map((c) => (
-              <span
-                key={c}
-                className="badge bg-highlight text-navy border px-3 py-2 fw-normal"
-              >
-                {c}
-              </span>
-            ))}
-          </div>
-          <Link href="/learn/courses" className="btn btn-primary">
-            Browse course catalogue
-          </Link>
+      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
+        <h2 className="mb-4 text-lg font-semibold text-white">Categories</h2>
+        <div className="mb-8 flex flex-wrap gap-2.5">
+          {CATEGORIES.map((c) => (
+            <span
+              key={c}
+              className="inline-flex items-center rounded-md border border-white/15 bg-white/[0.06] px-3 py-1.5 text-xs font-medium text-slate-200"
+            >
+              {c}
+            </span>
+          ))}
         </div>
+        <Link
+          href="/learn/courses"
+          className="btn-primary px-6 py-3 text-sm"
+        >
+          Browse course catalogue
+        </Link>
       </section>
 
       <EmptyState

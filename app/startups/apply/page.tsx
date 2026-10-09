@@ -15,14 +15,10 @@ export default async function StartupApplyPage() {
         title="Founder application"
         description="Tell us about what you're building. A real person reviews every application."
       />
-      <section className="py-5">
-        <div className="container">
-          <div className="row">
-            <div className="col-lg-7">
-              <div className="card border p-4 p-md-5">
-                <ApplicationForm />
-              </div>
-            </div>
+      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
+        <div className="max-w-2xl">
+          <div className="site-panel rounded-2xl p-6 sm:p-8">
+            <ApplicationForm />
           </div>
         </div>
       </section>

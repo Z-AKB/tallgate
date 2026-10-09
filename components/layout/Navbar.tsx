@@ -1,19 +1,20 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import Image from "next/image"
 import Logo from "@/components/layout/Logo"
 import { siteConfig } from "@/lib/config/site"
 import { createClient } from "@/lib/supabase/client"
-import { HiMenu, HiX, HiChevronDown, HiOutlinePhone, HiOutlineMail, HiOutlineLocationMarker } from "react-icons/hi"
+import { HiMenu, HiX, HiOutlinePhone, HiOutlineMail, HiOutlineLocationMarker } from "react-icons/hi"
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
   const [dashboardHref, setDashboardHref] = useState<"/admin" | "/dashboard" | "/login" | null>(null)
   const pathname = usePathname()
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     const supabase = createClient()
@@ -83,6 +84,10 @@ export default function Navbar() {
 
   useEffect(() => {
     if (!mobileMenuOpen) return
+    const trigger = triggerRef.current
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    closeButtonRef.current?.focus()
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setMobileMenuOpen(false)
     }
@@ -92,8 +97,10 @@ export default function Navbar() {
     document.addEventListener("keydown", onKeyDown)
     window.addEventListener("resize", onResize)
     return () => {
+      document.body.style.overflow = previousOverflow
       document.removeEventListener("keydown", onKeyDown)
       window.removeEventListener("resize", onResize)
+      trigger?.focus()
     }
   }, [mobileMenuOpen])
 
@@ -112,6 +119,7 @@ export default function Navbar() {
   }
 
   return (
+    <>
     <header className="sticky top-0 z-40 w-full border-b border-white/[0.09] bg-[#061A4F]/85 backdrop-blur-xl">
       {/* Top Contact Ribbon */}
       <div className="hidden lg:block bg-white/[0.025] text-slate-400 text-xs py-2 px-6 border-b border-white/[0.06]">
@@ -195,6 +203,8 @@ export default function Navbar() {
               Consult
             </Link>
             <button
+              type="button"
+              ref={triggerRef}
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 rounded-lg text-slate-300 hover:text-white hover:bg-white/10"
               aria-label="Toggle Menu"
@@ -207,39 +217,56 @@ export default function Navbar() {
         </div>
       </div>
 
+      </header>
+
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
-        <>
-          <div
-            className="fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-sm md:hidden"
-            onClick={() => setMobileMenuOpen(false)}
-            aria-hidden="true"
-          />
-          <div
-            id="landing-mobile-menu"
-            role="dialog"
-            aria-modal="true"
-            className="md:hidden border-t border-white/10 bg-[#061A4F] px-4 pt-2 pb-6 space-y-2 shadow-dropdown"
-          >
-          <div className="space-y-1">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                prefetch={true}
-                onClick={() => setMobileMenuOpen(false)}
-                className={`block px-3 py-2.5 rounded-lg text-base font-medium transition-colors ${
-                  isActive(link.href)
-                    ? "text-white bg-white/10 font-semibold"
-                    : "text-slate-300 hover:bg-white/[0.06]"
-                }`}
-              >
-                {link.name}
-              </Link>
-            ))}
+        <div
+          id="landing-mobile-menu"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Site navigation"
+          className="fixed inset-x-0 top-0 z-50 flex h-dvh flex-col bg-[#061A4F] md:hidden"
+        >
+          {/* Menu header: keep branding + a dedicated close control */}
+          <div className="flex h-16 shrink-0 items-center justify-between border-b border-white/10 px-4">
+            <Logo variant="light" />
+            <button
+              type="button"
+              ref={closeButtonRef}
+              onClick={() => setMobileMenuOpen(false)}
+              className="rounded-lg p-2 text-slate-200 hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/30"
+              aria-label="Close menu"
+            >
+              <HiX className="h-6 w-6" />
+            </button>
           </div>
 
-          <div className="pt-4 border-t border-white/10 flex flex-col gap-2">
+          {/* Scrollable link list so every item is reachable on short screens */}
+          <nav className="flex-1 overflow-y-auto overscroll-contain px-4 py-4">
+            <ul className="space-y-1">
+              {navLinks.map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    prefetch={true}
+                    onClick={() => setMobileMenuOpen(false)}
+                    aria-current={isActive(link.href) ? "page" : undefined}
+                    className={`block rounded-xl px-4 py-3 text-base font-medium transition-colors ${
+                      isActive(link.href)
+                        ? "bg-white/10 font-semibold text-white"
+                        : "text-slate-200 hover:bg-white/[0.06] hover:text-white"
+                    }`}
+                  >
+                    {link.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          {/* Pinned CTA + contact details */}
+          <div className="shrink-0 space-y-3 border-t border-white/10 px-4 py-4">
             <Link
               href="/consultation"
               prefetch={true}
@@ -258,14 +285,26 @@ export default function Navbar() {
                 {isAuthenticated ? "Open Dashboard" : "Portal Sign In"}
               </Link>
             )}
-            <div className="pt-2 text-xs text-slate-400 space-y-1">
-              <p>📍 {siteConfig.address.short}</p>
-              <p>📞 {siteConfig.phone.display}</p>
+            <div className="flex flex-col gap-1.5 pt-1 text-sm text-slate-300">
+              <a href={siteConfig.phone.href} className="flex items-center gap-2 hover:text-white">
+                <HiOutlinePhone className="h-4 w-4 shrink-0 text-indigo-300" />
+                {siteConfig.phone.display}
+              </a>
+              <a
+                href={`mailto:${siteConfig.supportEmail}`}
+                className="flex items-center gap-2 break-all hover:text-white"
+              >
+                <HiOutlineMail className="h-4 w-4 shrink-0 text-indigo-300" />
+                {siteConfig.supportEmail}
+              </a>
+              <span className="flex items-start gap-2">
+                <HiOutlineLocationMarker className="mt-0.5 h-4 w-4 shrink-0 text-indigo-300" />
+                {siteConfig.address.short}
+              </span>
             </div>
           </div>
-          </div>
-        </>
+        </div>
       )}
-    </header>
+    </>
   )
 }

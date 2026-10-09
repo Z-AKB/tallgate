@@ -14,7 +14,7 @@ const COLUMNS: { heading: string; links: { href: string; label: string }[] }[] =
     heading: "Platform",
     links: [
       { href: "/services", label: "Services" },
-      { href: "/learn", label: "Learning Hub" },
+      { href: "/learning-hub", label: "Learning Hub" },
       { href: "/startups", label: "Startup Hub" },
     ],
   },

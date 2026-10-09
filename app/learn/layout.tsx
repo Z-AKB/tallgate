@@ -7,10 +7,10 @@ export default function LearnLayout({
   children: React.ReactNode;
 }) {
   return (
-    <>
+    <div className="site-shell flex flex-col">
       <SiteHeader />
-      <main className="flex-grow-1">{children}</main>
+      <main className="flex-grow">{children}</main>
       <SiteFooter />
-    </>
+    </div>
   );
 }

@@ -20,19 +20,19 @@ export function ComingSoon({
   backLabel = "Back to home",
 }: ComingSoonProps) {
   return (
-    <div className="container py-5 my-5">
-      <div className="row justify-content-center text-center">
-        <div className="col-lg-6">
-          <p className="text-uppercase fw-semibold text-primary small mb-2">
-            Coming soon
-          </p>
-          <h1 className="h2 fw-bold text-navy mb-3">{title}</h1>
-          <p className="text-muted-tg mb-4">{description}</p>
-          <Link href={backHref} className="btn btn-outline-primary">
-            {backLabel}
-          </Link>
-        </div>
-      </div>
+    <div className="site-shell flex min-h-screen flex-col items-center justify-center px-4 py-16 text-center">
+      <p className="mb-3 text-xs font-bold uppercase tracking-[0.16em] text-indigo-300 sm:text-sm">
+        Coming soon
+      </p>
+      <h1 className="mb-3 text-3xl font-bold tracking-tight text-white sm:text-4xl">
+        {title}
+      </h1>
+      <p className="mb-6 max-w-xl text-base leading-relaxed text-slate-300">
+        {description}
+      </p>
+      <Link href={backHref} className="btn-secondary">
+        {backLabel}
+      </Link>
     </div>
   );
 }

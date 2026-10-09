@@ -14,12 +14,10 @@ export default function StartupHubPage() {
         description="Submit an application, get a real review, and track your status — no black-hole forms."
       />
 
-      <section className="py-4">
-        <div className="container">
-          <Link href="/startups/apply" className="btn btn-primary btn-lg">
-            Apply as a founder
-          </Link>
-        </div>
+      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <Link href="/startups/apply" className="btn-primary px-6 py-3 text-base">
+          Apply as a founder
+        </Link>
       </section>
 
       <EmptyState
