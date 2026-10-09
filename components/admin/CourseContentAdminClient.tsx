@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useMemo, useRef, useState } from "react"
+import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { getErrorMessage } from "@/lib/utils"
 import type { Database } from "@/types/supabase"
@@ -340,13 +341,6 @@ export default function CourseContentAdminClient({
   const uploadedFolderCount = folderItems.filter((item) => item.status === "uploaded").length
   const failedFolderCount = folderItems.filter((item) => item.status === "failed").length
   const skippedFolderCount = folderItems.filter((item) => item.status === "skipped").length
-
-  useEffect(() => {
-    const input = folderInputRef.current
-    if (!input) return
-    input.setAttribute("webkitdirectory", "")
-    input.setAttribute("directory", "")
-  }, [])
 
   const resetSessionForm = () => {
     setEditingSession(null)
@@ -822,6 +816,7 @@ export default function CourseContentAdminClient({
     <div className="space-y-8">
       {(error || notice) && (
       <div
+          role={error ? "alert" : "status"}
           className={`mb-3 rounded-lg border px-3 py-2 text-xs ${
             error
               ? "border-red-200 bg-red-50 text-red-800"
@@ -829,6 +824,24 @@ export default function CourseContentAdminClient({
           }`}
         >
           {error || notice}
+        </div>
+      )}
+
+      {courses.length === 0 && (
+        <div
+          role="alert"
+          className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+        >
+          <p className="font-semibold">No courses exist yet.</p>
+          <p className="mt-1">
+            Materials are attached to lessons, so the upload tools stay disabled
+            until the catalogue contains at least one course with a lesson. Add or
+            seed a course in{" "}
+            <Link href="/admin/courses" className="font-semibold underline">
+              Curriculum Management
+            </Link>{" "}
+            first.
+          </p>
         </div>
       )}
 
@@ -975,6 +988,7 @@ export default function CourseContentAdminClient({
             ref={folderInputRef}
             type="file"
             multiple
+            {...{ webkitdirectory: "", directory: "" }}
             className="hidden"
             onChange={(event) => {
               const selected = Array.from(event.target.files ?? [])

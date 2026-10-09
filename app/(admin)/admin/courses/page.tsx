@@ -1,7 +1,7 @@
 import React from "react"
 import Link from "next/link"
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/server"
-import { mockCourses, type MockCourse } from "@/lib/data/adminMockData"
+import type { MockCourse } from "@/lib/data/adminMockData"
 import { coursesData } from "@/lib/data/courses"
 import { toCourse } from "@/lib/data/adminRowMappers"
 import { ADMIN_QUERY_LIMIT } from "@/lib/admin/queryLimits"
@@ -19,19 +19,15 @@ const fallbackDomains = Array.from(new Set(coursesData.map((course) => course.ca
 
 export default async function AdminCoursesPage() {
   const supabase = await createClient()
-  const useMockData = !isSupabaseConfigured() && process.env.NODE_ENV === "development"
 
-  // Mock data is only ever a development placeholder for an unconfigured
-  // project. Once Supabase answers, its result is authoritative even when it
-  // is empty: a zero-row table must render as empty, never as seeded rows.
-  let courses: MockCourse[] = useMockData ? mockCourses : []
+  // Never present mock courses as real records: an empty (or unconfigured)
+  // catalogue renders the seed empty state instead.
+  let courses: MockCourse[] = []
   let knownDomains: string[] = fallbackDomains
   let dataWarning = ""
 
   if (!isSupabaseConfigured()) {
-    dataWarning = useMockData
-      ? "Supabase is not configured, so this catalogue is showing sample data."
-      : "Courses are unavailable because Supabase is not configured."
+    dataWarning = "Courses are unavailable because Supabase is not configured."
   } else {
     try {
       const [coursesResult, categoriesResult] = await Promise.all([

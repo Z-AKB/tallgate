@@ -14,6 +14,8 @@ type CourseAction = {
   success: boolean
   message?: string
   error?: string
+  course?: MockCourse
+  courses?: MockCourse[]
 }
 
 async function postCourseAction(action: string, payload: Record<string, unknown>) {
@@ -24,6 +26,22 @@ async function postCourseAction(action: string, payload: Record<string, unknown>
   })
   const data = (await res.json().catch(() => null)) as CourseAction | null
   if (!res.ok) throw new Error(getErrorMessage(data, "The change could not be saved."))
+  return data
+}
+
+const COURSE_LEVELS = ["Beginner", "Intermediate", "Advanced", "All Levels"] as const
+
+const emptyCourseForm = {
+  title: "",
+  category: "",
+  level: "Beginner",
+  price_ngn: "0",
+  duration: "",
+  short_description: "",
+  overview: "",
+  prerequisites: "",
+  learning_outcomes: "",
+  is_published: true,
 }
 
 export default function CoursesClient({
@@ -43,6 +61,10 @@ export default function CoursesClient({
   const [savingDomainId, setSavingDomainId] = useState<string | null>(null)
   const [notice, setNotice] = useState("")
   const [error, setError] = useState("")
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [courseForm, setCourseForm] = useState(emptyCourseForm)
+  const [isCreating, setIsCreating] = useState(false)
+  const [isSeeding, setIsSeeding] = useState(false)
 
   const observedDomains = Array.from(
     new Set(courses.map((course) => course.category).filter((category) => category.trim()))
@@ -153,6 +175,94 @@ export default function CoursesClient({
     }
   }
 
+  const mergeCourses = (incoming: MockCourse[]) => {
+    if (incoming.length === 0) return
+    setCourses((prev) => {
+      const byId = new Map(prev.map((course) => [course.id, course]))
+      for (const course of incoming) byId.set(course.id, course)
+      return Array.from(byId.values())
+    })
+    setDomainDrafts((prev) => {
+      const next = { ...prev }
+      for (const course of incoming) next[course.id] = course.category
+      return next
+    })
+  }
+
+  const submitNewCourse = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (isCreating) return
+    setError("")
+    setNotice("")
+    if (!courseForm.title.trim()) {
+      setError("Enter a course title.")
+      return
+    }
+    if (!courseForm.category.trim()) {
+      setError("Assign a domain for the course.")
+      return
+    }
+    if (!courseForm.duration.trim()) {
+      setError("Enter a duration (for example, 6 Weeks).")
+      return
+    }
+    if (!courseForm.short_description.trim()) {
+      setError("Add a short description.")
+      return
+    }
+    if (!courseForm.overview.trim()) {
+      setError("Add an overview.")
+      return
+    }
+
+    const learning_outcomes = courseForm.learning_outcomes
+      .split("\n")
+      .map((outcome) => outcome.trim())
+      .filter(Boolean)
+
+    setIsCreating(true)
+    try {
+      const data = await postCourseAction("create_course", {
+        title: courseForm.title,
+        category: courseForm.category,
+        level: courseForm.level,
+        price_ngn: courseForm.price_ngn,
+        duration: courseForm.duration,
+        short_description: courseForm.short_description,
+        overview: courseForm.overview,
+        prerequisites: courseForm.prerequisites,
+        learning_outcomes,
+        is_published: courseForm.is_published,
+      })
+      if (data?.course) mergeCourses([data.course])
+      setNotice(data?.message ?? "Course created.")
+      setCourseForm(emptyCourseForm)
+      setShowAddForm(false)
+    } catch (err) {
+      console.error("Course creation failed:", err)
+      setError(getErrorMessage(err, "The course could not be created."))
+    } finally {
+      setIsCreating(false)
+    }
+  }
+
+  const runSeed = async () => {
+    if (isSeeding) return
+    setIsSeeding(true)
+    setError("")
+    setNotice("")
+    try {
+      const data = await postCourseAction("seed_learning_hub_courses", {})
+      if (data?.courses) mergeCourses(data.courses)
+      setNotice(data?.message ?? "Learning Hub catalogue synced.")
+    } catch (err) {
+      console.error("Catalogue seed failed:", err)
+      setError(getErrorMessage(err, "The catalogue could not be synced."))
+    } finally {
+      setIsSeeding(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       {(error || notice) && (
@@ -221,7 +331,186 @@ export default function CoursesClient({
             </select>
           </div>
         </div>
+
+        {/* Catalogue actions */}
+        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
+          <button
+            type="button"
+            onClick={runSeed}
+            disabled={isSeeding}
+            className="rounded-lg border border-brand-primary/30 bg-brand-light px-3 py-1.5 text-xs font-bold text-brand-primary transition-all hover:bg-brand-primary hover:text-white disabled:opacity-60"
+          >
+            {isSeeding ? "Syncing…" : "Seed Learning Hub Courses"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowAddForm((value) => !value)}
+            className="rounded-lg bg-brand-primary px-3 py-1.5 text-xs font-bold text-white transition-all hover:opacity-90"
+          >
+            {showAddForm ? "Close" : "Add Course"}
+          </button>
+        </div>
       </div>
+
+      {showAddForm && (
+        <form
+          onSubmit={submitNewCourse}
+          className="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-card space-y-4"
+        >
+          <div>
+            <h2 className="text-sm font-bold text-slate-900">Add a course</h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Creates the course in Supabase and adds its default &ldquo;Package Curriculum&rdquo; module.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <label className="block">
+              <span className="form-label">Title</span>
+              <input
+                type="text"
+                required
+                maxLength={200}
+                value={courseForm.title}
+                onChange={(e) => setCourseForm((prev) => ({ ...prev, title: e.target.value }))}
+                className="form-input"
+                placeholder="Course title"
+              />
+            </label>
+            <label className="block">
+              <span className="form-label">Domain</span>
+              <input
+                type="text"
+                required
+                list="course-domain-options"
+                maxLength={80}
+                value={courseForm.category}
+                onChange={(e) => setCourseForm((prev) => ({ ...prev, category: e.target.value }))}
+                className="form-input"
+                placeholder="e.g. Development"
+              />
+            </label>
+            <label className="block">
+              <span className="form-label">Level</span>
+              <select
+                value={courseForm.level}
+                onChange={(e) => setCourseForm((prev) => ({ ...prev, level: e.target.value }))}
+                className="form-input"
+              >
+                {COURSE_LEVELS.map((level) => (
+                  <option key={level} value={level}>
+                    {level}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="form-label">Duration</span>
+              <input
+                type="text"
+                required
+                maxLength={80}
+                value={courseForm.duration}
+                onChange={(e) => setCourseForm((prev) => ({ ...prev, duration: e.target.value }))}
+                className="form-input"
+                placeholder="e.g. 6 Weeks"
+              />
+            </label>
+            <label className="block">
+              <span className="form-label">Price (₦)</span>
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                max={99999999.99}
+                value={courseForm.price_ngn}
+                onChange={(e) => setCourseForm((prev) => ({ ...prev, price_ngn: e.target.value }))}
+                className="form-input"
+              />
+            </label>
+            <label className="flex items-center gap-2 self-end pb-2">
+              <input
+                type="checkbox"
+                checked={courseForm.is_published}
+                onChange={(e) =>
+                  setCourseForm((prev) => ({ ...prev, is_published: e.target.checked }))
+                }
+              />
+              <span className="text-xs font-semibold text-slate-600">Publish immediately</span>
+            </label>
+          </div>
+          <label className="block">
+            <span className="form-label">Short description</span>
+            <input
+              type="text"
+              required
+              maxLength={300}
+              value={courseForm.short_description}
+              onChange={(e) =>
+                setCourseForm((prev) => ({ ...prev, short_description: e.target.value }))
+              }
+              className="form-input"
+              placeholder="One-line summary shown in the catalogue"
+            />
+          </label>
+          <label className="block">
+            <span className="form-label">Overview</span>
+            <textarea
+              rows={3}
+              maxLength={2000}
+              value={courseForm.overview}
+              onChange={(e) => setCourseForm((prev) => ({ ...prev, overview: e.target.value }))}
+              className="form-input"
+              placeholder="What learners will achieve"
+            />
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <label className="block">
+              <span className="form-label">Prerequisites (optional)</span>
+              <input
+                type="text"
+                maxLength={500}
+                value={courseForm.prerequisites}
+                onChange={(e) =>
+                  setCourseForm((prev) => ({ ...prev, prerequisites: e.target.value }))
+                }
+                className="form-input"
+                placeholder="e.g. No prior experience required."
+              />
+            </label>
+            <label className="block">
+              <span className="form-label">Learning outcomes (one per line)</span>
+              <textarea
+                rows={3}
+                value={courseForm.learning_outcomes}
+                onChange={(e) =>
+                  setCourseForm((prev) => ({ ...prev, learning_outcomes: e.target.value }))
+                }
+                className="form-input"
+                placeholder={"Web Development\nDomain & Hosting"}
+              />
+            </label>
+          </div>
+          <div className="flex flex-wrap items-center gap-3 pt-1">
+            <button
+              type="submit"
+              disabled={isCreating}
+              className="rounded-lg bg-brand-primary px-4 py-2 text-xs font-bold text-white transition-all hover:opacity-90 disabled:opacity-60"
+            >
+              {isCreating ? "Creating…" : "Create Course"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowAddForm(false)
+                setCourseForm(emptyCourseForm)
+              }}
+              className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
 
       <datalist id="course-domain-options">
         {domainOptions.map((domain) => (
@@ -229,7 +518,35 @@ export default function CoursesClient({
         ))}
       </datalist>
 
-      {groupedCourses.length === 0 ? (
+      {courses.length === 0 ? (
+        <div
+          role="status"
+          className="bg-white rounded-2xl p-8 border border-slate-200/90 shadow-card text-center space-y-3"
+        >
+          <h2 className="text-lg font-bold text-slate-900">No courses in the catalogue yet</h2>
+          <p className="mx-auto max-w-xl text-sm text-slate-500">
+            Seed the six authored Learning Hub packages (Appreciation, Advanced, Digital, Security,
+            Developer and Digital Health) into Supabase, or add a course manually.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
+            <button
+              type="button"
+              onClick={runSeed}
+              disabled={isSeeding}
+              className="rounded-lg bg-brand-primary px-4 py-2 text-xs font-bold text-white transition-all hover:opacity-90 disabled:opacity-60"
+            >
+              {isSeeding ? "Seeding…" : "Seed Learning Hub Courses"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowAddForm(true)}
+              className="rounded-lg border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+            >
+              Add Course
+            </button>
+          </div>
+        </div>
+      ) : groupedCourses.length === 0 ? (
         <div className="bg-white rounded-2xl p-8 border border-slate-200/90 shadow-card text-center text-sm text-slate-500">
           No courses match the current search and domain filter.
         </div>

@@ -8,6 +8,16 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { requireAdminApi } from "@/lib/auth/guards"
 import { readJsonObject, isValidEmailAddress, isNonEmptyText, isOptionalText } from "@/lib/api/request"
 import { renderCertificatePdf } from "@/lib/certificates/generateCertificatePdf"
+import {
+  CANONICAL_MODULE_TITLE,
+  DEFAULT_COURSE_LEVEL,
+  planCatalogueSeed,
+  slugify,
+  toCourseInsert,
+  type ExistingCatalogueCourse,
+} from "@/lib/admin/catalogueSeed"
+import { toCourse } from "@/lib/data/adminRowMappers"
+import { coursesData } from "@/lib/data/courses"
 import type { Database } from "@/types/supabase"
 import { getErrorMessage, isNonEmptyString, isOneOf, isRecord } from "@/lib/utils"
 
@@ -35,6 +45,8 @@ type ContactMessageUpdate = Database["public"]["Tables"]["contact_messages"]["Up
 type CertificateInsert = Database["public"]["Tables"]["certificates"]["Insert"]
 type PaymentInsert = Database["public"]["Tables"]["payment_requests"]["Insert"]
 type PaymentUpdate = Database["public"]["Tables"]["payment_requests"]["Update"]
+type CourseInsert = Database["public"]["Tables"]["courses"]["Insert"]
+type CourseRow = Database["public"]["Tables"]["courses"]["Row"]
 
 type ConsultationStatus = Database["public"]["Tables"]["consultation_requests"]["Row"]["status"]
 type StartupApplicationStatus = Database["public"]["Tables"]["startup_applications"]["Row"]["status"]
@@ -151,6 +163,36 @@ async function assignUserRole(
   }
 
   return { error: null }
+}
+
+type CatalogueSeedSummary = {
+  createdCourses: number
+  createdModules: number
+  createdLessons: number
+  skippedCourses: number
+  conflicts: string[]
+}
+
+function buildSeedMessage(summary: CatalogueSeedSummary): string {
+  const parts: string[] = []
+  if (summary.createdCourses > 0) {
+    parts.push(`${summary.createdCourses} course${summary.createdCourses === 1 ? "" : "s"} created`)
+  }
+  if (summary.createdModules > 0) {
+    parts.push(`${summary.createdModules} module${summary.createdModules === 1 ? "" : "s"} created`)
+  }
+  if (summary.createdLessons > 0) {
+    parts.push(`${summary.createdLessons} lesson${summary.createdLessons === 1 ? "" : "s"} created`)
+  }
+  if (parts.length === 0) {
+    parts.push("Learning Hub catalogue is already in sync")
+  }
+  if (summary.conflicts.length > 0) {
+    parts.push(
+      `${summary.conflicts.length} existing course${summary.conflicts.length === 1 ? " has" : "s have"} a different title and were left unchanged`
+    )
+  }
+  return `${parts.join("; ")}.`
 }
 
 export async function POST(req: NextRequest) {
@@ -326,6 +368,335 @@ export async function POST(req: NextRequest) {
           )
         }
         return NextResponse.json({ success: true, message: "Course domain updated" })
+      }
+
+      case "create_course": {
+        const {
+          title,
+          category,
+          level,
+          price_ngn,
+          duration,
+          short_description,
+          overview,
+          prerequisites,
+          learning_outcomes,
+          is_published,
+        } = payload
+
+        if (!isNonEmptyText(title, 200)) {
+          return NextResponse.json(
+            { error: "A course title of 200 characters or fewer is required." },
+            { status: 400 }
+          )
+        }
+        if (!isNonEmptyText(category, 80)) {
+          return NextResponse.json(
+            { error: "A domain of 80 characters or fewer is required." },
+            { status: 400 }
+          )
+        }
+        if (!isOptionalText(level, 40)) {
+          return NextResponse.json(
+            { error: "Level must be 40 characters or fewer when provided." },
+            { status: 400 }
+          )
+        }
+        if (!isNonEmptyText(duration, 80)) {
+          return NextResponse.json(
+            { error: "A duration of 80 characters or fewer is required." },
+            { status: 400 }
+          )
+        }
+        if (!isNonEmptyText(short_description, 300)) {
+          return NextResponse.json(
+            { error: "A short description of 300 characters or fewer is required." },
+            { status: 400 }
+          )
+        }
+        if (!isNonEmptyText(overview, 2000)) {
+          return NextResponse.json(
+            { error: "An overview of 2000 characters or fewer is required." },
+            { status: 400 }
+          )
+        }
+        if (!isOptionalText(prerequisites, 500)) {
+          return NextResponse.json(
+            { error: "Prerequisites must be 500 characters or fewer." },
+            { status: 400 }
+          )
+        }
+
+        const parsedPrice = typeof price_ngn === "string" ? Number(price_ngn) : price_ngn
+        let price = 0
+        if (price_ngn !== undefined && price_ngn !== null && price_ngn !== "") {
+          if (
+            typeof parsedPrice !== "number" ||
+            !Number.isFinite(parsedPrice) ||
+            parsedPrice < 0 ||
+            parsedPrice > 99_999_999.99
+          ) {
+            return NextResponse.json(
+              { error: "Price must be a number between 0 and 99,999,999.99." },
+              { status: 400 }
+            )
+          }
+          price = Math.round(parsedPrice * 100) / 100
+        }
+
+        let outcomes: string[] = []
+        if (learning_outcomes !== undefined && learning_outcomes !== null) {
+          if (!Array.isArray(learning_outcomes) || learning_outcomes.length > 30) {
+            return NextResponse.json(
+              { error: "Learning outcomes must be a list of up to 30 items." },
+              { status: 400 }
+            )
+          }
+          for (const outcome of learning_outcomes) {
+            if (!isNonEmptyText(outcome, 120)) {
+              return NextResponse.json(
+                { error: "Each learning outcome must be 1-120 characters." },
+                { status: 400 }
+              )
+            }
+          }
+          outcomes = learning_outcomes.map((outcome) => outcome.trim())
+        }
+
+        const baseSlug = slugify(title)
+        if (!baseSlug) {
+          return NextResponse.json(
+            { error: "The course title must contain at least one letter or number." },
+            { status: 400 }
+          )
+        }
+
+        const insertBase: CourseInsert = {
+          slug: baseSlug,
+          title: title.trim(),
+          category: category.trim(),
+          level: isNonEmptyString(level) ? level.trim() : DEFAULT_COURSE_LEVEL,
+          price_ngn: price,
+          duration: duration.trim(),
+          short_description: short_description.trim(),
+          overview: overview.trim(),
+          learning_outcomes: outcomes,
+          prerequisites: isNonEmptyString(prerequisites) ? prerequisites.trim() : null,
+          is_popular: false,
+          is_published: typeof is_published === "boolean" ? is_published : true,
+          display_order: 0,
+        }
+
+        let createdCourse: CourseRow | null = null
+        let createError: unknown = null
+        for (let attempt = 0; attempt < 6; attempt++) {
+          const slug = attempt === 0 ? baseSlug : `${baseSlug}-${attempt + 1}`
+          const { data, error } = await supabase
+            .from("courses")
+            .insert({ ...insertBase, slug })
+            .select("*")
+            .single()
+          if (!error) {
+            createdCourse = data
+            createError = null
+            break
+          }
+          createError = error
+          if (error.code !== "23505") break
+        }
+
+        if (createError || !createdCourse) {
+          return NextResponse.json(
+            { error: genericDbError("Course creation failed:", createError) },
+            { status: 400 }
+          )
+        }
+
+        const { error: moduleError } = await supabase
+          .from("course_modules")
+          .insert({ course_id: createdCourse.id, title: CANONICAL_MODULE_TITLE, order_index: 0 })
+
+        if (moduleError) {
+          console.error("Course module creation failed:", moduleError)
+          const { error: draftError } = await supabase
+            .from("courses")
+            .update({ is_published: false })
+            .eq("id", createdCourse.id)
+          if (draftError) {
+            console.error("Failed to set new course back to draft:", draftError)
+          }
+          return NextResponse.json(
+            {
+              error:
+                "The course was created but its default curriculum module could not be added. It was saved as a draft so it will not appear publicly; retry to complete it.",
+            },
+            { status: 503 }
+          )
+        }
+
+        return NextResponse.json({
+          success: true,
+          message: `${createdCourse.title} was added to the catalogue.`,
+          course: toCourse(createdCourse),
+        })
+      }
+
+      case "seed_learning_hub_courses": {
+        const canonicalSlugs = coursesData.map((course) => course.slug)
+        const { data: courseRows, error: courseLookupError } = await supabase
+          .from("courses")
+          .select("*")
+          .in("slug", canonicalSlugs)
+        if (courseLookupError) {
+          return NextResponse.json(
+            { error: genericDbError("Learning Hub course lookup failed:", courseLookupError) },
+            { status: 503 }
+          )
+        }
+
+        const existingCourses = courseRows ?? []
+        const courseIds = existingCourses.map((course) => course.id)
+
+        let moduleRows: { id: string; course_id: string; title: string }[] = []
+        if (courseIds.length > 0) {
+          const { data, error } = await supabase
+            .from("course_modules")
+            .select("id, course_id, title")
+            .in("course_id", courseIds)
+          if (error) {
+            return NextResponse.json(
+              { error: genericDbError("Learning Hub module lookup failed:", error) },
+              { status: 503 }
+            )
+          }
+          moduleRows = data ?? []
+        }
+
+        const moduleIds = moduleRows.map((module) => module.id)
+        let lessonRows: { module_id: string; title: string }[] = []
+        if (moduleIds.length > 0) {
+          const { data, error } = await supabase
+            .from("lessons")
+            .select("module_id, title")
+            .in("module_id", moduleIds)
+          if (error) {
+            return NextResponse.json(
+              { error: genericDbError("Learning Hub lesson lookup failed:", error) },
+              { status: 503 }
+            )
+          }
+          lessonRows = data ?? []
+        }
+
+        const existingPlanInput: ExistingCatalogueCourse[] = existingCourses.map((course) => ({
+          slug: course.slug,
+          title: course.title,
+          modules: moduleRows
+            .filter((module) => module.course_id === course.id)
+            .map((module) => ({
+              title: module.title,
+              lessonTitles: lessonRows
+                .filter((lesson) => lesson.module_id === module.id)
+                .map((lesson) => lesson.title),
+            })),
+        }))
+
+        const plan = planCatalogueSeed(existingPlanInput)
+        const summary: CatalogueSeedSummary = {
+          createdCourses: 0,
+          createdModules: 0,
+          createdLessons: 0,
+          skippedCourses: 0,
+          conflicts: [],
+        }
+        const createdCourseRows: CourseRow[] = []
+
+        for (let index = 0; index < plan.length; index++) {
+          const item = plan[index]
+          if (item.titleConflict) {
+            summary.conflicts.push(item.course.title)
+          }
+
+          let courseId: string
+          if (item.createCourse) {
+            const { data, error } = await supabase
+              .from("courses")
+              .insert(toCourseInsert(item.course, index))
+              .select("*")
+              .single()
+            if (error) {
+              return NextResponse.json(
+                { error: genericDbError("Learning Hub course seed failed:", error) },
+                { status: 503 }
+              )
+            }
+            courseId = data.id
+            createdCourseRows.push(data)
+            summary.createdCourses += 1
+          } else {
+            summary.skippedCourses += 1
+            const existing = existingCourses.find((course) => course.slug === item.course.slug)
+            if (!existing) continue
+            courseId = existing.id
+          }
+
+          for (const modulePlan of item.modules) {
+            let moduleId: string
+            if (modulePlan.create) {
+              const { data, error } = await supabase
+                .from("course_modules")
+                .insert({
+                  course_id: courseId,
+                  title: modulePlan.title,
+                  order_index: modulePlan.orderIndex,
+                })
+                .select("id")
+                .single()
+              if (error) {
+                return NextResponse.json(
+                  { error: genericDbError("Learning Hub module seed failed:", error) },
+                  { status: 503 }
+                )
+              }
+              moduleId = data.id
+              summary.createdModules += 1
+            } else {
+              const existingModule = moduleRows.find(
+                (module) => module.course_id === courseId && module.title === modulePlan.title
+              )
+              if (!existingModule) continue
+              moduleId = existingModule.id
+            }
+
+            if (modulePlan.lessonTitlesToCreate.length === 0) continue
+
+            const lessonInserts = modulePlan.lessonTitlesToCreate.map(
+              (lessonTitle, lessonIndex) => ({
+                module_id: moduleId,
+                title: lessonTitle,
+                content_type: "text" as const,
+                order_index: lessonIndex,
+                is_preview: false,
+              })
+            )
+
+            const { error } = await supabase.from("lessons").insert(lessonInserts)
+            if (error) {
+              return NextResponse.json(
+                { error: genericDbError("Learning Hub lesson seed failed:", error) },
+                { status: 503 }
+              )
+            }
+            summary.createdLessons += lessonInserts.length
+          }
+        }
+
+        return NextResponse.json({
+          success: true,
+          message: buildSeedMessage(summary),
+          summary,
+          courses: [...existingCourses, ...createdCourseRows].map(toCourse),
+        })
       }
 
       case "issue_certificate": {
