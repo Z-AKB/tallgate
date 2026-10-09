@@ -155,12 +155,14 @@ export default function AdminHeader({
 
           {/* Right Actions & Admin Identity */}
           <div className="flex items-center gap-2 sm:gap-5 shrink-0">
-            <button
-              aria-label="Admin Alerts"
+            <Link
+              href="/admin/messages"
+              aria-label="Open the message inbox"
+              title="Open the message inbox"
               className="hidden sm:block p-2 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 relative transition-colors"
             >
               <HiOutlineBell className="w-5 h-5" />
-            </button>
+            </Link>
 
             <SignOutButton className="hidden sm:inline-flex items-center px-3 py-1.5 rounded-lg text-[11px] font-semibold text-slate-300 hover:text-white hover:bg-white/10 border border-white/10">
               Sign out

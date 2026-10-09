@@ -2,7 +2,7 @@
 
 import React, { useState } from "react"
 import { MockConsultation } from "@/lib/data/adminMockData"
-import { formatDate } from "@/lib/utils"
+import { formatDate, getErrorMessage } from "@/lib/utils"
 import Pagination, { ADMIN_PAGE_SIZE } from "@/components/admin/Pagination"
 import {
   HiOutlineMagnifyingGlass,
@@ -22,6 +22,7 @@ export default function InquiriesClient({
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [selectedItem, setSelectedItem] = useState<MockConsultation | null>(null)
   const [isUpdating, setIsUpdating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [adminNoteInput, setAdminNoteInput] = useState("")
   const [page, setPage] = useState(1)
 
@@ -44,7 +45,10 @@ export default function InquiriesClient({
   )
 
   const handleStatusChange = async (id: string, newStatus: MockConsultation["status"], notes?: string) => {
+    if (isUpdating) return
+    const previousConsultations = consultations
     setIsUpdating(true)
+    setError(null)
     // Optimistic UI update
     setConsultations((prev) =>
       prev.map((item) =>
@@ -56,7 +60,7 @@ export default function InquiriesClient({
     }
 
     try {
-      await fetch("/api/admin/actions", {
+      const res = await fetch("/api/admin/actions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -64,8 +68,15 @@ export default function InquiriesClient({
           payload: { id, status: newStatus, admin_notes: notes },
         }),
       })
+      const data = (await res.json().catch(() => null)) as { error?: string } | null
+      if (!res.ok) throw new Error(getErrorMessage(data, "The consultation could not be updated."))
     } catch (err) {
       console.error("Failed to update status:", err)
+      setConsultations(previousConsultations)
+      setSelectedItem((prev) =>
+        prev && prev.id === id ? previousConsultations.find((item) => item.id === id) ?? prev : prev
+      )
+      setError(getErrorMessage(err, "The consultation could not be updated."))
     } finally {
       setIsUpdating(false)
     }
@@ -78,6 +89,11 @@ export default function InquiriesClient({
 
   return (
     <div className="space-y-6">
+      {error && (
+        <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-800">
+          {error}
+        </div>
+      )}
       {/* Header & Filter Controls */}
       <div className="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-card space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

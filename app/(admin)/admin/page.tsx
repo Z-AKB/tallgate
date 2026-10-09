@@ -313,7 +313,12 @@ export default async function AdminOverviewPage() {
           </div>
 
           <div className="space-y-3">
-            {consultations.slice(0, 4).map((item) => (
+            {consultations.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50/50 px-4 py-8 text-center text-xs text-slate-500">
+                No enterprise scoping requests yet.
+              </p>
+            ) : (
+              consultations.slice(0, 4).map((item) => (
               <div
                 key={item.id}
                 className="p-4 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:border-slate-200 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3"
@@ -348,7 +353,7 @@ export default async function AdminOverviewPage() {
                   </span>
                 </div>
               </div>
-            ))}
+            )))}
           </div>
         </div>
 
@@ -364,17 +369,23 @@ export default async function AdminOverviewPage() {
             </div>
 
             <div className="space-y-3">
-              {startups.slice(0, 3).map((startup) => (
-                <div key={startup.id} className="p-3 rounded-xl border border-slate-100 bg-slate-50/50 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-xs text-slate-900">{startup.company_name}</span>
-                    <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded bg-slate-200/70 text-slate-700">
-                      {startup.stage}
-                    </span>
+              {startups.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50/50 px-4 py-8 text-center text-xs text-slate-500">
+                  No startup applications yet.
+                </p>
+              ) : (
+                startups.slice(0, 3).map((startup) => (
+                  <div key={startup.id} className="p-3 rounded-xl border border-slate-100 bg-slate-50/50 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-xs text-slate-900">{startup.company_name}</span>
+                      <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded bg-slate-200/70 text-slate-700">
+                        {startup.stage}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 break-words">{startup.industry}</p>
                   </div>
-                  <p className="text-[11px] text-slate-500 break-words">{startup.industry}</p>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 

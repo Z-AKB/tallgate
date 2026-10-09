@@ -2,7 +2,7 @@
 
 import React, { useState } from "react"
 import { MockMessage } from "@/lib/data/adminMockData"
-import { formatDate } from "@/lib/utils"
+import { formatDate, getErrorMessage } from "@/lib/utils"
 import Pagination, { ADMIN_PAGE_SIZE } from "@/components/admin/Pagination"
 import {
   HiOutlineMagnifyingGlass,
@@ -22,6 +22,8 @@ export default function MessagesClient({
   const [statusFilter, setStatusFilter] = useState("all")
   const [selectedMessage, setSelectedMessage] = useState<MockMessage | null>(null)
   const [page, setPage] = useState(1)
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const filteredMessages = messages.filter((m) => {
     const matchesSearch =
@@ -40,6 +42,10 @@ export default function MessagesClient({
   )
 
   const handleStatusChange = async (id: string, newStatus: MockMessage["status"]) => {
+    if (isUpdating) return
+    const previousMessages = messages
+    setIsUpdating(true)
+    setError(null)
     setMessages((prev) =>
       prev.map((item) => (item.id === id ? { ...item, status: newStatus } : item))
     )
@@ -48,7 +54,7 @@ export default function MessagesClient({
     }
 
     try {
-      await fetch("/api/admin/actions", {
+      const res = await fetch("/api/admin/actions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -56,8 +62,17 @@ export default function MessagesClient({
           payload: { id, status: newStatus },
         }),
       })
+      const data = (await res.json().catch(() => null)) as { error?: string } | null
+      if (!res.ok) throw new Error(getErrorMessage(data, "The message status could not be saved."))
     } catch (err) {
       console.error("Failed to update message status:", err)
+      setMessages(previousMessages)
+      setSelectedMessage((prev) =>
+        prev && prev.id === id ? previousMessages.find((item) => item.id === id) ?? prev : prev
+      )
+      setError(getErrorMessage(err, "The message status could not be saved."))
+    } finally {
+      setIsUpdating(false)
     }
   }
 
@@ -70,6 +85,11 @@ export default function MessagesClient({
 
   return (
     <div className="min-w-0 space-y-6">
+      {error && (
+        <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-800">
+          {error}
+        </div>
+      )}
       {/* Control Header */}
       <div className="min-w-0 bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/90 shadow-card space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -236,7 +256,8 @@ export default function MessagesClient({
                   <button
                     key={status}
                     onClick={() => handleStatusChange(selectedMessage.id, status)}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-bold capitalize transition-all ${
+                    disabled={isUpdating}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold capitalize transition-all disabled:cursor-not-allowed disabled:opacity-60 ${
                       selectedMessage.status === status
                         ? "bg-brand-navy text-white shadow-sm"
                         : "bg-slate-100 text-slate-600 hover:bg-slate-200"

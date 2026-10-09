@@ -2,6 +2,7 @@
 
 import React, { useState } from "react"
 import { MockStartup } from "@/lib/data/adminMockData"
+import { getErrorMessage } from "@/lib/utils"
 import {
   HiOutlineMagnifyingGlass,
   HiOutlineRocketLaunch,
@@ -24,6 +25,7 @@ export default function StartupsClient({
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [selectedStartup, setSelectedStartup] = useState<MockStartup | null>(null)
   const [isUpdating, setIsUpdating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   // Filtering
   const filteredStartups = startups.filter((item) => {
@@ -39,7 +41,10 @@ export default function StartupsClient({
   })
 
   const handleStatusChange = async (id: string, newStatus: MockStartup["status"]) => {
+    if (isUpdating) return
+    const previousStartups = startups
     setIsUpdating(true)
+    setError(null)
     setStartups((prev) =>
       prev.map((item) => (item.id === id ? { ...item, status: newStatus } : item))
     )
@@ -48,7 +53,7 @@ export default function StartupsClient({
     }
 
     try {
-      await fetch("/api/admin/actions", {
+      const res = await fetch("/api/admin/actions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -56,8 +61,15 @@ export default function StartupsClient({
           payload: { id, status: newStatus },
         }),
       })
+      const data = (await res.json().catch(() => null)) as { error?: string } | null
+      if (!res.ok) throw new Error(getErrorMessage(data, "The startup status could not be updated."))
     } catch (err) {
       console.error("Failed to update startup status:", err)
+      setStartups(previousStartups)
+      setSelectedStartup((prev) =>
+        prev && prev.id === id ? previousStartups.find((item) => item.id === id) ?? prev : prev
+      )
+      setError(getErrorMessage(err, "The startup status could not be updated."))
     } finally {
       setIsUpdating(false)
     }
@@ -65,6 +77,11 @@ export default function StartupsClient({
 
   return (
     <div className="space-y-6">
+      {error && (
+        <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-800">
+          {error}
+        </div>
+      )}
       {/* Control Header */}
       <div className="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-card space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
