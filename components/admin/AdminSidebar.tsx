@@ -153,13 +153,6 @@ export default function AdminSidebar() {
             <span>View Live Site</span>
             <HiOutlineArrowTopRightOnSquare className="w-4 h-4 text-slate-400" />
           </Link>
-          <Link
-            href="/dashboard"
-            className="flex items-center justify-between w-full px-3.5 py-2.5 rounded-xl text-xs font-medium text-slate-300 hover:text-white bg-slate-900/80 hover:bg-slate-800 border border-slate-800 transition-colors"
-          >
-            <span>Student Dashboard</span>
-            <HiOutlineArrowTopRightOnSquare className="w-4 h-4 text-slate-400" />
-          </Link>
           <SignOutButton className="lg:hidden flex items-center justify-between w-full px-3.5 py-2.5 rounded-xl text-xs font-medium text-rose-300 hover:text-white bg-rose-950/40 hover:bg-rose-900/40 border border-rose-900/50 transition-colors">
             <span>Sign Out</span>
             <HiOutlineArrowRightOnRectangle className="w-4 h-4" />
