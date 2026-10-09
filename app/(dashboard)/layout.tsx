@@ -1,8 +1,9 @@
 import React from "react"
-import UserDashboardHeader from "@/components/dashboard/UserDashboardHeader"
+import UserDashboardHeader, { type EnrolledCourse } from "@/components/dashboard/UserDashboardHeader"
 import Link from "next/link"
 import { requireUser } from "@/lib/auth/guards"
 import { redirect } from "next/navigation"
+import { createClient } from "@/lib/supabase/server"
 import { siteConfig } from "@/lib/config/site"
 import { getPortalPresentation } from "@/lib/auth/roles"
 
@@ -23,12 +24,27 @@ export default async function UserDashboardLayout({
     redirect("/admin")
   }
 
+  const { data: enrolledRows } = await (await createClient())
+    .from("course_enrollments")
+    .select("courses(id, slug, title, category)")
+    .eq("user_id", user.id)
+    .not("status", "eq", "dropped")
+  const courses: EnrolledCourse[] = []
+  const seenCourseIds = new Set<string>()
+  for (const row of enrolledRows ?? []) {
+    const course = row.courses
+    if (!course?.slug || seenCourseIds.has(course.id)) continue
+    seenCourseIds.add(course.id)
+    courses.push({ id: course.id, slug: course.slug, title: course.title, category: course.category ?? "" })
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-brand-canvas text-slate-900 antialiased">
       <UserDashboardHeader
         displayName={displayName}
         email={user.email || user.profile?.email || ""}
         roles={user.roles}
+        courses={courses}
       />
       <main className="flex-grow py-8 sm:py-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

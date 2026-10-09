@@ -53,6 +53,17 @@ export function isOneOf<T extends string>(allowed: readonly T[], value: unknown)
   return typeof value === 'string' && (allowed as readonly string[]).includes(value)
 }
 
+export function toCategoryInitials(category: string): string {
+  const trimmed = category.trim()
+  if (!trimmed) return '?'
+  const parts = trimmed.split(/\s+/)
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase()
+  return parts
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('')
+}
+
 export function getErrorMessage(error: unknown, fallback = 'Internal server error'): string {
   if (error instanceof Error && error.message.trim()) return error.message
   if (isRecord(error)) {
