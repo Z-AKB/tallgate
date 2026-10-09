@@ -13,6 +13,16 @@ import { getErrorMessage, isNonEmptyString, isOneOf, isRecord } from "@/lib/util
 
 export const runtime = "nodejs"
 
+/**
+ * Logs the underlying database/upstream error server-side and returns a
+ * stable, non-leaking message for the client. Raw Postgres/PostgREST messages
+ * can disclose schema, constraint, and column names.
+ */
+function genericDbError(context: string, error: unknown): string {
+  console.error(context, error)
+  return "The operation could not be completed. Please try again."
+}
+
 const CERTIFICATE_BUCKET = "certificates"
 const CERTIFICATE_CONTENT_TYPE = "application/pdf"
 const CERTIFICATE_FILE_NAME = "certificate.pdf"
@@ -126,8 +136,7 @@ async function assignUserRole(
     .maybeSingle()
 
   if (profileError) {
-    console.error("Role assignment profile lookup failed:", profileError)
-    return { error: profileError.message, status: 503 }
+    return { error: genericDbError("Role assignment profile lookup failed:", profileError), status: 503 }
   }
   if (!profile) {
     return { error: "This user's profile no longer exists, so the role cannot be assigned.", status: 400 }
@@ -138,8 +147,7 @@ async function assignUserRole(
     .upsert({ user_id: userId, role_id: roleId }, { onConflict: "user_id" })
 
   if (upsertError) {
-    console.error("Role assignment upsert failed:", upsertError)
-    return { error: upsertError.message, status: 503 }
+    return { error: genericDbError("Role assignment upsert failed:", upsertError), status: 503 }
   }
 
   return { error: null }
@@ -185,7 +193,10 @@ export async function POST(req: NextRequest) {
           .eq("id", id)
 
         if (error) {
-          return NextResponse.json({ error: error.message }, { status: 400 })
+          return NextResponse.json(
+            { error: genericDbError("Consultation status update failed:", error) },
+            { status: 400 }
+          )
         }
         return NextResponse.json({ success: true, message: "Consultation status updated" })
       }
@@ -207,7 +218,10 @@ export async function POST(req: NextRequest) {
           .eq("id", id)
 
         if (error) {
-          return NextResponse.json({ error: error.message }, { status: 400 })
+          return NextResponse.json(
+            { error: genericDbError("Startup application status update failed:", error) },
+            { status: 400 }
+          )
         }
         return NextResponse.json({ success: true, message: "Startup application status updated" })
       }
@@ -231,7 +245,10 @@ export async function POST(req: NextRequest) {
           .maybeSingle()
 
         if (error) {
-          return NextResponse.json({ error: error.message }, { status: 400 })
+          return NextResponse.json(
+            { error: genericDbError("Course publish toggle failed:", error) },
+            { status: 400 }
+          )
         }
         if (!updated) {
           return NextResponse.json(
@@ -261,7 +278,10 @@ export async function POST(req: NextRequest) {
           .maybeSingle()
 
         if (error) {
-          return NextResponse.json({ error: error.message }, { status: 400 })
+          return NextResponse.json(
+            { error: genericDbError("Course popularity toggle failed:", error) },
+            { status: 400 }
+          )
         }
         if (!updated) {
           return NextResponse.json(
@@ -294,7 +314,10 @@ export async function POST(req: NextRequest) {
           .maybeSingle()
 
         if (error) {
-          return NextResponse.json({ error: error.message }, { status: 400 })
+          return NextResponse.json(
+            { error: genericDbError("Course domain update failed:", error) },
+            { status: 400 }
+          )
         }
         if (!updated) {
           return NextResponse.json(
@@ -596,7 +619,10 @@ export async function POST(req: NextRequest) {
         const { error } = await supabase.from("certificates").update(updateData).eq("id", id)
 
         if (error) {
-          return NextResponse.json({ error: error.message }, { status: 400 })
+          return NextResponse.json(
+            { error: genericDbError("Certificate validity toggle failed:", error) },
+            { status: 400 }
+          )
         }
         return NextResponse.json({ success: true, message: "Certificate validity toggled" })
       }
@@ -615,7 +641,10 @@ export async function POST(req: NextRequest) {
         const { error } = await supabase.from("contact_messages").update(updateData).eq("id", id)
 
         if (error) {
-          return NextResponse.json({ error: error.message }, { status: 400 })
+          return NextResponse.json(
+            { error: genericDbError("Message status update failed:", error) },
+            { status: 400 }
+          )
         }
         return NextResponse.json({ success: true, message: "Message status updated" })
       }
@@ -702,8 +731,10 @@ export async function POST(req: NextRequest) {
           .single()
 
         if (insertError) {
-          console.error("Payment request insert failed:", insertError)
-          return NextResponse.json({ error: insertError.message }, { status: 400 })
+          return NextResponse.json(
+            { error: genericDbError("Payment request insert failed:", insertError) },
+            { status: 400 }
+          )
         }
         return NextResponse.json({
           success: true,
@@ -741,7 +772,10 @@ export async function POST(req: NextRequest) {
           .eq("id", id)
           .maybeSingle()
         if (currentError) {
-          return NextResponse.json({ error: currentError.message }, { status: 400 })
+          return NextResponse.json(
+            { error: genericDbError("Payment request lookup failed:", currentError) },
+            { status: 400 }
+          )
         }
         if (!current) {
           return NextResponse.json(
@@ -780,7 +814,10 @@ export async function POST(req: NextRequest) {
           .maybeSingle()
 
         if (error) {
-          return NextResponse.json({ error: error.message }, { status: 400 })
+          return NextResponse.json(
+            { error: genericDbError("Payment status update failed:", error) },
+            { status: 400 }
+          )
         }
         if (!updated) {
           return NextResponse.json(
@@ -831,7 +868,14 @@ export async function POST(req: NextRequest) {
         })
 
         if (authError || !authData.user) {
-          return NextResponse.json({ error: authError?.message || "Failed to create user" }, { status: 400 })
+          console.error("Admin create_user failed:", authError)
+          return NextResponse.json(
+            {
+              error:
+                "The user could not be created. The email may already be in use, or the password may not meet the requirements.",
+            },
+            { status: 400 }
+          )
         }
 
         const newUserId = authData.user.id
@@ -915,9 +959,8 @@ export async function POST(req: NextRequest) {
 
         if (roleError || !roleData) {
           if (roleError && roleError.code !== "PGRST116") {
-            console.error("Role lookup failed:", roleError)
             return NextResponse.json(
-              { error: `Role was not changed: ${roleError.message}` },
+              { error: genericDbError("Role lookup failed:", roleError) },
               { status: 503 }
             )
           }
@@ -944,6 +987,6 @@ export async function POST(req: NextRequest) {
     }
   } catch (error: unknown) {
     console.error("Admin action API error:", error)
-    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 })
+    return NextResponse.json({ error: "The operation could not be completed. Please try again." }, { status: 500 })
   }
 }

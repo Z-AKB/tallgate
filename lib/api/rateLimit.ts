@@ -18,14 +18,34 @@ export class RateLimitUnavailableError extends Error {
   }
 }
 
-function getClientIp(request: NextRequest): string {
-  for (const header of ["x-real-ip", "cf-connecting-ip"]) {
-    const address = request.headers.get(header)?.trim()
-    if (address && isIP(address)) return address
-  }
-  if (process.env.NODE_ENV !== "production") return "127.0.0.1"
+// Only trust IP headers that a reverse proxy / CDN is configured to set (and
+// overwrite). Operators behind a trusted edge can override the list with
+// RATE_LIMIT_TRUSTED_IP_HEADERS (comma-separated). Client-supplied values on
+// these headers must be stripped by the proxy, otherwise they are spoofable.
+const TRUSTED_IP_HEADERS = (
+  process.env.RATE_LIMIT_TRUSTED_IP_HEADERS ?? "x-real-ip,cf-connecting-ip"
+)
+  .split(",")
+  .map((header) => header.trim().toLowerCase())
+  .filter(Boolean)
 
-  throw new RateLimitUnavailableError()
+function firstIp(value: string | null): string | null {
+  if (!value) return null
+  for (const part of value.split(",")) {
+    const candidate = part.trim()
+    if (candidate && isIP(candidate)) return candidate
+  }
+  return null
+}
+
+function getClientIp(request: NextRequest): string | null {
+  for (const header of TRUSTED_IP_HEADERS) {
+    const address = firstIp(request.headers.get(header))
+    if (address) return address
+  }
+  // Outside production, fall back to a fixed key so local flows keep working.
+  if (process.env.NODE_ENV !== "production") return "127.0.0.1"
+  return null
 }
 
 export async function checkRateLimit(
@@ -38,7 +58,7 @@ export async function checkRateLimit(
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!serviceRoleKey) throw new RateLimitUnavailableError()
 
-  const key = identity ?? getClientIp(request)
+  const key = identity ?? getClientIp(request) ?? "unknown"
   const keyHash = createHmac("sha256", serviceRoleKey)
     .update(`${bucket}:${key}`)
     .digest("hex")

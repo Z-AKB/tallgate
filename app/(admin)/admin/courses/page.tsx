@@ -4,6 +4,7 @@ import { createClient, isSupabaseConfigured } from "@/lib/supabase/server"
 import { mockCourses, type MockCourse } from "@/lib/data/adminMockData"
 import { coursesData } from "@/lib/data/courses"
 import { toCourse } from "@/lib/data/adminRowMappers"
+import { ADMIN_QUERY_LIMIT } from "@/lib/admin/queryLimits"
 import CoursesClient from "@/components/admin/CoursesClient"
 
 export const metadata = {
@@ -34,7 +35,11 @@ export default async function AdminCoursesPage() {
   } else {
     try {
       const [coursesResult, categoriesResult] = await Promise.all([
-        supabase.from("courses").select("*").order("created_at", { ascending: false }),
+        supabase
+          .from("courses")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(ADMIN_QUERY_LIMIT),
         supabase
           .from("course_categories")
           .select("name")
@@ -46,6 +51,9 @@ export default async function AdminCoursesPage() {
         dataWarning = "Courses could not be loaded. This catalogue may be incomplete."
       } else {
         courses = (coursesResult.data ?? []).map(toCourse)
+        if (courses.length === ADMIN_QUERY_LIMIT) {
+          dataWarning = `Showing the ${ADMIN_QUERY_LIMIT} most recent courses. Older records are not displayed.`
+        }
       }
 
       if (categoriesResult.error) {

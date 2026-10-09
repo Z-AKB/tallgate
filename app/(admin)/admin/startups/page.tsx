@@ -2,6 +2,7 @@ import React from "react"
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/server"
 import { mockStartups, type MockStartup } from "@/lib/data/adminMockData"
 import { toStartup } from "@/lib/data/adminRowMappers"
+import { ADMIN_QUERY_LIMIT } from "@/lib/admin/queryLimits"
 import StartupsClient from "./StartupsClient"
 
 export const metadata = {
@@ -29,12 +30,16 @@ export default async function AdminStartupsPage() {
         .from("startup_applications")
         .select("*")
         .order("created_at", { ascending: false })
+        .limit(ADMIN_QUERY_LIMIT)
 
       if (error) {
         console.error("Admin startup query failed:", error)
         dataWarning = "Startup applications could not be loaded. This pipeline may be incomplete."
       } else {
         startups = (data ?? []).map(toStartup)
+        if (startups.length === ADMIN_QUERY_LIMIT) {
+          dataWarning = `Showing the ${ADMIN_QUERY_LIMIT} most recent applications. Older records are not displayed.`
+        }
       }
     } catch (err) {
       console.error("Admin startup query failed:", err)

@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from "react"
 import { formatNaira, formatShortDate, getErrorMessage } from "@/lib/utils"
+import Pagination, { ADMIN_PAGE_SIZE } from "@/components/admin/Pagination"
 import { HiOutlineMagnifyingGlass, HiOutlinePlus, HiOutlineXMark } from "react-icons/hi2"
 
 type PaymentStatus = "pending" | "confirmed" | "declined" | "refunded"
@@ -81,6 +82,7 @@ export default function PaymentsClient({
   const [form, setForm] = useState(emptyForm)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
+  const [page, setPage] = useState(1)
 
   const stats = useMemo(() => {
     let pending = 0
@@ -106,6 +108,11 @@ export default function PaymentsClient({
       (request.courses?.title ?? "").toLowerCase().includes(query)
     )
   })
+
+  const pagedRequests = filteredRequests.slice(
+    (page - 1) * ADMIN_PAGE_SIZE,
+    page * ADMIN_PAGE_SIZE
+  )
 
   const postAction = async (action: string, payload: Record<string, unknown>) => {
     const res = await fetch("/api/admin/actions", {
@@ -241,13 +248,19 @@ export default function PaymentsClient({
               type="text"
               placeholder="Search name, email, reference, course..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value)
+                setPage(1)
+              }}
               className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-all"
             />
           </div>
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as PaymentStatus | "all")}
+            onChange={(e) => {
+              setStatusFilter(e.target.value as PaymentStatus | "all")
+              setPage(1)
+            }}
             className="w-full sm:w-auto px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-all"
           >
             <option value="all">All Statuses</option>
@@ -294,7 +307,7 @@ export default function PaymentsClient({
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredRequests.length > 0 ? (
-                filteredRequests.map((request) => (
+                pagedRequests.map((request) => (
                   <tr key={request.id} className="hover:bg-slate-50/50 transition-colors align-top">
                     <td className="px-6 py-4 text-sm text-slate-500 whitespace-nowrap">
                       {formatShortDate(request.created_at)}
@@ -367,6 +380,12 @@ export default function PaymentsClient({
             </tbody>
           </table>
         </div>
+        <Pagination
+          page={page}
+          total={filteredRequests.length}
+          onPageChange={setPage}
+          itemLabel="payment requests"
+        />
       </div>
 
       {/* Create Modal */}

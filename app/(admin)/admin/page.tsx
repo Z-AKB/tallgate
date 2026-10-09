@@ -22,6 +22,7 @@ import {
   toEnrollment,
   type AdminCertificate,
 } from "@/lib/data/adminRowMappers"
+import { ADMIN_QUERY_LIMIT } from "@/lib/admin/queryLimits"
 import {
   HiOutlineInboxStack,
   HiOutlineRocketLaunch,
@@ -63,15 +64,16 @@ export default async function AdminOverviewPage() {
   } else {
     try {
       const [cRes, sRes, crsRes, enrRes, certRes, msgRes] = await Promise.all([
-        supabase.from("consultation_requests").select("*").order("created_at", { ascending: false }),
-        supabase.from("startup_applications").select("*").order("created_at", { ascending: false }),
-        supabase.from("courses").select("*").order("created_at", { ascending: false }),
+        supabase.from("consultation_requests").select("*").order("created_at", { ascending: false }).limit(ADMIN_QUERY_LIMIT),
+        supabase.from("startup_applications").select("*").order("created_at", { ascending: false }).limit(ADMIN_QUERY_LIMIT),
+        supabase.from("courses").select("*").order("created_at", { ascending: false }).limit(ADMIN_QUERY_LIMIT),
         supabase
           .from("course_enrollments")
           .select("*, profiles(full_name, email), courses(title)")
-          .order("enrolled_at", { ascending: false }),
-        supabase.from("certificates").select("*").order("created_at", { ascending: false }),
-        supabase.from("contact_messages").select("*").order("created_at", { ascending: false }),
+          .order("enrolled_at", { ascending: false })
+          .limit(ADMIN_QUERY_LIMIT),
+        supabase.from("certificates").select("*").order("created_at", { ascending: false }).limit(ADMIN_QUERY_LIMIT),
+        supabase.from("contact_messages").select("*").order("created_at", { ascending: false }).limit(ADMIN_QUERY_LIMIT),
       ])
 
       const failures: string[] = []
@@ -103,6 +105,14 @@ export default async function AdminOverviewPage() {
           if (result.error) console.error("Admin overview query failed:", result.error)
         }
         dataWarning = `Could not load ${failures.join(", ")}. The affected figures below may be understated.`
+      }
+
+      const truncated = [cRes, sRes, crsRes, enrRes, certRes, msgRes].some(
+        (result) => (result.data?.length ?? 0) >= ADMIN_QUERY_LIMIT
+      )
+      if (truncated) {
+        const truncationNotice = `Showing up to ${ADMIN_QUERY_LIMIT} rows per table; some figures may be understated.`
+        dataWarning = dataWarning ? `${dataWarning} ${truncationNotice}` : truncationNotice
       }
     } catch (err) {
       console.error("Admin overview query failed:", err)

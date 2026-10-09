@@ -2,6 +2,7 @@
 
 import React, { useState } from "react"
 import { formatShortDate, getErrorMessage } from "@/lib/utils"
+import Pagination, { ADMIN_PAGE_SIZE } from "@/components/admin/Pagination"
 import { HiOutlineMagnifyingGlass, HiOutlinePlus, HiOutlineXMark } from "react-icons/hi2"
 
 type User = {
@@ -32,6 +33,7 @@ export default function UsersClient({
   const [error, setError] = useState<string | null>(null)
   const [roleError, setRoleError] = useState<string | null>(null)
   const [pendingUserId, setPendingUserId] = useState<string | null>(null)
+  const [page, setPage] = useState(1)
 
   const filteredUsers = users.filter((u) => {
     const matchesSearch =
@@ -40,6 +42,11 @@ export default function UsersClient({
     const matchesRole = roleFilter === "all" || u.role === roleFilter
     return matchesSearch && matchesRole
   })
+
+  const pagedUsers = filteredUsers.slice(
+    (page - 1) * ADMIN_PAGE_SIZE,
+    page * ADMIN_PAGE_SIZE
+  )
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -105,13 +112,19 @@ export default function UsersClient({
               type="text"
               placeholder="Search users..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value)
+                setPage(1)
+              }}
               className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-all"
             />
           </div>
           <select
             value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
+            onChange={(e) => {
+              setRoleFilter(e.target.value)
+              setPage(1)
+            }}
             className="w-full sm:w-auto px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-all"
           >
             <option value="all">All Roles</option>
@@ -154,7 +167,7 @@ export default function UsersClient({
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredUsers.length > 0 ? (
-                filteredUsers.map((user) => (
+                pagedUsers.map((user) => (
                   <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
@@ -206,6 +219,12 @@ export default function UsersClient({
             </tbody>
           </table>
         </div>
+        <Pagination
+          page={page}
+          total={filteredUsers.length}
+          onPageChange={setPage}
+          itemLabel="users"
+        />
       </div>
 
       {/* Create User Modal */}

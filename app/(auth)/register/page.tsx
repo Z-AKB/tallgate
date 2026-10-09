@@ -36,6 +36,7 @@ export default function RegisterPage() {
         email: formData.email,
         password: formData.password,
         options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
             full_name: formData.fullName,
             account_type: formData.accountType,
@@ -45,6 +46,22 @@ export default function RegisterPage() {
 
       if (authError) {
         throw new Error(authError.message)
+      }
+
+      // Supabase returns a user with an empty identities array when the email
+      // is already registered, without raising an error (avoids enumeration).
+      if (data.user && data.user.identities && data.user.identities.length === 0) {
+        setError(
+          "An account with this email already exists. Try signing in instead."
+        )
+        return
+      }
+
+      // Email confirmation is enabled on this project: signUp succeeds but
+      // returns no session until the user confirms via the emailed link.
+      if (!data.session) {
+        router.push("/verify-email")
+        return
       }
 
       const roles = await fetchCurrentRoleNames(supabase)

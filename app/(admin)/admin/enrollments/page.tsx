@@ -2,6 +2,7 @@ import React from "react"
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/server"
 import { mockEnrollments, type MockEnrollment } from "@/lib/data/adminMockData"
 import { toEnrollment } from "@/lib/data/adminRowMappers"
+import { ADMIN_QUERY_LIMIT } from "@/lib/admin/queryLimits"
 import EnrollmentsClient from "@/components/admin/EnrollmentsClient"
 
 export const metadata = {
@@ -29,12 +30,16 @@ export default async function AdminEnrollmentsPage() {
         .from("course_enrollments")
         .select("*, profiles(full_name, email), courses(title)")
         .order("enrolled_at", { ascending: false })
+        .limit(ADMIN_QUERY_LIMIT)
 
       if (error) {
         console.error("Admin enrollments query failed:", error)
         dataWarning = "Enrollments could not be loaded. This cohort view may be incomplete."
       } else {
         enrollments = (data ?? []).map((item) => toEnrollment(item, "Enrolled Student", "Technical Track"))
+        if (enrollments.length === ADMIN_QUERY_LIMIT) {
+          dataWarning = `Showing the ${ADMIN_QUERY_LIMIT} most recent enrollments. Older records are not displayed.`
+        }
       }
     } catch (err) {
       console.error("Admin enrollments query failed:", err)

@@ -3,6 +3,7 @@
 import React, { useState } from "react"
 import { MockMessage } from "@/lib/data/adminMockData"
 import { formatDate } from "@/lib/utils"
+import Pagination, { ADMIN_PAGE_SIZE } from "@/components/admin/Pagination"
 import {
   HiOutlineMagnifyingGlass,
   HiOutlineEnvelope,
@@ -20,6 +21,7 @@ export default function MessagesClient({
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [selectedMessage, setSelectedMessage] = useState<MockMessage | null>(null)
+  const [page, setPage] = useState(1)
 
   const filteredMessages = messages.filter((m) => {
     const matchesSearch =
@@ -31,6 +33,11 @@ export default function MessagesClient({
     const matchesStatus = statusFilter === "all" || m.status === statusFilter
     return matchesSearch && matchesStatus
   })
+
+  const pagedMessages = filteredMessages.slice(
+    (page - 1) * ADMIN_PAGE_SIZE,
+    page * ADMIN_PAGE_SIZE
+  )
 
   const handleStatusChange = async (id: string, newStatus: MockMessage["status"]) => {
     setMessages((prev) =>
@@ -87,7 +94,10 @@ export default function MessagesClient({
               type="text"
               placeholder="Search by sender, email, subject, or message..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value)
+                setPage(1)
+              }}
               className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-brand-primary focus:outline-none transition-all"
             />
           </div>
@@ -96,7 +106,10 @@ export default function MessagesClient({
             {["all", "unread", "read", "responded", "archived"].map((status) => (
               <button
                 key={status}
-                onClick={() => setStatusFilter(status)}
+                onClick={() => {
+                  setStatusFilter(status)
+                  setPage(1)
+                }}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all ${
                   statusFilter === status
                     ? "bg-brand-navy text-white shadow-sm"
@@ -113,7 +126,8 @@ export default function MessagesClient({
       {/* Messages List */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-card overflow-hidden divide-y divide-slate-100">
         {filteredMessages.length > 0 ? (
-          filteredMessages.map((msg) => (
+          <>
+            {pagedMessages.map((msg) => (
             <div
               key={msg.id}
               onClick={() => openMessage(msg)}
@@ -166,9 +180,16 @@ export default function MessagesClient({
                 <span className="text-[11px] text-slate-400">
                   {formatDate(msg.created_at)}
                 </span>
-              </div>
-            </div>
-          ))
+               </div>
+             </div>
+           ))}
+            <Pagination
+              page={page}
+              total={filteredMessages.length}
+              onPageChange={setPage}
+              itemLabel="messages"
+            />
+          </>
         ) : (
           <div className="py-16 text-center text-slate-500 space-y-2">
             <HiOutlineChatBubbleLeftRight className="w-10 h-10 mx-auto text-slate-300" />

@@ -2,6 +2,7 @@ import React from "react"
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/server"
 import { mockConsultations, type MockConsultation } from "@/lib/data/adminMockData"
 import { toConsultation } from "@/lib/data/adminRowMappers"
+import { ADMIN_QUERY_LIMIT } from "@/lib/admin/queryLimits"
 import InquiriesClient from "@/components/admin/InquiriesClient"
 
 export const metadata = {
@@ -29,12 +30,16 @@ export default async function AdminInquiriesPage() {
         .from("consultation_requests")
         .select("*")
         .order("created_at", { ascending: false })
+        .limit(ADMIN_QUERY_LIMIT)
 
       if (error) {
         console.error("Admin consultation query failed:", error)
         dataWarning = "Consultation requests could not be loaded. This queue may be incomplete."
       } else {
         consultations = (data ?? []).map(toConsultation)
+        if (consultations.length === ADMIN_QUERY_LIMIT) {
+          dataWarning = `Showing the ${ADMIN_QUERY_LIMIT} most recent requests. Older records are not displayed.`
+        }
       }
     } catch (err) {
       console.error("Admin consultation query failed:", err)

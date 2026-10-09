@@ -1,5 +1,6 @@
 import React from "react"
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/server"
+import { ADMIN_QUERY_LIMIT } from "@/lib/admin/queryLimits"
 import PaymentsClient from "@/components/admin/PaymentsClient"
 
 export const metadata = {
@@ -43,7 +44,8 @@ export default async function AdminPaymentsPage() {
       supabase
         .from("payment_requests")
         .select("*, courses(title)")
-        .order("created_at", { ascending: false }),
+        .order("created_at", { ascending: false })
+        .limit(ADMIN_QUERY_LIMIT),
       supabase.from("courses").select("id, title").order("title"),
     ])
 
@@ -57,6 +59,9 @@ export default async function AdminPaymentsPage() {
         ...item,
         courses: item.courses ?? null,
       })) as PaymentWithCourse[]
+      if (requests.length === ADMIN_QUERY_LIMIT) {
+        loadWarning = `Showing the ${ADMIN_QUERY_LIMIT} most recent payment requests. Older records are not displayed, so the summary figures above may be incomplete.`
+      }
     }
 
     if (coursesResult.error) {

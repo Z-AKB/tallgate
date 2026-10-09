@@ -3,6 +3,7 @@
 import React, { useState } from "react"
 import { MockConsultation } from "@/lib/data/adminMockData"
 import { formatDate } from "@/lib/utils"
+import Pagination, { ADMIN_PAGE_SIZE } from "@/components/admin/Pagination"
 import {
   HiOutlineMagnifyingGlass,
   HiOutlineBuildingOffice2,
@@ -22,6 +23,7 @@ export default function InquiriesClient({
   const [selectedItem, setSelectedItem] = useState<MockConsultation | null>(null)
   const [isUpdating, setIsUpdating] = useState(false)
   const [adminNoteInput, setAdminNoteInput] = useState("")
+  const [page, setPage] = useState(1)
 
   // Filter items
   const filteredItems = consultations.filter((item) => {
@@ -35,6 +37,11 @@ export default function InquiriesClient({
 
     return matchesSearch && matchesStatus
   })
+
+  const pagedItems = filteredItems.slice(
+    (page - 1) * ADMIN_PAGE_SIZE,
+    page * ADMIN_PAGE_SIZE
+  )
 
   const handleStatusChange = async (id: string, newStatus: MockConsultation["status"], notes?: string) => {
     setIsUpdating(true)
@@ -95,7 +102,10 @@ export default function InquiriesClient({
               type="text"
               placeholder="Search by client, company, email, or service..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value)
+                setPage(1)
+              }}
               className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-brand-primary focus:outline-none transition-all"
             />
           </div>
@@ -104,7 +114,10 @@ export default function InquiriesClient({
             {["all", "pending", "contacted", "in_progress", "closed"].map((status) => (
               <button
                 key={status}
-                onClick={() => setStatusFilter(status)}
+                onClick={() => {
+                  setStatusFilter(status)
+                  setPage(1)
+                }}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize whitespace-nowrap transition-all ${
                   statusFilter === status
                     ? "bg-brand-navy text-white shadow-sm"
@@ -121,7 +134,8 @@ export default function InquiriesClient({
       {/* Consultations Table */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-card overflow-hidden">
         {filteredItems.length > 0 ? (
-          <div className="overflow-x-auto">
+          <>
+            <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[10px]">
                 <tr>
@@ -134,7 +148,7 @@ export default function InquiriesClient({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredItems.map((item) => (
+                {pagedItems.map((item) => (
                   <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
                     <td className="px-6 py-4">
                       <p className="font-bold text-slate-900 text-sm">{item.full_name}</p>
@@ -196,7 +210,14 @@ export default function InquiriesClient({
                 ))}
               </tbody>
             </table>
-          </div>
+            </div>
+            <Pagination
+              page={page}
+              total={filteredItems.length}
+              onPageChange={setPage}
+              itemLabel="requests"
+            />
+          </>
         ) : (
           <div className="py-16 text-center text-slate-500 space-y-2">
             <HiOutlineDocumentText className="w-10 h-10 mx-auto text-slate-300" />

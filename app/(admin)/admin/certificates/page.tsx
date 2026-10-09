@@ -1,5 +1,6 @@
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/server"
 import { toCertificate, type AdminCertificate } from "@/lib/data/adminRowMappers"
+import { ADMIN_QUERY_LIMIT } from "@/lib/admin/queryLimits"
 import CertificatesClient from "@/components/admin/CertificatesClient"
 
 export const metadata = {
@@ -27,7 +28,11 @@ export default async function AdminCertificatesPage({
     try {
       const supabase = await createClient()
       const [certificatesResult, learnerRoleResult] = await Promise.all([
-        supabase.from("certificates").select("*").order("created_at", { ascending: false }),
+        supabase
+          .from("certificates")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(ADMIN_QUERY_LIMIT),
         supabase.from("roles").select("id").eq("name", "learner").maybeSingle(),
       ])
 
@@ -38,6 +43,9 @@ export default async function AdminCertificatesPage({
           "Certificate records could not be loaded from Supabase. The list below may be incomplete."
       } else {
         certificates = (certificatesResult.data ?? []).map(toCertificate)
+        if (certificates.length === ADMIN_QUERY_LIMIT) {
+          dataWarning = `Showing the ${ADMIN_QUERY_LIMIT} most recent certificates. Older records are not displayed.`
+        }
       }
 
       if (learnerRoleResult.error) {

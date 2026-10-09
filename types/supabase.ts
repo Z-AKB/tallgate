@@ -613,6 +613,27 @@ export interface Database {
           },
         ]
       }
+      api_rate_limits: {
+        Row: {
+          bucket: string
+          key_hash: string
+          request_count: number
+          window_started: string
+        }
+        Insert: {
+          bucket: string
+          key_hash: string
+          request_count?: number
+          window_started?: string
+        }
+        Update: {
+          bucket?: string
+          key_hash?: string
+          request_count?: number
+          window_started?: string
+        }
+        Relationships: []
+      }
       certificates: {
         Row: {
           id: string

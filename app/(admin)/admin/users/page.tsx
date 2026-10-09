@@ -1,5 +1,6 @@
 import { requireAdmin } from "@/lib/auth/guards"
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/server"
+import { ADMIN_QUERY_LIMIT } from "@/lib/admin/queryLimits"
 import UsersClient from "@/components/admin/UsersClient"
 
 export const metadata = {
@@ -40,6 +41,7 @@ export default async function AdminUsersPage() {
         )
       `)
       .order("created_at", { ascending: false })
+      .limit(ADMIN_QUERY_LIMIT)
 
     if (error) {
       loadFailed = true
@@ -70,6 +72,9 @@ export default async function AdminUsersPage() {
           role: typeof roleName === "string" && roleName.trim() ? roleName : "learner",
         }
       })
+      if (users.length === ADMIN_QUERY_LIMIT) {
+        loadWarning = `Showing the ${ADMIN_QUERY_LIMIT} most recent users. Older accounts are not displayed.`
+      }
     }
 
     const { data: roles, error: rolesError } = await supabase.from("roles").select("name")

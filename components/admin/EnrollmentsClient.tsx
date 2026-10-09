@@ -4,6 +4,7 @@ import React, { useState } from "react"
 import Link from "next/link"
 import { MockEnrollment } from "@/lib/data/adminMockData"
 import { formatDate } from "@/lib/utils"
+import Pagination, { ADMIN_PAGE_SIZE } from "@/components/admin/Pagination"
 import {
   HiOutlineMagnifyingGlass,
   HiOutlineUserGroup,
@@ -19,6 +20,7 @@ export default function EnrollmentsClient({
   const [enrollments, setEnrollments] = useState<MockEnrollment[]>(initialEnrollments)
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [page, setPage] = useState(1)
 
   const filteredEnrollments = enrollments.filter((e) => {
     const matchesSearch =
@@ -29,6 +31,11 @@ export default function EnrollmentsClient({
     const matchesStatus = statusFilter === "all" || e.status === statusFilter
     return matchesSearch && matchesStatus
   })
+
+  const pagedEnrollments = filteredEnrollments.slice(
+    (page - 1) * ADMIN_PAGE_SIZE,
+    page * ADMIN_PAGE_SIZE
+  )
 
   return (
     <div className="space-y-6">
@@ -56,7 +63,10 @@ export default function EnrollmentsClient({
               type="text"
               placeholder="Search student, email, or course..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value)
+                setPage(1)
+              }}
               className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-brand-primary focus:outline-none transition-all"
             />
           </div>
@@ -65,7 +75,10 @@ export default function EnrollmentsClient({
             {["all", "active", "completed", "dropped"].map((status) => (
               <button
                 key={status}
-                onClick={() => setStatusFilter(status)}
+                onClick={() => {
+                  setStatusFilter(status)
+                  setPage(1)
+                }}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all ${
                   statusFilter === status
                     ? "bg-brand-navy text-white shadow-sm"
@@ -82,7 +95,8 @@ export default function EnrollmentsClient({
       {/* Enrollments Table */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-card overflow-hidden">
         {filteredEnrollments.length > 0 ? (
-          <div className="overflow-x-auto">
+          <>
+            <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[10px]">
                 <tr>
@@ -95,7 +109,7 @@ export default function EnrollmentsClient({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredEnrollments.map((item) => (
+                {pagedEnrollments.map((item) => (
                   <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
                     <td className="px-6 py-4">
                       <p className="font-bold text-slate-900 text-sm">{item.user_name}</p>
@@ -164,7 +178,14 @@ export default function EnrollmentsClient({
                 ))}
               </tbody>
             </table>
-          </div>
+            </div>
+            <Pagination
+              page={page}
+              total={filteredEnrollments.length}
+              onPageChange={setPage}
+              itemLabel="enrollments"
+            />
+          </>
         ) : (
           <div className="py-16 text-center text-slate-500 space-y-2">
             <HiOutlineUserGroup className="w-10 h-10 mx-auto text-slate-300" />

@@ -13,6 +13,11 @@ import {
   HiOutlineAcademicCap,
 } from "react-icons/hi"
 
+export const metadata = {
+  title: "Lesson Player | TallGate",
+  robots: { index: false, follow: false },
+}
+
 interface LessonPlayerPageProps {
   params: Promise<{
     slug: string
@@ -21,9 +26,7 @@ interface LessonPlayerPageProps {
     lessonId?: string
     lesson?: string
   }>
-}
-
-interface ModuleWithLessons {
+}interface ModuleWithLessons {
   id: string
   title: string
   sort_order: number

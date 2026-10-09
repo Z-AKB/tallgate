@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
     if (!res.ok) {
       console.error("Resend API error:", data)
       return NextResponse.json(
-        { error: data?.message || "Failed to send email." },
+        { error: "The email could not be sent. Please try again later." },
         { status: res.status }
       )
     }

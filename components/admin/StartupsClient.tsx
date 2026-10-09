@@ -2,6 +2,7 @@
 
 import React, { useState } from "react"
 import { MockStartup } from "@/lib/data/adminMockData"
+import Pagination, { ADMIN_PAGE_SIZE } from "@/components/admin/Pagination"
 import {
   HiOutlineMagnifyingGlass,
   HiOutlineRocketLaunch,
@@ -20,6 +21,7 @@ export default function StartupsClient({
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [selectedStartup, setSelectedStartup] = useState<MockStartup | null>(null)
   const [isUpdating, setIsUpdating] = useState(false)
+  const [page, setPage] = useState(1)
 
   // Filtering
   const filteredStartups = startups.filter((item) => {
@@ -33,6 +35,11 @@ export default function StartupsClient({
 
     return matchesSearch && matchesStage && matchesStatus
   })
+
+  const pagedStartups = filteredStartups.slice(
+    (page - 1) * ADMIN_PAGE_SIZE,
+    page * ADMIN_PAGE_SIZE
+  )
 
   const handleStatusChange = async (id: string, newStatus: MockStartup["status"]) => {
     setIsUpdating(true)
@@ -85,7 +92,10 @@ export default function StartupsClient({
               type="text"
               placeholder="Search startup name, founder, or industry..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value)
+                setPage(1)
+              }}
               className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-brand-primary focus:outline-none transition-all"
             />
           </div>
@@ -94,7 +104,10 @@ export default function StartupsClient({
             {/* Stage Selector */}
             <select
               value={stageFilter}
-              onChange={(e) => setStageFilter(e.target.value)}
+              onChange={(e) => {
+                setStageFilter(e.target.value)
+                setPage(1)
+              }}
               className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200 focus:outline-none"
             >
               <option value="all">All Stages</option>
@@ -108,7 +121,10 @@ export default function StartupsClient({
             {/* Status Selector */}
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => {
+                setStatusFilter(e.target.value)
+                setPage(1)
+              }}
               className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200 focus:outline-none"
             >
               <option value="all">All Statuses</option>
@@ -125,7 +141,8 @@ export default function StartupsClient({
       {/* Startups Table */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-card overflow-hidden">
         {filteredStartups.length > 0 ? (
-          <div className="overflow-x-auto">
+          <>
+            <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[10px]">
                 <tr>
@@ -138,7 +155,7 @@ export default function StartupsClient({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredStartups.map((item) => (
+                {pagedStartups.map((item) => (
                   <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
                     <td className="px-6 py-4">
                       <p className="font-bold text-slate-900 text-sm">{item.company_name}</p>
@@ -204,7 +221,14 @@ export default function StartupsClient({
                 ))}
               </tbody>
             </table>
-          </div>
+            </div>
+            <Pagination
+              page={page}
+              total={filteredStartups.length}
+              onPageChange={setPage}
+              itemLabel="ventures"
+            />
+          </>
         ) : (
           <div className="py-16 text-center text-slate-500 space-y-2">
             <HiOutlineRocketLaunch className="w-10 h-10 mx-auto text-slate-300" />

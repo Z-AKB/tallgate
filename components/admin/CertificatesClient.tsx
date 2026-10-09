@@ -5,6 +5,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { AdminCertificate } from "@/lib/data/adminRowMappers"
 import { formatCertificateIssueDate } from "@/lib/certificates/date"
+import Pagination, { ADMIN_PAGE_SIZE } from "@/components/admin/Pagination"
 import {
   HiOutlineMagnifyingGlass,
   HiOutlineIdentification,
@@ -49,6 +50,7 @@ export default function CertificatesClient({
   const [grade, setGrade] = useState("Distinction")
   const [issueDate, setIssueDate] = useState(initialIssueDate)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [page, setPage] = useState(1)
 
   const filteredCertificates = certificates.filter((c) => {
     const query = searchQuery.trim().toLowerCase()
@@ -60,6 +62,11 @@ export default function CertificatesClient({
       c.course_title.toLowerCase().includes(query)
     )
   })
+
+  const pagedCertificates = filteredCertificates.slice(
+    (page - 1) * ADMIN_PAGE_SIZE,
+    page * ADMIN_PAGE_SIZE
+  )
 
   const matchingLearners = learners
     .filter((learner) => {
@@ -245,7 +252,10 @@ export default function CertificatesClient({
               type="text"
               placeholder="Search by recipient, course, certificate number, or verification code..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value)
+                setPage(1)
+              }}
               className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-brand-primary focus:outline-none transition-all"
             />
           </div>
@@ -258,7 +268,8 @@ export default function CertificatesClient({
       {/* Certificates Table */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-card overflow-hidden">
         {filteredCertificates.length > 0 ? (
-          <div className="overflow-x-auto">
+          <>
+            <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50/80 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[10px]">
                 <tr>
@@ -273,7 +284,7 @@ export default function CertificatesClient({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredCertificates.map((cert) => (
+                {pagedCertificates.map((cert) => (
                   <tr key={cert.id} className="hover:bg-slate-50/70 transition-colors">
                     <td className="px-6 py-4">
                       <span className="font-mono font-bold text-slate-800 bg-slate-50 px-2 py-1 rounded border border-slate-200 text-[11px]">
@@ -344,7 +355,14 @@ export default function CertificatesClient({
                 ))}
               </tbody>
             </table>
-          </div>
+            </div>
+            <Pagination
+              page={page}
+              total={filteredCertificates.length}
+              onPageChange={setPage}
+              itemLabel="certificates"
+            />
+          </>
         ) : (
           <div className="py-16 text-center text-slate-500 space-y-2">
             <HiOutlineIdentification className="w-10 h-10 mx-auto text-slate-300" />

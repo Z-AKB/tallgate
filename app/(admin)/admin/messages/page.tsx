@@ -2,6 +2,7 @@ import React from "react"
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/server"
 import { mockMessages, type MockMessage } from "@/lib/data/adminMockData"
 import { toMessage } from "@/lib/data/adminRowMappers"
+import { ADMIN_QUERY_LIMIT } from "@/lib/admin/queryLimits"
 import MessagesClient from "@/components/admin/MessagesClient"
 
 export const metadata = {
@@ -29,12 +30,16 @@ export default async function AdminMessagesPage() {
         .from("contact_messages")
         .select("*")
         .order("created_at", { ascending: false })
+        .limit(ADMIN_QUERY_LIMIT)
 
       if (error) {
         console.error("Admin contact messages query failed:", error)
         dataWarning = "Messages could not be loaded. This inbox may be incomplete."
       } else {
         messages = (data ?? []).map(toMessage)
+        if (messages.length === ADMIN_QUERY_LIMIT) {
+          dataWarning = `Showing the ${ADMIN_QUERY_LIMIT} most recent messages. Older records are not displayed.`
+        }
       }
     } catch (err) {
       console.error("Admin contact messages query failed:", err)
