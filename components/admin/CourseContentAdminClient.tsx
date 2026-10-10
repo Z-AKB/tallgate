@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
+import { buildObjectPath } from "@/lib/admin/courseContentPaths"
 import { getErrorMessage } from "@/lib/utils"
 import type { Database } from "@/types/supabase"
 import {
@@ -128,18 +129,6 @@ function lessonTitleFromFile(relativePath: string) {
   const cleaned = stripLeadingNumber(normalizeLabel(stripSupportedExtension(leaf))).trim()
   if (!cleaned) return "Untitled material"
   return cleaned.charAt(0).toUpperCase() + cleaned.slice(1)
-}
-
-function buildObjectPath(courseId: string, lessonId: string, relativePath: string) {
-  const segments = relativePath.split("/").filter(Boolean)
-  const leaf = (segments.at(-1) ?? "material")
-    .replace(/[\u0000-\u001f/]/g, "_")
-    .slice(-100)
-  const parents = segments
-    .slice(0, -1)
-    .slice(-2)
-    .map((segment) => segment.replace(/[^A-Za-z0-9._-]/g, "_").slice(0, 40))
-  return `${courseId}/${lessonId}/${crypto.randomUUID()}/${[...parents, leaf].join("/")}`
 }
 
 function buildLessonLookup(lessonsInCourse: Lesson[]) {
