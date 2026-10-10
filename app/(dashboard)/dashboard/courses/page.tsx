@@ -8,10 +8,7 @@ import {
   HiOutlineAcademicCap,
   HiOutlineRocketLaunch,
   HiOutlineClock,
-  HiOutlineCalendar,
   HiOutlineCheck,
-  HiOutlineUserGroup,
-  HiOutlineSparkles,
 } from "react-icons/hi2"
 
 export default function UserCoursesPage() {
