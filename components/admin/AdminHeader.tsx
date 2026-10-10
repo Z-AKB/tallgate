@@ -139,16 +139,16 @@ export default function AdminHeader({
 
             {/* Desktop Breadcrumb & Title */}
             <div className="hidden lg:block">
-              <div className="flex items-center gap-2 text-[11px] font-medium text-slate-400">
+              <div className="flex items-center gap-2 text-[11px] font-medium text-slate-200">
                 <Link href="/admin" className="hover:text-white transition-colors">
                   Admin
                 </Link>
                 <span>/</span>
-                <span className="text-slate-200 font-semibold">{pageTitle}</span>
+                <span className="text-white font-semibold">{pageTitle}</span>
               </div>
               <h2 className="text-lg font-bold text-white tracking-tight flex items-center gap-2 mt-0.5">
                 <span>{pageTitle}</span>
-                {subtitle && <span className="text-xs font-normal text-slate-400">({subtitle})</span>}
+                {subtitle && <span className="text-xs font-normal text-slate-300">({subtitle})</span>}
               </h2>
             </div>
           </div>
@@ -182,7 +182,7 @@ export default function AdminHeader({
               </div>
               <div className="hidden md:flex flex-col text-left">
                 <span className="text-xs font-bold text-white leading-tight">{profile.name}</span>
-                <span className="text-[10px] text-slate-400 leading-tight">{profile.role}</span>
+                <span className="text-[10px] text-slate-300 leading-tight">{profile.role}</span>
               </div>
               <HiChevronDown className="hidden md:block w-4 h-4 text-slate-300" />
             </button>

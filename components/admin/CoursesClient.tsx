@@ -551,135 +551,137 @@ export default function CoursesClient({
           No courses match the current search and domain filter.
         </div>
       ) : (
-        groupedCourses.map((group) => (
-          <div key={group.domain} className="space-y-4">
-            <div className="flex items-center gap-3">
-              <h2 className="text-xs font-bold uppercase tracking-widest text-slate-500">
-                {group.domain}
-              </h2>
-              <span className="text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200 rounded px-1.5 py-0.5">
-                {group.courses.length}
-              </span>
-              <div className="h-px flex-1 bg-slate-200" />
-            </div>
-            {group.courses.length === 0 ? (
-              <div className="rounded-lg border border-slate-200 bg-white p-4 text-xs text-slate-500">
-                No courses in this domain match the current search.
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-3">
+          {groupedCourses.map((group) => (
+            <div key={group.domain} className="min-w-0 space-y-4">
+              <div className="flex items-center gap-3">
+                <h2 className="text-base font-semibold uppercase tracking-wide text-white sm:text-lg">
+                  {group.domain}
+                </h2>
+                <span className="rounded-md bg-white px-2 py-0.5 text-xs font-bold text-[#031544]">
+                  {group.courses.length}
+                </span>
+                <div className="h-px flex-1 bg-white/30" />
               </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                {group.courses.map((course) => (
-                <div
-                  key={course.id}
-                  className="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-card hover:border-slate-300 transition-all flex flex-col justify-between space-y-4"
-                >
-                  <div className="space-y-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-brand-primary">
-                        <span className="sr-only">Domain for {course.title}</span>
-                        <input
-                          list="course-domain-options"
-                          value={domainDrafts[course.id] ?? course.category}
-                          onChange={(e) =>
-                            setDomainDrafts((prev) => ({ ...prev, [course.id]: e.target.value }))
-                          }
-                          disabled={savingDomainId === course.id}
-                          maxLength={80}
-                          placeholder="Assign domain"
-                          className="w-36 rounded-md border border-brand-primary/20 bg-brand-light px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary disabled:opacity-60"
-                        />
-                        {(domainDrafts[course.id] ?? course.category).trim() !==
-                          course.category.trim() && (
-                          <button
-                            type="button"
-                            onClick={() => saveDomain(course)}
-                            disabled={savingDomainId === course.id}
-                            className="rounded bg-brand-primary px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white hover:opacity-90 disabled:opacity-50"
-                          >
-                            {savingDomainId === course.id ? "Saving" : "Save"}
-                          </button>
-                        )}
-                      </label>
-                      <span className="text-xs font-bold text-slate-900">
-                        ₦{formatNumber(course.price_ngn)}
-                      </span>
-                    </div>
-
-                    <div>
-                      <h3 className="text-base font-bold text-slate-900">{course.title}</h3>
-                      <p className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">
-                        {course.short_description}
-                      </p>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 pt-2 border-t border-slate-100">
-                      <span>⏱ {course.duration}</span>
-                      <span>•</span>
-                      <span>🎓 {course.level}</span>
-                      <span>•</span>
-                      <span className="font-semibold text-slate-700">
-                        👥 {course.enrollment_count} Enrolled
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Admin Toggles & Links */}
-                  <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      {/* Publish Toggle */}
-                      <button
-                        onClick={() => togglePublish(course)}
-                        disabled={isUpdating === course.id}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-60 ${
-                          course.is_published
-                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
-                            : "bg-slate-100 text-slate-500 hover:bg-slate-200"
-                        }`}
-                      >
-                        {course.is_published ? "● Published" : "○ Draft"}
-                      </button>
-
-                      {/* Popular Toggle */}
-                      <button
-                        onClick={() => togglePopular(course)}
-                        disabled={isUpdating === course.id}
-                        className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 disabled:opacity-60 ${
-                          course.is_popular
-                            ? "bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100"
-                            : "bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-600"
-                        }`}
-                        title="Spotlight on Landing / Hub"
-                      >
-                        <HiOutlineStar className={`w-3.5 h-3.5 ${course.is_popular ? "fill-amber-500 text-amber-500" : ""}`} />
-                        <span>{course.is_popular ? "Featured" : "Standard"}</span>
-                      </button>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <Link
-                        href={`/admin/course-content?course=${course.id}`}
-                        className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-brand-primary"
-                      >
-                        <span>Materials</span>
-                        <HiOutlineArrowTopRightOnSquare className="h-3.5 w-3.5" />
-                      </Link>
-                      <Link
-                        href={`/learning-hub`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs font-semibold text-brand-primary hover:underline"
-                      >
-                        <span>Live Preview</span>
-                        <HiOutlineArrowTopRightOnSquare className="h-3.5 w-3.5" />
-                      </Link>
-                    </div>
-                  </div>
+              {group.courses.length === 0 ? (
+                <div className="rounded-lg border border-slate-200 bg-white p-4 text-xs text-slate-500">
+                  No courses in this domain match the current search.
                 </div>
-              ))}
+              ) : (
+                <div className="flex flex-col gap-6">
+                  {group.courses.map((course) => (
+                    <div
+                      key={course.id}
+                      className="flex w-full min-w-0 flex-col gap-4 rounded-2xl border border-slate-200/90 bg-white p-6 transition-all hover:border-slate-300 hover:shadow-md"
+                    >
+                      <div className="space-y-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <label className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-brand-primary">
+                            <span className="sr-only">Domain for {course.title}</span>
+                            <input
+                              list="course-domain-options"
+                              value={domainDrafts[course.id] ?? course.category}
+                              onChange={(e) =>
+                                setDomainDrafts((prev) => ({ ...prev, [course.id]: e.target.value }))
+                              }
+                              disabled={savingDomainId === course.id}
+                              maxLength={80}
+                              placeholder="Assign domain"
+                              className="w-36 rounded-md border border-brand-primary/20 bg-brand-light px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-brand-primary focus:outline-none focus:ring-1 focus:ring-brand-primary disabled:opacity-60"
+                            />
+                            {(domainDrafts[course.id] ?? course.category).trim() !==
+                              course.category.trim() && (
+                              <button
+                                type="button"
+                                onClick={() => saveDomain(course)}
+                                disabled={savingDomainId === course.id}
+                                className="rounded bg-brand-primary px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white hover:opacity-90 disabled:opacity-50"
+                              >
+                                {savingDomainId === course.id ? "Saving" : "Save"}
+                              </button>
+                            )}
+                          </label>
+                          <span className="text-xs font-bold text-slate-900">
+                            ₦{formatNumber(course.price_ngn)}
+                          </span>
+                        </div>
+
+                        <div>
+                          <h3 className="line-clamp-2 text-base font-bold text-slate-900">{course.title}</h3>
+                          <p className="mt-1 line-clamp-3 text-xs leading-relaxed text-slate-500">
+                            {course.short_description}
+                          </p>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-3 border-t border-slate-100 pt-2 text-sm text-slate-600">
+                          <span>⏱ {course.duration}</span>
+                          <span>•</span>
+                          <span>🎓 {course.level}</span>
+                          <span>•</span>
+                          <span className="font-semibold text-slate-800">
+                            👥 {course.enrollment_count} Enrolled
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Admin Toggles & Links */}
+                      <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
+                        <div className="flex items-center gap-2">
+                          {/* Publish Toggle */}
+                          <button
+                            onClick={() => togglePublish(course)}
+                            disabled={isUpdating === course.id}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-60 ${
+                              course.is_published
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
+                                : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                            }`}
+                          >
+                            {course.is_published ? "Published" : "Draft"}
+                          </button>
+
+                          {/* Popular Toggle */}
+                          <button
+                            onClick={() => togglePopular(course)}
+                            disabled={isUpdating === course.id}
+                            className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 disabled:opacity-60 ${
+                              course.is_popular
+                                ? "bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100"
+                                : "bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-600"
+                            }`}
+                            title="Spotlight on Landing / Hub"
+                          >
+                            <HiOutlineStar className={`w-3.5 h-3.5 ${course.is_popular ? "fill-amber-500 text-amber-500" : ""}`} />
+                            <span>{course.is_popular ? "Featured" : "Standard"}</span>
+                          </button>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <Link
+                            href={`/admin/course-content?course=${course.id}`}
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-brand-primary"
+                          >
+                            <span>Materials</span>
+                            <HiOutlineArrowTopRightOnSquare className="h-3.5 w-3.5" />
+                          </Link>
+                          <Link
+                            href={`/learning-hub`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-brand-primary hover:underline"
+                          >
+                            <span>Live Preview</span>
+                            <HiOutlineArrowTopRightOnSquare className="h-3.5 w-3.5" />
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-            )}
-          </div>
-        ))
+          ))}
+        </div>
       )}
     </div>
   )
