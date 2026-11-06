@@ -1,0 +1,188 @@
+name: HostAfrica Production Build and Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hostafrica-production
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SITE_URL: https://tallgateltd.com
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Run tests
+        run: npm run test
+
+      - name: Build production application
+        run: npm run build
+
+      - name: Package release
+        run: |
+          mkdir -p deployment
+          cp -a .next public package.json package-lock.json server.js next.config.mjs deployment/
+          tar -czf tallgate-release.tar.gz -C deployment .
+
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tallgate-release
+          path: tallgate-release.tar.gz
+          retention-days: 7
+
+  deploy:
+    needs: build
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Download release artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tallgate-release
+
+      - name: Validate deployment configuration
+        env:
+          SSH_HOST: ${{ secrets.HOSTAFRICA_SSH_HOST }}
+          SSH_PORT: ${{ secrets.HOSTAFRICA_SSH_PORT }}
+          SSH_USERNAME: ${{ secrets.HOSTAFRICA_SSH_USERNAME }}
+          SSH_PRIVATE_KEY: ${{ secrets.HOSTAFRICA_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.HOSTAFRICA_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          for name in SSH_HOST SSH_PORT SSH_USERNAME SSH_PRIVATE_KEY SSH_KNOWN_HOSTS; do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::Missing required GitHub secret for $name"
+              exit 1
+            fi
+          done
+          if ! [[ "$SSH_PORT" =~ ^[0-9]+$ ]] || [ "$SSH_PORT" -lt 1 ] || [ "$SSH_PORT" -gt 65535 ]; then
+            echo "::error::HOSTAFRICA_SSH_PORT must be a valid TCP port"
+            exit 1
+          fi
+
+      - name: Configure SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.HOSTAFRICA_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.HOSTAFRICA_SSH_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Transfer release
+        env:
+          SSH_HOST: ${{ secrets.HOSTAFRICA_SSH_HOST }}
+          SSH_PORT: ${{ secrets.HOSTAFRICA_SSH_PORT }}
+          SSH_USERNAME: ${{ secrets.HOSTAFRICA_SSH_USERNAME }}
+        run: |
+          scp -i ~/.ssh/id_ed25519 -P "$SSH_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            tallgate-release.tar.gz "$SSH_USERNAME@$SSH_HOST:~/tallgate-release-$GITHUB_SHA.tar.gz"
+
+      - name: Deploy with rollback
+        env:
+          SSH_HOST: ${{ secrets.HOSTAFRICA_SSH_HOST }}
+          SSH_PORT: ${{ secrets.HOSTAFRICA_SSH_PORT }}
+          SSH_USERNAME: ${{ secrets.HOSTAFRICA_SSH_USERNAME }}
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -p "$SSH_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            "$SSH_USERNAME@$SSH_HOST" "bash -s -- '$GITHUB_SHA'" <<'REMOTE'
+          set -Eeuo pipefail
+          SHA="$1"
+          APP="$HOME/tallgate-app"
+          RELEASE="$HOME/tallgate-release-$SHA"
+          ARCHIVE="$HOME/tallgate-release-$SHA.tar.gz"
+          BACKUP="$HOME/tallgate-backup-$SHA"
+          STAGING="$HOME/tallgate-staging-$SHA"
+          NODE_ENV_DIR="$HOME/nodevenv/tallgate-app/24/bin"
+
+          cleanup() {
+            rm -rf "$STAGING"
+            rm -f "$ARCHIVE"
+          }
+          trap cleanup EXIT
+
+          test -d "$APP" || { echo "Application directory not found: $APP"; exit 1; }
+          test -f "$ARCHIVE" || { echo "Release archive missing"; exit 1; }
+          test -x "$NODE_ENV_DIR/node" || { echo "Node 24 environment not found"; exit 1; }
+          test -x "$NODE_ENV_DIR/npm" || { echo "npm not found in Node 24 environment"; exit 1; }
+
+          rm -rf "$STAGING" "$RELEASE"
+          mkdir -p "$STAGING"
+          tar -xzf "$ARCHIVE" -C "$STAGING"
+
+          # Preserve production configuration and Passenger restart directory.
+          find "$APP" -maxdepth 1 -type f -name '.env*' -exec cp -p {} "$STAGING/" \;
+          if [ -d "$APP/tmp" ]; then cp -a "$APP/tmp" "$STAGING/tmp"; fi
+          mkdir -p "$STAGING/tmp"
+
+          cd "$STAGING"
+          export PATH="$NODE_ENV_DIR:$PATH"
+          npm ci --omit=dev
+
+          # Keep the current live app intact until staging is ready.
+          rm -rf "$BACKUP"
+          mv "$APP" "$BACKUP"
+          if ! mv "$STAGING" "$APP"; then
+            mv "$BACKUP" "$APP"
+            exit 1
+          fi
+
+          touch "$APP/tmp/restart.txt"
+
+          # Confirm the public site responds before accepting the release.
+          healthy=0
+          for attempt in $(seq 1 18); do
+            if curl --fail --silent --show-error --max-time 10 https://tallgateltd.com/ >/dev/null; then
+              healthy=1
+              break
+            fi
+            sleep 5
+          done
+
+          if [ "$healthy" -ne 1 ]; then
+            echo "Health check failed; restoring previous release"
+            FAILED="$HOME/tallgate-failed-$SHA"
+            mv "$APP" "$FAILED"
+            mv "$BACKUP" "$APP"
+            touch "$APP/tmp/restart.txt"
+            rm -rf "$FAILED"
+            exit 1
+          fi
+
+          # Keep the latest three backups for manual recovery.
+          find "$HOME" -maxdepth 1 -type d -name 'tallgate-backup-*' -printf '%T@ %p\n' \
+            | sort -nr | awk 'NR > 3 { $1=""; sub(/^ /,""); print }' \
+            | while IFS= read -r old_backup; do [ -n "$old_backup" ] && rm -rf -- "$old_backup"; done
+
+          echo "Deployment succeeded: $SHA"
+          REMOTE
