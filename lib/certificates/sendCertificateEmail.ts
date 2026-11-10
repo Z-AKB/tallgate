@@ -11,6 +11,20 @@ export type CertificateEmailInput = {
   idempotencyKey?: string
 }
 
+/**
+ * Stable Resend idempotency key for a certificate's delivery email.
+ *
+ * The same key is used by every send path for the same certificate (initial
+ * issuance and admin retries). Lease tokens only prevent concurrent database
+ * work; they cannot prevent duplicate external sends on their own. Resend
+ * deduplicates requests that carry the same Idempotency-Key and payload for
+ * 24 hours, so a retry after a database failure that followed a successful
+ * external send returns the original response instead of sending again.
+ */
+export function certificateEmailIdempotencyKey(certificateId: string): string {
+  return `certificate-email-${certificateId}`
+}
+
 export async function sendCertificateEmail(input: CertificateEmailInput): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY
   const from = process.env.RESEND_FROM_EMAIL

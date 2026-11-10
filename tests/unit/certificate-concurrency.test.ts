@@ -12,15 +12,17 @@ vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: mockCreateAdminClient,
 }))
 
-vi.mock("@/lib/certificates/sendCertificateEmail", () => ({
-  sendCertificateEmail: mockSendCertificateEmail,
-}))
+vi.mock("@/lib/certificates/sendCertificateEmail", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/certificates/sendCertificateEmail")>()
+  return { ...actual, sendCertificateEmail: mockSendCertificateEmail }
+})
 
 vi.stubGlobal("crypto", { randomUUID: mockRandomUUID })
 
 import { claimAndSendCertificateEmail, releaseStaleEmailLeases } from "@/lib/certificates/issueCertificate"
+import { certificateEmailIdempotencyKey } from "@/lib/certificates/sendCertificateEmail"
 
-function createMockClient(overrides = {}) {
+function createMockClient(overrides: Record<string, unknown> = {}) {
   const rpcMock = vi.fn()
 
   return {
@@ -47,7 +49,7 @@ function createMockClient(overrides = {}) {
     },
     rpc: rpcMock,
     ...overrides,
-  } as any
+  }
 }
 
 describe("Email Lease Ownership (SECURITY DEFINER functions)", () => {
@@ -271,26 +273,30 @@ describe("Email Lease Ownership (SECURITY DEFINER functions)", () => {
 })
 
 describe("Stable Idempotency Key for Retries", () => {
-  it("uses certificate-specific stable key for admin retries", () => {
+  it("uses the same stable key for admin retries and initial issue of the same certificate", () => {
     const certId = "cert-123"
-    const retryCount = 5
-    
-    // Old unstable key (would change per retry)
-    const oldKey = `cert-retry-${certId}-${retryCount}`
-    
-    // New stable key (same for all retries of same certificate)
-    const newKey = `cert-retry-${certId}`
-    
-    expect(oldKey).toBe("cert-retry-cert-123-5")
-    expect(newKey).toBe("cert-retry-cert-123")
-    expect(newKey).not.toContain(retryCount.toString())
+
+    // The issuance path (issueCourseCertificate) and the admin retry path
+    // (resend_certificate_email) must share one key per certificate so Resend
+    // deduplicates across retries within the 24-hour idempotency window.
+    const issueKey = certificateEmailIdempotencyKey(certId)
+    const retryKey = certificateEmailIdempotencyKey(certId)
+
+    expect(issueKey).toBe(retryKey)
+    expect(retryKey).toBe(`certificate-email-${certId}`)
   })
 
-  it("uses certificate-specific stable key for initial issue", () => {
-    const certId = "cert-456"
-    const key = `cert-issue-${certId}`
-    
-    expect(key).toBe("cert-issue-cert-456")
+  it("does not embed the retry attempt count in the key", () => {
+    const certId = "cert-123"
+    const retryCount = 5
+
+    const key = certificateEmailIdempotencyKey(certId)
+
+    expect(key).not.toContain(retryCount.toString())
+  })
+
+  it("uses a distinct key per certificate", () => {
+    expect(certificateEmailIdempotencyKey("cert-1")).not.toBe(certificateEmailIdempotencyKey("cert-2"))
   })
 })
 
@@ -331,7 +337,7 @@ describe("Admin Retry Concurrency", () => {
       certificateNumber: "TG-001",
       verificationUrl: "https://example.com/verify",
       pdfBuffer: Buffer.from("pdf"),
-      idempotencyKey: "cert-retry-cert-1",
+      idempotencyKey: certificateEmailIdempotencyKey("cert-1"),
     })
 
     // Second retry finds already sending
@@ -353,7 +359,7 @@ describe("Admin Retry Concurrency", () => {
       certificateNumber: "TG-001",
       verificationUrl: "https://example.com/verify",
       pdfBuffer: Buffer.from("pdf"),
-      idempotencyKey: "cert-retry-cert-1",
+      idempotencyKey: certificateEmailIdempotencyKey("cert-1"),
     })
 
     // Only first claim should have proceeded to complete

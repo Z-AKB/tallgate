@@ -5,15 +5,12 @@ import path from "path"
 import QRCode from "qrcode"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { renderCertificatePdf } from "@/lib/certificates/generateCertificatePdf"
-import { sendCertificateEmail } from "@/lib/certificates/sendCertificateEmail"
+import { certificateEmailIdempotencyKey, sendCertificateEmail } from "@/lib/certificates/sendCertificateEmail"
 import { logError, logWarn } from "@/lib/logging/logger"
 
 const CERTIFICATE_BUCKET = "certificates"
 const CERTIFICATE_CONTENT_TYPE = "application/pdf"
 const CERTIFICATE_FILE_NAME = "certificate.pdf"
-
-// Email lease timeout in milliseconds (5 minutes)
-const EMAIL_LEASE_TIMEOUT_MS = 5 * 60 * 1000
 
 // Manual issuance unique constraint name
 const MANUAL_ISSUANCE_UNIQUE_CONSTRAINT = "certificates_user_title_date_unique"
@@ -445,7 +442,7 @@ export async function issueCourseCertificate(
         certificateNumber: issuedCertificate.certificate_number,
         verificationUrl: verificationUrlString,
         pdfBuffer,
-        idempotencyKey: `cert-issue-${issuedCertificate.id}`,
+        idempotencyKey: certificateEmailIdempotencyKey(issuedCertificate.id),
       })
     } catch (emailError) {
       // Email claiming/sending failed, but certificate issuance succeeded
@@ -475,20 +472,27 @@ interface ClaimAndSendEmailInput {
 }
 
 /**
+ * Minimal Supabase client surface required for the certificate email lease
+ * RPCs. `createAdminClient()` satisfies this structurally, and unit tests can
+ * pass a mock exposing only `rpc`.
+ */
+export type CertificateEmailRpcClient = Pick<ReturnType<typeof createAdminClient>, "rpc">
+
+/**
  * Atomically claims a certificate for email delivery and sends it.
  * Uses a UUID lease token for ownership tracking to prevent duplicate sends
  * and lease theft. Separate lease acquisition timestamp from delivery timestamp.
  * Uses SECURITY DEFINER functions for atomic lease management.
  */
 export async function claimAndSendCertificateEmail(
-  client: ReturnType<typeof createAdminClient>,
+  client: CertificateEmailRpcClient,
   input: ClaimAndSendEmailInput
 ): Promise<void> {
   const { certificateId, to, recipientName, courseTitle, certificateNumber, verificationUrl, pdfBuffer } = input
   const leaseToken = crypto.randomUUID()
 
   // Atomically claim the lease using SECURITY DEFINER function
-  const { data: claimResult, error: claimError } = await (client as any)
+  const { data: claimResult, error: claimError } = await client
     .rpc('claim_certificate_email_lease', {
       p_certificate_id: certificateId,
       p_lease_token: leaseToken,
@@ -530,7 +534,7 @@ export async function claimAndSendCertificateEmail(
     })
 
     // Mark as sent - require matching lease token to prevent lease theft
-    const { data: completed, error: completeError } = await (client as any)
+    const { data: completed, error: completeError } = await client
       .rpc('complete_certificate_email_lease', {
         p_certificate_id: certificateId,
         p_lease_token: leaseToken,
@@ -547,7 +551,7 @@ export async function claimAndSendCertificateEmail(
     }
   } catch (emailError) {
     // Email sending failed, mark as failed - require matching lease token
-    const { data: failed, error: failedError } = await (client as any)
+    const { data: failed, error: failedError } = await client
       .rpc('complete_certificate_email_lease', {
         p_certificate_id: certificateId,
         p_lease_token: leaseToken,
@@ -565,7 +569,7 @@ export async function claimAndSendCertificateEmail(
 }
 
 /**
- * Releases stale 'sending' leases (older than EMAIL_LEASE_TIMEOUT_MS).
+ * Releases stale 'sending' leases (older than the lease timeout interval).
  * Uses SECURITY DEFINER function for atomic lease release.
  * Should be called periodically or before retry attempts.
  */
@@ -578,7 +582,7 @@ export async function releaseStaleEmailLeases(): Promise<number> {
     return 0
   }
 
-  const { data, error } = await (client as any)
+  const { data, error } = await client
     .rpc('release_stale_certificate_email_leases', {
       p_lease_timeout_interval: '5 minutes',
     })
@@ -588,5 +592,5 @@ export async function releaseStaleEmailLeases(): Promise<number> {
     return 0
   }
 
-  return (data as number) ?? 0
+  return data ?? 0
 }

@@ -12,6 +12,7 @@ import {
   type ExistingCatalogueCourse,
 } from "@/lib/admin/catalogueSeed"
 import { issueCourseCertificate, type IssueCertificateFailure, claimAndSendCertificateEmail, releaseStaleEmailLeases } from "@/lib/certificates/issueCertificate"
+import { certificateEmailIdempotencyKey } from "@/lib/certificates/sendCertificateEmail"
 import { checkCourseCompletion } from "@/lib/assessments/completion"
 import { toCourse } from "@/lib/data/adminRowMappers"
 import { coursesData } from "@/lib/data/courses"
@@ -863,7 +864,22 @@ async function handleAdminAction(
 
         const updateData: CertificateUpdate = { is_valid }
 
-        const { data: updated, error } = await supabase
+        // Mutations on certificates are service-role only since the
+        // 20261110160000 hardening revoked UPDATE from authenticated, so this
+        // must run through the admin client (the caller is already verified as
+        // an admin by requireAdminApi above).
+        let certificateAdminClient: ReturnType<typeof createAdminClient>
+        try {
+          certificateAdminClient = createAdminClient()
+        } catch (error: unknown) {
+          logError("admin_action.admin_client_unavailable", error)
+          return NextResponse.json(
+            { error: "Certificate management is temporarily unavailable." },
+            { status: 503 }
+          )
+        }
+
+        const { data: updated, error } = await certificateAdminClient
           .from("certificates")
           .update(updateData)
           .eq("id", id)
@@ -891,7 +907,19 @@ async function handleAdminAction(
           return NextResponse.json({ error: "A certificate id is required." }, { status: 400 })
         }
 
-        const adminClient = createAdminClient()
+        // Email delivery RPCs mutate certificate rows through the service
+        // role (see the 20261110160000 hardening), so this needs the admin
+        // client; guard against missing configuration like the other cases.
+        let adminClient: ReturnType<typeof createAdminClient>
+        try {
+          adminClient = createAdminClient()
+        } catch (error: unknown) {
+          logError("admin_action.admin_client_unavailable", error)
+          return NextResponse.json(
+            { error: "Certificate email sending is temporarily unavailable." },
+            { status: 503 }
+          )
+        }
 
         // Release any stale sending leases before attempting retry
         await releaseStaleEmailLeases()
@@ -955,7 +983,8 @@ async function handleAdminAction(
         verificationUrl.searchParams.set("code", cert.verification_code)
 
         // Send email with PDF attachment using atomic claiming
-        // Use stable idempotency key per certificate (not per retry attempt)
+        // Use the stable per-certificate idempotency key shared with the
+        // issuance path so Resend deduplicates across retries
         try {
           await claimAndSendCertificateEmail(adminClient, {
             certificateId: id,
@@ -965,7 +994,7 @@ async function handleAdminAction(
             certificateNumber: cert.certificate_number,
             verificationUrl: verificationUrl.toString(),
             pdfBuffer,
-            idempotencyKey: `cert-retry-${id}`,
+            idempotencyKey: certificateEmailIdempotencyKey(id),
           })
 
           return NextResponse.json({ success: true, message: "Certificate email resent successfully." })
@@ -1262,7 +1291,7 @@ async function handleAdminAction(
           return NextResponse.json({ error: "Role not found" }, { status: 400 })
         }
 
-        const { data: authData, error: authError } = await (adminSupabase.auth as any).admin.createUser({
+        const { data: authData, error: authError } = await adminSupabase.auth.admin.createUser({
           email: email.trim().toLowerCase(),
           password,
           email_confirm: true,
