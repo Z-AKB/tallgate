@@ -11,8 +11,30 @@
 --     -f supabase/validate/20261110180000_certificate_email_rpc_null_validation.sql
 --
 -- The whole script runs inside a transaction that is rolled back at the
--- end, so even a mistaken run leaves no rows behind -- it must still never
--- be pointed at staging or production.
+-- end, so it leaves no rows behind -- it must still never be pointed at
+-- staging or production.
+--
+-- Fixtures: three certificates exercise the RPC matrix. certificates.user_id
+-- references public.profiles(id) and certificates.course_id references
+-- public.courses(id); public.profiles.id itself references auth.users(id).
+-- The script therefore creates its own temporary dependency chain inside
+-- the same transaction:
+--
+--   auth.users  ->  public.profiles  ->  public.certificates.user_id
+--   public.courses  ->  public.certificates.course_id
+--
+-- No fabricated foreign keys are used and no existing rows are modified:
+-- every referenced row is inserted (and rolled back) by this script. The
+-- certificates use one shared user_id with distinct course_ids, which also
+-- satisfies the partial unique index certificates_user_course_unique on
+-- (user_id, course_id) WHERE course_id IS NOT NULL.
+--
+-- Prerequisites, verified by the preflight block with explicit diagnostics:
+--   * tables public.certificates, public.profiles, public.courses, auth.users
+--   * the email RPC functions with their 20261110180000 signatures
+--   * INSERT/SELECT privileges for the connected role. Connect as the
+--     database owner or the postgres superuser: RLS is enabled on these
+--     tables and non-exempt roles are subject to it.
 --
 -- Cases covered (mirrors the review matrix):
 --   update_certificate_email_status:
@@ -38,14 +60,113 @@ BEGIN;
 -- verified service-role JWT after authentication; the RPC authorization
 -- checks (is_admin() OR is_service_role()) read it. The dummy sub has no
 -- user_roles rows, so authorization must pass via the service-role branch.
-SET request.jwt.claims = '{"role":"service_role","sub":"00000000-0000-0000-0000-000000000000"}';
+SET LOCAL request.jwt.claims = '{"role":"service_role","sub":"00000000-0000-0000-0000-000000000000"}';
 
--- Fixture rows (rolled back with the transaction).
-INSERT INTO public.certificates (id, verification_code, recipient_name, course_title, email_status, email_retry_count)
-VALUES
-  ('11111111-1111-1111-1111-111111111111', 'VAL-NULL-A', 'Validation A', 'Validation Course A', 'pending', 0),
-  ('22222222-2222-2222-2222-222222222222', 'VAL-NULL-B', 'Validation B', 'Validation Course B', 'pending', 0),
-  ('33333333-3333-3333-3333-333333333333', 'VAL-NULL-C', 'Validation C', 'Validation Course C', 'pending', 0);
+-- ---------------------------------------------------------------------------
+-- Preflight: fail with a clear diagnostic when prerequisites are missing
+-- ---------------------------------------------------------------------------
+
+DO $preflight$
+BEGIN
+  IF pg_catalog.to_regclass('public.certificates') IS NULL THEN
+    RAISE EXCEPTION 'VALIDATION PREREQUISITE MISSING: table public.certificates not found. Apply the schema migrations to this database first.';
+  END IF;
+  IF pg_catalog.to_regclass('public.profiles') IS NULL THEN
+    RAISE EXCEPTION 'VALIDATION PREREQUISITE MISSING: table public.profiles not found. Apply the schema migrations to this database first.';
+  END IF;
+  IF pg_catalog.to_regclass('public.courses') IS NULL THEN
+    RAISE EXCEPTION 'VALIDATION PREREQUISITE MISSING: table public.courses not found. Apply the schema migrations to this database first.';
+  END IF;
+  IF pg_catalog.to_regclass('auth.users') IS NULL THEN
+    RAISE EXCEPTION 'VALIDATION PREREQUISITE MISSING: table auth.users not found. This script must run against a Supabase database (public.profiles.id references auth.users).';
+  END IF;
+
+  IF pg_catalog.to_regprocedure('public.update_certificate_email_status(uuid, text, boolean, timestamptz, boolean, uuid, boolean, timestamptz, boolean, text, boolean, int, boolean)') IS NULL THEN
+    RAISE EXCEPTION 'VALIDATION PREREQUISITE MISSING: function public.update_certificate_email_status(uuid, text, boolean, timestamptz, boolean, uuid, boolean, timestamptz, boolean, text, boolean, int, boolean) not found. Apply migrations through 20261110180000_certificate_email_rpc_null_status_validation first.';
+  END IF;
+  IF pg_catalog.to_regprocedure('public.claim_certificate_email_lease(uuid, uuid, interval)') IS NULL THEN
+    RAISE EXCEPTION 'VALIDATION PREREQUISITE MISSING: function public.claim_certificate_email_lease(uuid, uuid, interval) not found. Apply migrations through 20261110180000_certificate_email_rpc_null_status_validation first.';
+  END IF;
+  IF pg_catalog.to_regprocedure('public.complete_certificate_email_lease(uuid, uuid, text, text)') IS NULL THEN
+    RAISE EXCEPTION 'VALIDATION PREREQUISITE MISSING: function public.complete_certificate_email_lease(uuid, uuid, text, text) not found. Apply migrations through 20261110180000_certificate_email_rpc_null_status_validation first.';
+  END IF;
+  IF pg_catalog.to_regprocedure('public.is_service_role()') IS NULL OR pg_catalog.to_regprocedure('public.is_admin()') IS NULL THEN
+    RAISE EXCEPTION 'VALIDATION PREREQUISITE MISSING: function public.is_service_role() or public.is_admin() not found. Apply migrations through 20261110180000_certificate_email_rpc_null_status_validation first.';
+  END IF;
+
+  IF NOT pg_catalog.has_table_privilege(pg_catalog.current_user, 'public.certificates', 'INSERT, SELECT') THEN
+    RAISE EXCEPTION 'VALIDATION PREREQUISITE FAILED: role % lacks INSERT/SELECT on public.certificates. Connect as the database owner or the postgres superuser (RLS is enabled on this table).', pg_catalog.current_user;
+  END IF;
+  IF NOT pg_catalog.has_table_privilege(pg_catalog.current_user, 'public.profiles', 'INSERT') THEN
+    RAISE EXCEPTION 'VALIDATION PREREQUISITE FAILED: role % lacks INSERT on public.profiles. Connect as the database owner or the postgres superuser (RLS is enabled on this table).', pg_catalog.current_user;
+  END IF;
+  IF NOT pg_catalog.has_table_privilege(pg_catalog.current_user, 'public.courses', 'INSERT') THEN
+    RAISE EXCEPTION 'VALIDATION PREREQUISITE FAILED: role % lacks INSERT on public.courses. Connect as the database owner or the postgres superuser (RLS is enabled on this table).', pg_catalog.current_user;
+  END IF;
+  IF NOT pg_catalog.has_table_privilege(pg_catalog.current_user, 'auth.users', 'INSERT') THEN
+    RAISE EXCEPTION 'VALIDATION PREREQUISITE FAILED: role % lacks INSERT on auth.users. Connect as the database owner or the postgres superuser.', pg_catalog.current_user;
+  END IF;
+
+  RAISE NOTICE 'preflight passed: required tables, functions, and privileges are present';
+END
+$preflight$;
+
+-- ---------------------------------------------------------------------------
+-- Fixtures (rolled back with the transaction)
+-- ---------------------------------------------------------------------------
+
+DO $fixtures$
+DECLARE
+  v_message text;
+BEGIN
+  -- Root of the dependency chain: public.profiles.id references auth.users.id.
+  BEGIN
+    INSERT INTO auth.users (id, email)
+    VALUES ('66666666-6666-6666-6666-666666666666', 'validation-null-status@example.invalid');
+  EXCEPTION WHEN OTHERS THEN
+    GET STACKED DIAGNOSTICS v_message = MESSAGE_TEXT;
+    RAISE EXCEPTION 'VALIDATION SETUP FAILED: could not insert the auth.users fixture: %', v_message;
+  END;
+
+  BEGIN
+    INSERT INTO public.profiles (id, full_name, email)
+    VALUES ('66666666-6666-6666-6666-666666666666', 'Validation RPC Fixtures', 'validation-null-status@example.invalid');
+  EXCEPTION WHEN OTHERS THEN
+    GET STACKED DIAGNOSTICS v_message = MESSAGE_TEXT;
+    RAISE EXCEPTION 'VALIDATION SETUP FAILED: could not insert the public.profiles fixture (its id must match a row in auth.users): %', v_message;
+  END;
+
+  -- Three distinct courses so the three certificates form distinct
+  -- (user_id, course_id) pairs under certificates_user_course_unique.
+  BEGIN
+    INSERT INTO public.courses (id, slug, title, category, duration, short_description, overview)
+    VALUES
+      ('77777777-7777-7777-7777-777777777771', 'validation-null-status-a', 'Validation Course A', 'Validation', '1 hour', 'Validation fixture course A', 'Validation fixture course A overview.'),
+      ('77777777-7777-7777-7777-777777777772', 'validation-null-status-b', 'Validation Course B', 'Validation', '1 hour', 'Validation fixture course B', 'Validation fixture course B overview.'),
+      ('77777777-7777-7777-7777-777777777773', 'validation-null-status-c', 'Validation Course C', 'Validation', '1 hour', 'Validation fixture course C', 'Validation fixture course C overview.');
+  EXCEPTION WHEN OTHERS THEN
+    GET STACKED DIAGNOSTICS v_message = MESSAGE_TEXT;
+    RAISE EXCEPTION 'VALIDATION SETUP FAILED: could not insert the public.courses fixtures: %', v_message;
+  END;
+
+  BEGIN
+    INSERT INTO public.certificates (id, verification_code, user_id, course_id, recipient_name, course_title, email_status, email_retry_count)
+    VALUES
+      ('11111111-1111-1111-1111-111111111111', 'VAL-NULL-A', '66666666-6666-6666-6666-666666666666', '77777777-7777-7777-7777-777777777771', 'Validation A', 'Validation Course A', 'pending', 0),
+      ('22222222-2222-2222-2222-222222222222', 'VAL-NULL-B', '66666666-6666-6666-6666-666666666666', '77777777-7777-7777-7777-777777777772', 'Validation B', 'Validation Course B', 'pending', 0),
+      ('33333333-3333-3333-3333-333333333333', 'VAL-NULL-C', '66666666-6666-6666-6666-666666666666', '77777777-7777-7777-7777-777777777773', 'Validation C', 'Validation Course C', 'pending', 0);
+  EXCEPTION WHEN OTHERS THEN
+    GET STACKED DIAGNOSTICS v_message = MESSAGE_TEXT;
+    RAISE EXCEPTION 'VALIDATION SETUP FAILED: could not insert the public.certificates fixtures (user_id/course_id must reference the fixture rows above; RLS may block non-owner roles): %', v_message;
+  END;
+
+  RAISE NOTICE 'fixtures inserted: 1 auth user, 1 profile, 3 courses, 3 certificates';
+END
+$fixtures$;
+
+-- ---------------------------------------------------------------------------
+-- Validation cases
+-- ---------------------------------------------------------------------------
 
 DO $validate$
 DECLARE
