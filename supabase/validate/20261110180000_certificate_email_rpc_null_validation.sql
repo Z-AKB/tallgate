@@ -17,14 +17,20 @@
 -- Fixtures: three certificates exercise the RPC matrix. certificates.user_id
 -- references public.profiles(id) and certificates.course_id references
 -- public.courses(id); public.profiles.id itself references auth.users(id).
--- The script therefore creates its own temporary dependency chain inside
--- the same transaction:
+-- The script therefore relies on this dependency chain inside the same
+-- transaction:
 --
---   auth.users  ->  public.profiles  ->  public.certificates.user_id
+--   auth.users  --(on_auth_user_created trigger)-->  public.profiles
+--   public.profiles  ->  public.certificates.user_id
 --   public.courses  ->  public.certificates.course_id
 --
--- No fabricated foreign keys are used and no existing rows are modified:
--- every referenced row is inserted (and rolled back) by this script. The
+-- The auth.users fixture insert fires the on_auth_user_created AFTER INSERT
+-- trigger (public.handle_new_user(), 20260828000000_phase3_schema.sql),
+-- which creates the matching public.profiles row automatically; the script
+-- verifies that profile exists instead of inserting it explicitly (an
+-- explicit insert would collide on the primary key). No fabricated foreign
+-- keys are used and no existing rows are modified: every referenced row is
+-- inserted (and rolled back) by this script or its trigger. The
 -- certificates use one shared user_id with distinct course_ids, which also
 -- satisfies the partial unique index certificates_user_course_unique on
 -- (user_id, course_id) WHERE course_id IS NOT NULL.
@@ -118,6 +124,7 @@ $preflight$;
 DO $fixtures$
 DECLARE
   v_message text;
+  v_profile_id uuid;
 BEGIN
   -- Root of the dependency chain: public.profiles.id references auth.users.id.
   BEGIN
@@ -128,13 +135,21 @@ BEGIN
     RAISE EXCEPTION 'VALIDATION SETUP FAILED: could not insert the auth.users fixture: %', v_message;
   END;
 
-  BEGIN
-    INSERT INTO public.profiles (id, full_name, email)
-    VALUES ('66666666-6666-6666-6666-666666666666', 'Validation RPC Fixtures', 'validation-null-status@example.invalid');
-  EXCEPTION WHEN OTHERS THEN
-    GET STACKED DIAGNOSTICS v_message = MESSAGE_TEXT;
-    RAISE EXCEPTION 'VALIDATION SETUP FAILED: could not insert the public.profiles fixture (its id must match a row in auth.users): %', v_message;
-  END;
+  -- The public.profiles row is created by the on_auth_user_created AFTER
+  -- INSERT trigger on auth.users (public.handle_new_user(), defined in
+  -- 20260828000000_phase3_schema.sql): it inserts profiles (id, full_name,
+  -- email) from the new auth user. The profile must NOT be inserted
+  -- explicitly -- that would raise a duplicate primary-key violation. (The
+  -- trigger also assigns the default 'learner' role when it exists; that
+  -- user_roles row is rolled back with this transaction like every other
+  -- fixture.) Verify the trigger-created profile exists before any
+  -- certificate fixture relies on it.
+  SELECT id INTO v_profile_id
+  FROM public.profiles
+  WHERE id = '66666666-6666-6666-6666-666666666666';
+  IF v_profile_id IS NULL THEN
+    RAISE EXCEPTION 'VALIDATION SETUP FAILED: the on_auth_user_created trigger did not create the public.profiles row for the fixture auth user 66666666-6666-6666-6666-666666666666. Verify the trigger from 20260828000000_phase3_schema.sql exists and is enabled on auth.users.';
+  END IF;
 
   -- Three distinct courses so the three certificates form distinct
   -- (user_id, course_id) pairs under certificates_user_course_unique.
@@ -160,7 +175,7 @@ BEGIN
     RAISE EXCEPTION 'VALIDATION SETUP FAILED: could not insert the public.certificates fixtures (user_id/course_id must reference the fixture rows above; RLS may block non-owner roles): %', v_message;
   END;
 
-  RAISE NOTICE 'fixtures inserted: 1 auth user, 1 profile, 3 courses, 3 certificates';
+  RAISE NOTICE 'fixtures inserted: 1 auth user (profile auto-created by the on_auth_user_created trigger), 3 courses, 3 certificates';
 END
 $fixtures$;
 
