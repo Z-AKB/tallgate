@@ -100,17 +100,17 @@ BEGIN
     RAISE EXCEPTION 'VALIDATION PREREQUISITE MISSING: function public.is_service_role() or public.is_admin() not found. Apply migrations through 20261110180000_certificate_email_rpc_null_status_validation first.';
   END IF;
 
-  IF NOT pg_catalog.has_table_privilege(pg_catalog.current_user, 'public.certificates', 'INSERT, SELECT') THEN
-    RAISE EXCEPTION 'VALIDATION PREREQUISITE FAILED: role % lacks INSERT/SELECT on public.certificates. Connect as the database owner or the postgres superuser (RLS is enabled on this table).', pg_catalog.current_user;
+  IF NOT pg_catalog.has_table_privilege(current_user, 'public.certificates', 'INSERT, SELECT') THEN
+    RAISE EXCEPTION 'VALIDATION PREREQUISITE FAILED: role % lacks INSERT/SELECT on public.certificates. Connect as the database owner or the postgres superuser (RLS is enabled on this table).', current_user;
   END IF;
-  IF NOT pg_catalog.has_table_privilege(pg_catalog.current_user, 'public.profiles', 'INSERT') THEN
-    RAISE EXCEPTION 'VALIDATION PREREQUISITE FAILED: role % lacks INSERT on public.profiles. Connect as the database owner or the postgres superuser (RLS is enabled on this table).', pg_catalog.current_user;
+  IF NOT pg_catalog.has_table_privilege(current_user, 'public.profiles', 'INSERT') THEN
+    RAISE EXCEPTION 'VALIDATION PREREQUISITE FAILED: role % lacks INSERT on public.profiles. Connect as the database owner or the postgres superuser (RLS is enabled on this table).', current_user;
   END IF;
-  IF NOT pg_catalog.has_table_privilege(pg_catalog.current_user, 'public.courses', 'INSERT') THEN
-    RAISE EXCEPTION 'VALIDATION PREREQUISITE FAILED: role % lacks INSERT on public.courses. Connect as the database owner or the postgres superuser (RLS is enabled on this table).', pg_catalog.current_user;
+  IF NOT pg_catalog.has_table_privilege(current_user, 'public.courses', 'INSERT') THEN
+    RAISE EXCEPTION 'VALIDATION PREREQUISITE FAILED: role % lacks INSERT on public.courses. Connect as the database owner or the postgres superuser (RLS is enabled on this table).', current_user;
   END IF;
-  IF NOT pg_catalog.has_table_privilege(pg_catalog.current_user, 'auth.users', 'INSERT') THEN
-    RAISE EXCEPTION 'VALIDATION PREREQUISITE FAILED: role % lacks INSERT on auth.users. Connect as the database owner or the postgres superuser.', pg_catalog.current_user;
+  IF NOT pg_catalog.has_table_privilege(current_user, 'auth.users', 'INSERT') THEN
+    RAISE EXCEPTION 'VALIDATION PREREQUISITE FAILED: role % lacks INSERT on auth.users. Connect as the database owner or the postgres superuser.', current_user;
   END IF;
 
   RAISE NOTICE 'preflight passed: required tables, functions, and privileges are present';
