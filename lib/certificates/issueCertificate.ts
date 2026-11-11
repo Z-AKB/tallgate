@@ -140,6 +140,47 @@ function siteUrlConfig():
 }
 
 /**
+ * Resolves the course description to display on the certificate PDF.
+ * Uses short_description if present and non-empty, otherwise falls back to overview,
+ * or an empty string if neither is provided.
+ */
+export function resolveCertificateCourseDescription(
+  course: {
+    short_description?: string | null
+    overview?: string | null
+  } | null | undefined
+): string {
+  if (!course) return ""
+  return course.short_description || course.overview || ""
+}
+
+export const MAX_CERTIFICATE_EMAIL_RETRIES = 3
+
+export type CertificateEmailRetryCheckResult =
+  | { allowed: true; retryCount: number }
+  | { allowed: false; retryCount: number; error: string; status: 400 }
+
+/**
+ * Checks whether a certificate email resend attempt is permitted under the
+ * maximum retry limit (3 attempts).
+ * When retryCount >= 3, rejects with an HTTP 400 error message.
+ */
+export function checkCertificateEmailRetryAllowed(
+  retryCountValue: number | null | undefined
+): CertificateEmailRetryCheckResult {
+  const retryCount = retryCountValue ?? 0
+  if (retryCount >= MAX_CERTIFICATE_EMAIL_RETRIES) {
+    return {
+      allowed: false,
+      retryCount,
+      error: "Maximum email retry attempts reached. This certificate cannot be resent.",
+      status: 400,
+    }
+  }
+  return { allowed: true, retryCount }
+}
+
+/**
  * Issues one certificate per user + course, generated entirely server-side.
  * Idempotent: when a certificate already exists for the user and course it
  * returns the existing row without minting a new one. Shared by the admin
@@ -384,7 +425,7 @@ export async function issueCourseCertificate(
       .eq("id", courseUuid)
       .maybeSingle()
     if (courseRow) {
-      courseDescription = courseRow.short_description || courseRow.overview || ""
+      courseDescription = resolveCertificateCourseDescription(courseRow)
     }
   }
 

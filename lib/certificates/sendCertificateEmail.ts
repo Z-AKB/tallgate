@@ -1,6 +1,66 @@
 import "server-only"
 import { logError } from "@/lib/logging/logger"
 
+/**
+ * Escapes a string for safe interpolation into an HTML text context.
+ * Prevents HTML injection via user-controlled values such as recipient name,
+ * course title, and certificate number.
+ */
+function escapeHtml(unsafe: string): string {
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+}
+
+/**
+ * Resolves and normalizes the trusted site origin from the configured
+ * NEXT_PUBLIC_SITE_URL environment variable (or an explicitly provided
+ * site URL in testing).
+ * Returns null if the configuration is missing, non-https, or malformed.
+ */
+function getExpectedSiteOrigin(configuredSiteUrl?: string): string | null {
+  const siteUrl = configuredSiteUrl ?? process.env.NEXT_PUBLIC_SITE_URL
+  if (!siteUrl) return null
+  try {
+    const parsed = new URL(siteUrl)
+    if (parsed.protocol !== "https:") return null
+    return parsed.origin
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Validates a verification URL and returns a safe value for use in an HTML
+ * href attribute.
+ *
+ * Requirements enforced:
+ * - Requires HTTPS.
+ * - Validates the parsed URL origin against the exact configured NEXT_PUBLIC_SITE_URL origin.
+ * - Rejects arbitrary external HTTPS domains.
+ * - Rejects malformed URLs and unsafe schemes (javascript:, http:, data:, etc.).
+ * - Returns "#" for invalid, untrusted, or unconfigured URLs.
+ * - Preserves correct HTML attribute escaping via escapeHtml().
+ * - Compares normalized origins exactly without substring or suffix matching.
+ */
+export function safeHref(url: string, configuredSiteUrl?: string): string {
+  try {
+    const expectedOrigin = getExpectedSiteOrigin(configuredSiteUrl)
+    if (!expectedOrigin) return "#"
+
+    const parsed = new URL(url)
+    if (parsed.protocol !== "https:") return "#"
+    if (parsed.origin !== expectedOrigin) return "#"
+
+    return escapeHtml(url)
+  } catch {
+    return "#"
+  }
+}
+
 export type CertificateEmailInput = {
   to: string
   recipientName: string
@@ -35,6 +95,16 @@ export async function sendCertificateEmail(input: CertificateEmailInput): Promis
 
   const pdfBase64 = input.pdfBuffer.toString("base64")
 
+  // Compute the safe href once; reuse it for both the button and the visible
+  // URL paragraph so that an unsafe input (non-https or malformed) is omitted
+  // entirely from the HTML rather than displayed as harmless but confusing text.
+  const verificationHref = safeHref(input.verificationUrl)
+  // Show the URL as plain text only when it passed the https validation.
+  const verificationTextHtml =
+    verificationHref !== "#"
+      ? `<p style="font-size: 13px; color: #94a3b8; text-align: center;">${escapeHtml(input.verificationUrl)}</p>`
+      : ""
+
   const html = `
 <!DOCTYPE html>
 <html>
@@ -48,7 +118,7 @@ export async function sendCertificateEmail(input: CertificateEmailInput): Promis
       <p style="color: #94a3b8; margin: 8px 0 0; font-size: 14px;">Your Certificate of Completion</p>
     </div>
     <div style="background: #ffffff; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 12px 12px; padding: 32px;">
-      <p style="font-size: 16px; margin-top: 0;">Dear <strong>${input.recipientName}</strong>,</p>
+      <p style="font-size: 16px; margin-top: 0;">Dear <strong>${escapeHtml(input.recipientName)}</strong>,</p>
       <p style="font-size: 15px; color: #475569;">Congratulations on successfully completing your course! Your official TallGate Academy certificate has been issued and is attached to this email as a PDF.</p>
       
       <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 24px 0;">
@@ -56,20 +126,20 @@ export async function sendCertificateEmail(input: CertificateEmailInput): Promis
         <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
           <tr>
             <td style="padding: 6px 0; color: #64748b; font-weight: 500;">Course:</td>
-            <td style="padding: 6px 0; color: #1e293b; font-weight: 600; text-align: right;">${input.courseTitle}</td>
+            <td style="padding: 6px 0; color: #1e293b; font-weight: 600; text-align: right;">${escapeHtml(input.courseTitle)}</td>
           </tr>
           <tr>
             <td style="padding: 6px 0; color: #64748b; font-weight: 500;">Certificate No:</td>
-            <td style="padding: 6px 0; color: #1e293b; font-family: monospace; font-size: 13px; text-align: right;">${input.certificateNumber}</td>
+            <td style="padding: 6px 0; color: #1e293b; font-family: monospace; font-size: 13px; text-align: right;">${escapeHtml(input.certificateNumber)}</td>
           </tr>
         </table>
       </div>
 
       <p style="font-size: 15px; color: #475569;">You can verify your certificate at any time using the link below or by scanning the QR code on the certificate:</p>
       <p style="text-align: center; margin: 24px 0;">
-        <a href="${input.verificationUrl}" style="display: inline-block; background: #061a4f; color: #ffffff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px;">Verify Certificate</a>
+        <a href="${verificationHref}" style="display: inline-block; background: #061a4f; color: #ffffff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px;">Verify Certificate</a>
       </p>
-      <p style="font-size: 13px; color: #94a3b8; text-align: center;">${input.verificationUrl}</p>
+      ${verificationTextHtml}
 
       <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
       <p style="font-size: 12px; color: #94a3b8; margin: 0;">This certificate was issued by TallGate Academy. If you have any questions, please contact our support team.</p>

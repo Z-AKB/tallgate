@@ -11,7 +11,13 @@ import {
   toCourseInsert,
   type ExistingCatalogueCourse,
 } from "@/lib/admin/catalogueSeed"
-import { issueCourseCertificate, type IssueCertificateFailure, claimAndSendCertificateEmail, releaseStaleEmailLeases } from "@/lib/certificates/issueCertificate"
+import {
+  issueCourseCertificate,
+  type IssueCertificateFailure,
+  claimAndSendCertificateEmail,
+  releaseStaleEmailLeases,
+  checkCertificateEmailRetryAllowed,
+} from "@/lib/certificates/issueCertificate"
 import { certificateEmailIdempotencyKey } from "@/lib/certificates/sendCertificateEmail"
 import { checkCourseCompletion } from "@/lib/assessments/completion"
 import { toCourse } from "@/lib/data/adminRowMappers"
@@ -949,6 +955,16 @@ async function handleAdminAction(
         }
         if (cert.email_status === "sent") {
           return NextResponse.json({ error: "Certificate email has already been sent successfully." }, { status: 409 })
+        }
+
+        // Enforce server-side retry limit. The UI shows the retry button only when
+        // email_retry_count < 3, but the server must enforce this independently to
+        // prevent bypassing the client-side guard. The counter is incremented by
+        // complete_certificate_email_lease on every terminal outcome (sent or failed),
+        // so a value of 3 means three full send attempts have already been made.
+        const retryCheck = checkCertificateEmailRetryAllowed(cert.email_retry_count)
+        if (!retryCheck.allowed) {
+          return NextResponse.json({ error: retryCheck.error }, { status: retryCheck.status })
         }
 
         // Get learner email
