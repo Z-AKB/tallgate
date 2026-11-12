@@ -9,6 +9,7 @@
 DO $$
 DECLARE
     dup_count integer;
+    dup record;
 BEGIN
     SELECT count(*)
     INTO dup_count

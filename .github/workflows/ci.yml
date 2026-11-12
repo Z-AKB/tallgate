@@ -43,6 +43,10 @@ jobs:
         run: npm run lint
 
       - name: Build
+        # Run even when an earlier step (e.g. Lint) failed, so build breakage
+        # surfaces in the same run instead of being masked as "skipped".
+        # !cancelled() (rather than always()) still respects job cancellation.
+        if: ${{ !cancelled() }}
         run: npm run build
         env:
           NEXT_PUBLIC_SITE_URL: https://tallgate.example.com

@@ -1452,6 +1452,56 @@ export interface Database {
         }
         Returns: boolean
       }
+      is_service_role: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      update_certificate_email_status: {
+        Args: {
+          p_certificate_id: string
+          p_email_status?: string | null
+          p_set_email_status?: boolean
+          p_email_sent_at?: string | null
+          p_set_email_sent_at?: boolean
+          p_email_lease_token?: string | null
+          p_set_email_lease_token?: boolean
+          p_email_lease_acquired_at?: string | null
+          p_set_email_lease_acquired_at?: boolean
+          p_email_error?: string | null
+          p_set_email_error?: boolean
+          p_email_retry_count?: number | null
+          p_set_email_retry_count?: boolean
+        }
+        Returns: boolean
+      }
+      claim_certificate_email_lease: {
+        Args: {
+          p_certificate_id: string
+          p_lease_token: string
+          p_lease_timeout?: string
+        }
+        Returns: {
+          claimed: boolean
+          current_status: string | null
+          current_lease_token: string | null
+          current_retry_count: number | null
+        }[]
+      }
+      complete_certificate_email_lease: {
+        Args: {
+          p_certificate_id: string
+          p_lease_token: string
+          p_email_status: string
+          p_email_error?: string | null
+        }
+        Returns: boolean
+      }
+      release_stale_certificate_email_leases: {
+        Args: {
+          p_lease_timeout_interval?: string
+        }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never

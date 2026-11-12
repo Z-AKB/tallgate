@@ -9,6 +9,7 @@
 DO $$
 DECLARE
     dup_count integer;
+    dup record;
 BEGIN
     SELECT count(*)
     INTO dup_count
@@ -56,7 +57,9 @@ ADD COLUMN IF NOT EXISTS email_lease_acquired_at timestamptz;
 
 -- 5. Add index for finding certificates with 'sending' status older than lease timeout (for cleanup)
 -- Uses the new lease acquisition timestamp
-CREATE INDEX IF NOT EXISTS idx_certificates_email_sending_stale
+-- Distinct name from idx_certificates_email_sending_stale (email_sent_at) created by
+-- 20261110120000, so both indexes are created independently.
+CREATE INDEX IF NOT EXISTS idx_certificates_email_lease_stale
 ON public.certificates (email_lease_acquired_at)
 WHERE email_status = 'sending';
 
