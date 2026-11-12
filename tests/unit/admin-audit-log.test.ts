@@ -9,7 +9,9 @@ const {
   courseMaybeSingle,
 } = vi.hoisted(() => {
   const auditInsert = vi.fn(
-    async (): Promise<{ error: { code?: string } | null }> => ({ error: null })
+    async (): Promise<{ error: { code?: string; message?: string } | null }> => ({
+      error: null,
+    })
   )
   const courseMaybeSingle = vi.fn(async () => ({
     data: { id: "course-1" },
@@ -144,6 +146,85 @@ describe("recordAdminAudit", () => {
         outcome: "failure",
       })
     ).resolves.toBeUndefined()
+  })
+
+  it("stores sanitized structured details", async () => {
+    await recordAdminAudit({
+      actorId: "admin-1",
+      action: "issue_certificate",
+      target: "cert-1",
+      outcome: "success",
+      details: {
+        certificate_type: "course_linked",
+        reason: "x".repeat(600),
+        retry_count: 2,
+        retried: true,
+        empty: null,
+        nested: { ignored: true },
+        list: ["ignored"],
+        "": "ignored",
+        ["k".repeat(65)]: "ignored",
+      },
+    })
+
+    expect(auditInsert).toHaveBeenCalledTimes(1)
+    expect(auditInsert).toHaveBeenCalledWith({
+      actor_id: "admin-1",
+      action: "issue_certificate",
+      target: "cert-1",
+      outcome: "success",
+      details: {
+        certificate_type: "course_linked",
+        reason: "x".repeat(500),
+        retry_count: 2,
+        retried: true,
+        empty: null,
+      },
+    })
+  })
+
+  it("omits details entirely when sanitization leaves nothing", async () => {
+    await recordAdminAudit({
+      actorId: "admin-1",
+      action: "create_course",
+      target: null,
+      outcome: "success",
+      details: { nested: { ignored: true }, list: [1, 2] },
+    })
+
+    expect(auditInsert).toHaveBeenCalledWith({
+      actor_id: "admin-1",
+      action: "create_course",
+      target: null,
+      outcome: "success",
+    })
+  })
+
+  it("retries without details when the details column is unavailable", async () => {
+    auditInsert
+      .mockResolvedValueOnce({
+        error: {
+          code: "PGRST204",
+          message: 'Could not find the "details" column in the schema cache',
+        },
+      })
+      .mockResolvedValueOnce({ error: null })
+
+    await recordAdminAudit({
+      actorId: "admin-1",
+      action: "issue_certificate",
+      target: "cert-1",
+      outcome: "failure",
+      details: { certificate_type: "independent" },
+    })
+
+    expect(auditInsert).toHaveBeenCalledTimes(2)
+    expect(auditInsert).toHaveBeenLastCalledWith({
+      actor_id: "admin-1",
+      action: "issue_certificate",
+      target: "cert-1",
+      outcome: "failure",
+    })
   })
 })
 

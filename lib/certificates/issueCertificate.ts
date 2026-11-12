@@ -15,6 +15,8 @@ const CERTIFICATE_FILE_NAME = "certificate.pdf"
 // Manual issuance unique constraint name
 const MANUAL_ISSUANCE_UNIQUE_CONSTRAINT = "certificates_user_title_date_unique"
 
+export type CertificateType = "course_linked" | "independent"
+
 export type IssueCertificateInput = {
   userId: string
   courseId?: string | null
@@ -23,11 +25,23 @@ export type IssueCertificateInput = {
   grade?: string | null
   issueDate?: string | null
   recipientEmail?: string | null
+  /**
+   * Required for independent manual issuance. Ignored for course-linked
+   * certificates, which are always derived from a verified course.
+   */
+  issuanceReason?: string | null
+  /**
+   * Present only for the independently issued admin action. Its success audit
+   * is written by the database in the same transaction as the certificate.
+   */
+  mandatoryIndependentAuditActorId?: string | null
 }
 
 export type IssuedCertificate = {
   id: string
   certificate_number: string
+  certificate_type: CertificateType
+  issuance_reason: string | null
   verification_code: string
   recipient_name: string
   user_id: string | null
@@ -44,6 +58,9 @@ export type IssuedCertificate = {
   email_retry_count: number | null
 }
 
+const ISSUED_CERTIFICATE_COLUMNS =
+  "id, certificate_number, certificate_type, issuance_reason, verification_code, recipient_name, user_id, course_id, course_title, issue_date, grade, is_valid, created_at, storage_path, email_status, email_sent_at, email_error, email_retry_count"
+
 export type IssueCertificateSuccess = {
   status: "created" | "existing"
   certificate: IssuedCertificate
@@ -57,6 +74,9 @@ export type IssueCertificateFailure = {
   code:
     | "site_url"
     | "not_found"
+    | "not_eligible"
+    | "not_complete"
+    | "reason_required"
     | "unconfigured"
     | "insert"
     | "pdf"
@@ -154,6 +174,103 @@ export function resolveCertificateCourseDescription(
   return course.short_description || course.overview || ""
 }
 
+function buildVerificationUrl(baseUrl: URL, verificationCode: string): string {
+  const verificationUrl = new URL("/verify", baseUrl)
+  verificationUrl.searchParams.set("code", verificationCode)
+  return verificationUrl.toString()
+}
+
+async function generateVerificationQrCode(verificationUrl: string): Promise<string> {
+  return QRCode.toDataURL(verificationUrl, {
+    errorCorrectionLevel: "M",
+    margin: 1,
+    width: 320,
+  })
+}
+
+async function existingCertificateResult(
+  certificate: IssuedCertificate,
+  baseUrl: URL
+): Promise<IssueCertificateSuccess> {
+  const verificationUrl = buildVerificationUrl(baseUrl, certificate.verification_code)
+  return {
+    status: "existing",
+    certificate,
+    verificationUrl,
+    qrCode: await generateVerificationQrCode(verificationUrl),
+    downloadUrl: `/api/certificates/${certificate.id}/download`,
+  }
+}
+
+/**
+ * Derives course-linked eligibility entirely from server-side database state:
+ * an active/completed enrollment plus recomputed completion. Client-supplied
+ * completion status is never accepted, and omitting course_id can never make a
+ * course-linked issuance bypass these checks (the caller must request an
+ * independent certificate explicitly, with a reason).
+ */
+async function verifyCourseLinkedEligibility(
+  client: ReturnType<typeof createAdminClient>,
+  userId: string,
+  courseId: string
+): Promise<IssueCertificateFailure | null> {
+  const { data: enrollment, error: enrollmentError } = await client
+    .from("course_enrollments")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("course_id", courseId)
+    .in("status", ["active", "completed"])
+    .maybeSingle()
+
+  if (enrollmentError) {
+    logError("certificate.eligibility_enrollment_lookup_failed", enrollmentError, {
+      userId,
+      courseId,
+    })
+    return {
+      status: "error",
+      code: "not_eligible",
+      message: "Certificate eligibility could not be verified. Please try again.",
+    }
+  }
+
+  if (!enrollment) {
+    return {
+      status: "error",
+      code: "not_eligible",
+      message: "Course-linked certificates require an active course enrollment.",
+    }
+  }
+
+  const { data: completion, error: completionError } = await client.rpc(
+    "recompute_course_completion",
+    { p_user_id: userId, p_course_id: courseId }
+  )
+
+  if (completionError) {
+    logError("certificate.eligibility_completion_lookup_failed", completionError, {
+      userId,
+      courseId,
+    })
+    return {
+      status: "error",
+      code: "not_eligible",
+      message: "Certificate eligibility could not be verified. Please try again.",
+    }
+  }
+
+  if (!completion?.isComplete) {
+    return {
+      status: "error",
+      code: "not_complete",
+      message:
+        "Course-linked certificates require server-verified completion of all required course activities.",
+    }
+  }
+
+  return null
+}
+
 export const MAX_CERTIFICATE_EMAIL_RETRIES = 3
 
 export type CertificateEmailRetryCheckResult =
@@ -211,17 +328,60 @@ export async function issueCourseCertificate(
   let courseTitle = input.courseTitle ?? null
   let recipientEmail = input.recipientEmail ?? null
   const courseUuid = typeof input.courseId === "string" && input.courseId.trim() ? input.courseId.trim() : null
+  const mandatoryIndependentAuditActorId = input.mandatoryIndependentAuditActorId?.trim()
   let courseIdValid = false
 
   if (courseUuid) {
-    const { data: courseRow } = await client
+    const { data: courseRow, error: courseError } = await client
       .from("courses")
       .select("id, title, short_description, overview")
       .eq("id", courseUuid)
       .maybeSingle()
-    if (courseRow) {
-      courseIdValid = true
-      if (!courseTitle) courseTitle = courseRow.title
+    if (courseError) {
+      logError("certificate.course_lookup_failed", courseError, { courseId: courseUuid })
+      return {
+        status: "error",
+        code: "not_found",
+        message: "Course details could not be verified for certificate issuance.",
+      }
+    }
+    if (!courseRow) {
+      return {
+        status: "error",
+        code: "not_found",
+        message: "Selected course could not be found.",
+      }
+    }
+    courseIdValid = true
+    // Course-linked titles are always derived from the verified course row.
+    // A client-supplied title must never be trusted for an awarded course.
+    courseTitle = courseRow.title
+  }
+
+  const certificateType: CertificateType = courseUuid ? "course_linked" : "independent"
+
+  if (certificateType === "course_linked" && courseUuid) {
+    const eligibilityFailure = await verifyCourseLinkedEligibility(
+      client,
+      input.userId,
+      courseUuid
+    )
+    if (eligibilityFailure) return eligibilityFailure
+  } else {
+    const reason = typeof input.issuanceReason === "string" ? input.issuanceReason.trim() : ""
+    if (!reason) {
+      return {
+        status: "error",
+        code: "reason_required",
+        message: "A reason is required for independent manual certificates.",
+      }
+    }
+    if (reason.length > 500) {
+      return {
+        status: "error",
+        code: "reason_required",
+        message: "The issuance reason must be 500 characters or fewer.",
+      }
     }
   }
 
@@ -249,44 +409,35 @@ export async function issueCourseCertificate(
   // For course-based issuance, check by user_id + course_id
   // For manual issuance (course_id is null), check by user_id + course_title + issue_date
   let existing: IssuedCertificate | null = null
-  
+
   if (courseIdValid && courseUuid) {
     const { data } = await client
       .from("certificates")
-      .select(
-        "id, certificate_number, verification_code, recipient_name, user_id, course_id, course_title, issue_date, grade, is_valid, created_at, storage_path, email_status, email_sent_at, email_error, email_retry_count"
-      )
+      .select(ISSUED_CERTIFICATE_COLUMNS)
       .eq("user_id", input.userId)
       .eq("course_id", courseUuid)
       .maybeSingle()
     existing = data as IssuedCertificate | null
   } else {
-    // Manual issuance: look for recent certificate with same user, title, and issue date
+    // Manual issuance: look for a certificate with the same user, title, and issue date
     const { data } = await client
       .from("certificates")
-      .select(
-        "id, certificate_number, verification_code, recipient_name, user_id, course_id, course_title, issue_date, grade, is_valid, created_at, storage_path, email_status, email_sent_at, email_error, email_retry_count"
-      )
+      .select(ISSUED_CERTIFICATE_COLUMNS)
       .eq("user_id", input.userId)
       .eq("course_title", courseTitle.trim())
       .eq("issue_date", input.issueDate ?? new Date().toISOString().slice(0, 10))
+      .is("course_id", null)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle()
     existing = data as IssuedCertificate | null
   }
 
-  if (existing?.storage_path) {
-    return {
-      status: "existing",
-      certificate: existing,
-      verificationUrl: new URL(
-        `/verify?code=${encodeURIComponent(existing.verification_code)}`,
-        baseUrl
-      ).toString(),
-      qrCode: "",
-      downloadUrl: `/api/certificates/${existing.id}/download`,
-    }
+  // Mandatory independent issuance also repairs the required audit trail for a
+  // pre-existing row before it returns that row. This covers retries after a
+  // response was lost and older rows created before the atomic RPC existed.
+  if (existing?.storage_path && !mandatoryIndependentAuditActorId) {
+    return existingCertificateResult(existing, baseUrl)
   }
 
   const issueDate = input.issueDate ?? new Date().toISOString().slice(0, 10)
@@ -313,27 +464,47 @@ export async function issueCourseCertificate(
       width: 320,
     })
 
-    const { data, error } = await client
-      .from("certificates")
-      .insert({
-        recipient_name: recipientName,
-        user_id: input.userId,
-        course_id: courseIdValid && courseUuid ? courseUuid : undefined,
-        course_title: courseTitle.trim(),
-        grade,
-        issue_date: issueDate,
-        is_valid: true,
-        verification_code: generatedCode,
-        email_status: "pending",
-        email_retry_count: 0,
-      })
-      .select(
-        "id, certificate_number, verification_code, recipient_name, user_id, course_id, course_title, issue_date, grade, is_valid, created_at, storage_path, email_status, email_sent_at, email_error, email_retry_count"
-      )
-      .single()
+    const result =
+      certificateType === "independent" && mandatoryIndependentAuditActorId
+        ? await client
+            .rpc("issue_independent_certificate_with_audit", {
+              p_actor_id: mandatoryIndependentAuditActorId,
+              p_user_id: input.userId,
+              p_recipient_name: recipientName,
+              p_course_title: courseTitle.trim(),
+              p_issuance_reason: (input.issuanceReason ?? "").trim(),
+              p_grade: grade,
+              p_issue_date: issueDate,
+              p_verification_code: generatedCode,
+            })
+            .single()
+        : await client
+            .from("certificates")
+            .insert({
+              recipient_name: recipientName,
+              user_id: input.userId,
+              course_id: certificateType === "course_linked" && courseUuid ? courseUuid : null,
+              course_title: courseTitle.trim(),
+              certificate_type: certificateType,
+              issuance_reason:
+                certificateType === "independent" ? (input.issuanceReason ?? "").trim() : null,
+              grade,
+              issue_date: issueDate,
+              is_valid: true,
+              verification_code: generatedCode,
+              email_status: "pending",
+              email_retry_count: 0,
+            })
+            .select(ISSUED_CERTIFICATE_COLUMNS)
+            .single()
+
+    const { data, error } = result
 
     if (!error) {
       issuedCertificate = data as IssuedCertificate
+      if (issuedCertificate.storage_path) {
+        return existingCertificateResult(issuedCertificate, baseUrl)
+      }
       insertError = null
       break
     }
@@ -348,23 +519,12 @@ export async function issueCourseCertificate(
         // Another request won the race, fetch the existing certificate
         const { data: raceWinner } = await client
           .from("certificates")
-          .select(
-            "id, certificate_number, verification_code, recipient_name, user_id, course_id, course_title, issue_date, grade, is_valid, created_at, storage_path, email_status, email_sent_at, email_error, email_retry_count"
-          )
+          .select(ISSUED_CERTIFICATE_COLUMNS)
           .eq("user_id", input.userId)
           .eq("course_id", courseUuid!)
           .maybeSingle()
         if (raceWinner?.storage_path) {
-          return {
-            status: "existing",
-            certificate: raceWinner as IssuedCertificate,
-            verificationUrl: new URL(
-              `/verify?code=${encodeURIComponent(raceWinner.verification_code)}`,
-              baseUrl
-            ).toString(),
-            qrCode: "",
-            downloadUrl: `/api/certificates/${raceWinner.id}/download`,
-          }
+          return existingCertificateResult(raceWinner as IssuedCertificate, baseUrl)
         }
         // If no storage_path yet, continue retry loop
         continue
@@ -374,9 +534,7 @@ export async function issueCourseCertificate(
         // Another request won the race for manual issuance, fetch the existing certificate
         const { data: raceWinner } = await client
           .from("certificates")
-          .select(
-            "id, certificate_number, verification_code, recipient_name, user_id, course_id, course_title, issue_date, grade, is_valid, created_at, storage_path, email_status, email_sent_at, email_error, email_retry_count"
-          )
+          .select(ISSUED_CERTIFICATE_COLUMNS)
           .eq("user_id", input.userId)
           .eq("course_title", courseTitle.trim())
           .eq("issue_date", issueDate)
@@ -385,16 +543,7 @@ export async function issueCourseCertificate(
           .limit(1)
           .maybeSingle()
         if (raceWinner?.storage_path) {
-          return {
-            status: "existing",
-            certificate: raceWinner as IssuedCertificate,
-            verificationUrl: new URL(
-              `/verify?code=${encodeURIComponent(raceWinner.verification_code)}`,
-              baseUrl
-            ).toString(),
-            qrCode: "",
-            downloadUrl: `/api/certificates/${raceWinner.id}/download`,
-          }
+          return existingCertificateResult(raceWinner as IssuedCertificate, baseUrl)
         }
         // If no storage_path yet, continue retry loop
         continue

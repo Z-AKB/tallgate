@@ -1,5 +1,8 @@
 import { createAdminClient } from "@/lib/supabase/admin"
 import { logError, logWarn } from "@/lib/logging/logger"
+import type { Database } from "@/types/supabase"
+
+type AdminAuditInsert = Database["public"]["Tables"]["admin_audit_log"]["Insert"]
 
 export type AdminAuditOutcome = "success" | "failure"
 
@@ -35,6 +38,26 @@ export type AdminAuditEntry = {
   action: string
   target?: string | null
   outcome: AdminAuditOutcome
+  details?: Record<string, unknown> | null
+}
+
+function sanitizeAuditDetails(
+  details: Record<string, unknown> | null | undefined
+): Record<string, unknown> | null {
+  if (!details || typeof details !== "object") return null
+  const out: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(details)) {
+    if (!key || key.length > 64) continue
+    if (
+      value === null ||
+      typeof value === "string" ||
+      typeof value === "number" ||
+      typeof value === "boolean"
+    ) {
+      out[key] = typeof value === "string" ? value.slice(0, 500) : value
+    }
+  }
+  return Object.keys(out).length ? out : null
 }
 
 /**
@@ -46,12 +69,24 @@ export type AdminAuditEntry = {
 export async function recordAdminAudit(entry: AdminAuditEntry): Promise<void> {
   try {
     const supabase = createAdminClient()
-    const { error } = await supabase.from("admin_audit_log").insert({
+    const details = sanitizeAuditDetails(entry.details)
+    const base: AdminAuditInsert = {
       actor_id: entry.actorId,
       action: entry.action.slice(0, 64),
       target: entry.target ? entry.target.slice(0, 200) : null,
       outcome: entry.outcome,
-    })
+    }
+    const row: AdminAuditInsert = details ? { ...base, details } : base
+
+    const { error } = await supabase.from("admin_audit_log").insert(row)
+
+    if (error && details && /details|column/i.test(error.message ?? "")) {
+      const fallback = await supabase.from("admin_audit_log").insert(base)
+      if (fallback.error) {
+        logError("admin_audit.insert_failed", fallback.error, { code: fallback.error.code })
+      }
+      return
+    }
 
     if (error) {
       logError("admin_audit.insert_failed", error, { code: error.code })

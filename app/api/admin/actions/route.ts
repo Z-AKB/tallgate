@@ -725,12 +725,14 @@ async function handleAdminAction(
 
       case "issue_certificate": {
         const {
-          course_title,
+          certificate_type,
           course_id,
           user_id,
           verification_code,
           grade,
           issue_date,
+          reason,
+          course_title: raw_course_title,
         } = payload
 
         if (verification_code !== undefined) {
@@ -740,21 +742,20 @@ async function handleAdminAction(
           )
         }
 
-        if (
-          !isNonEmptyString(user_id) ||
-          typeof course_title !== "string" ||
-          !course_title.trim() ||
-          course_title.trim().length > 200
-        ) {
-          return NextResponse.json(
-            { error: "Select a learner account and provide a course title." },
-            { status: 400 }
-          )
+        const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+        if (!isNonEmptyString(user_id) || !uuidPattern.test(user_id)) {
+          return NextResponse.json({ error: "Select a valid learner account." }, { status: 400 })
         }
 
-        const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-        if (!uuidPattern.test(user_id)) {
-          return NextResponse.json({ error: "Select a valid learner account." }, { status: 400 })
+        if (
+          certificate_type !== undefined &&
+          certificate_type !== "course_linked" &&
+          certificate_type !== "independent"
+        ) {
+          return NextResponse.json(
+            { error: "Certificate type must be course_linked or independent." },
+            { status: 400 }
+          )
         }
 
         let certificateAdminClient: ReturnType<typeof createAdminClient>
@@ -782,7 +783,7 @@ async function handleAdminAction(
           await Promise.all([
             certificateAdminClient
               .from("profiles")
-              .select("full_name")
+              .select("full_name, email")
               .eq("id", user_id)
               .maybeSingle(),
             certificateAdminClient
@@ -821,20 +822,102 @@ async function handleAdminAction(
           issueDate = issue_date
         }
 
-        let courseId: string | null | undefined = undefined
+        let courseId: string | null = null
         if (course_id !== undefined && course_id !== null && course_id !== "") {
           if (typeof course_id !== "string" || !uuidPattern.test(course_id)) {
-            return NextResponse.json({ error: `course_id must be a valid UUID.` }, { status: 400 })
+            return NextResponse.json({ error: "course_id must be a valid UUID." }, { status: 400 })
           }
           courseId = course_id
         }
 
+        let courseTitle = typeof raw_course_title === "string" ? raw_course_title.trim() : ""
+        let certificateTypeFinal: "course_linked" | "independent"
+        let manualReason: string | null = null
+
+        const requestedType: "course_linked" | "independent" =
+          certificate_type === "course_linked" || certificate_type === "independent"
+            ? certificate_type
+            : courseId
+              ? "course_linked"
+              : "independent"
+
+        if (requestedType === "independent") {
+          if (courseId) {
+            return NextResponse.json(
+              { error: "Independent manual certificates must not be linked to a course." },
+              { status: 400 }
+            )
+          }
+          if (typeof reason !== "string" || !reason.trim()) {
+            return NextResponse.json(
+              { error: "A reason is required for independent manual certificates." },
+              { status: 400 }
+            )
+          }
+          const trimmedReason = reason.trim()
+          if (trimmedReason.length > 500) {
+            return NextResponse.json(
+              { error: "The issuance reason must be 500 characters or fewer." },
+              { status: 400 }
+            )
+          }
+          manualReason = trimmedReason
+          if (!courseTitle || courseTitle.length > 200) {
+            return NextResponse.json(
+              { error: "Provide a certificate title (200 characters or fewer)." },
+              { status: 400 }
+            )
+          }
+          certificateTypeFinal = "independent"
+        } else {
+          if (!courseId) {
+            return NextResponse.json(
+              { error: "Select a course for course-linked certificates, or choose independent manual issuance with a reason." },
+              { status: 400 }
+            )
+          }
+
+          const { data: course, error: courseError } = await certificateAdminClient
+            .from("courses")
+            .select("id, title")
+            .eq("id", courseId)
+            .maybeSingle()
+          if (courseError) {
+            logError("admin_action.certificate_course_lookup_failed", courseError, { courseId })
+            return NextResponse.json(
+              { error: "Course details could not be verified for certificate issuance." },
+              { status: 503 }
+            )
+          }
+          if (!course) {
+            return NextResponse.json(
+              { error: "Selected course could not be found." },
+              { status: 400 }
+            )
+          }
+
+          // Never trust a client-supplied title for a course-linked award.
+          // Enrollment and completion are re-verified server-side inside
+          // issueCourseCertificate(), so omitting or spoofing course_id cannot
+          // bypass the completion requirement.
+          courseTitle = course.title
+          manualReason = null
+          certificateTypeFinal = "course_linked"
+        }
+
+        const gradeValue = typeof grade === "string" && grade.trim() ? grade.trim().slice(0, 100) : undefined
+
         const issueResult = await issueCourseCertificate({
           userId: user_id,
-          courseId,
-          courseTitle: typeof course_title === "string" ? course_title : undefined,
-          grade: typeof grade === "string" ? grade : undefined,
+          courseId: certificateTypeFinal === "course_linked" ? courseId : null,
+          courseTitle,
+          grade: gradeValue,
           issueDate,
+          recipientEmail: learnerProfile.email ?? undefined,
+          recipientName: learnerProfile.full_name ?? undefined,
+          issuanceReason: manualReason,
+          mandatoryIndependentAuditActorId:
+            certificateTypeFinal === "independent" ? audit.actorId : undefined,
         })
 
         if (issueResult.status === "error") {
@@ -842,13 +925,55 @@ async function handleAdminAction(
             site_url: 503,
             not_found: 503,
             unconfigured: 503,
+            not_eligible: 409,
+            not_complete: 409,
+            reason_required: 400,
             insert: 503,
             pdf: 503,
             storage: 503,
             persist: 503,
           }
+          await recordAdminAudit({
+            actorId: audit.actorId!,
+            action: "issue_certificate",
+            target: user_id,
+            outcome: "failure",
+            details: {
+              certificate_type: certificateTypeFinal,
+              recipient_user_id: user_id,
+              course_id: certificateTypeFinal === "course_linked" ? courseId : null,
+              issue_date: issueDate,
+              reason: manualReason,
+              failure_code: issueResult.code,
+            },
+          })
+          // The structured failure audit above replaces the generic POST-level record.
+          audit.actorId = null
+          audit.action = null
           return NextResponse.json({ error: issueResult.message }, { status: statusByCode[issueResult.code] })
         }
+
+        if (certificateTypeFinal === "course_linked") {
+          await recordAdminAudit({
+            actorId: audit.actorId!,
+            action: "issue_certificate",
+            target: issueResult.certificate.id,
+            outcome: "success",
+            details: {
+              certificate_type: certificateTypeFinal,
+              issuing_admin_id: audit.actorId,
+              recipient_user_id: user_id,
+              course_id: courseId,
+              issue_date: issueDate,
+              reason: null,
+              issuance_status: issueResult.status,
+            },
+          })
+        }
+
+        // Avoid duplicate generic audit record for this action; we already recorded structured details.
+        audit.actorId = null
+        audit.action = null
 
         return NextResponse.json({
           success: true,

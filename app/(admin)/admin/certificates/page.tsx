@@ -9,15 +9,18 @@ export const metadata = {
   description: "Generate and verify cryptographically verifiable graduation certificates.",
 }
 
+export type AdminCertificateCourseOption = { id: string; title: string }
+
 export default async function AdminCertificatesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ recipient?: string; course?: string }>
+  searchParams: Promise<{ recipient?: string; course?: string; courseId?: string }>
 }) {
-  const { recipient, course } = await searchParams
+  const { recipient, course, courseId } = await searchParams
   const initialIssueDate = new Date().toISOString().slice(0, 10)
   let certificates: AdminCertificate[] = []
   let learners: Array<{ id: string; full_name: string; email: string }> = []
+  let courses: AdminCertificateCourseOption[] = []
   let dataWarning = ""
   let loadFailed = false
 
@@ -28,13 +31,14 @@ export default async function AdminCertificatesPage({
   } else {
     try {
       const supabase = await createClient()
-      const [certificatesResult, learnerRoleResult] = await Promise.all([
+      const [certificatesResult, learnerRoleResult, coursesResult] = await Promise.all([
         supabase
           .from("certificates")
           .select("*")
           .order("created_at", { ascending: false })
           .limit(ADMIN_QUERY_LIMIT),
         supabase.from("roles").select("id").eq("name", "learner").maybeSingle(),
+        supabase.from("courses").select("id, title").order("title", { ascending: true }).limit(ADMIN_QUERY_LIMIT),
       ])
 
       if (certificatesResult.error) {
@@ -76,6 +80,13 @@ export default async function AdminCertificatesPage({
           }
         }
       }
+
+      if (coursesResult.error) {
+        logError("admin.certificate_courses_load_failed", coursesResult.error)
+        dataWarning = `${dataWarning ? `${dataWarning} ` : ""}Courses could not be loaded for issuance.`
+      } else {
+        courses = (coursesResult.data ?? []).map((c) => ({ id: c.id, title: c.title }))
+      }
     } catch (error) {
       loadFailed = true
       logError("admin.certificate_registry_load_failed", error)
@@ -88,10 +99,12 @@ export default async function AdminCertificatesPage({
     <CertificatesClient
       initialCertificates={certificates}
       learners={learners}
+      courses={courses}
       dataWarning={dataWarning}
       loadFailed={loadFailed}
       prefilledRecipient={recipient}
       prefilledCourse={course}
+      prefilledCourseId={courseId}
       initialIssueDate={initialIssueDate}
     />
   )

@@ -35,6 +35,7 @@ export interface Database {
           action: string
           target: string | null
           outcome: "success" | "failure"
+          details: unknown | null
           created_at: string
         }
         Insert: {
@@ -43,6 +44,7 @@ export interface Database {
           action: string
           target?: string | null
           outcome?: "success" | "failure"
+          details?: unknown | null
           created_at?: string
         }
         Update: {
@@ -51,6 +53,7 @@ export interface Database {
           action?: string
           target?: string | null
           outcome?: "success" | "failure"
+          details?: unknown | null
           created_at?: string
         }
         Relationships: [
@@ -679,6 +682,9 @@ export interface Database {
           id: string
           verification_code: string
           certificate_number: string
+          certificate_type: "course_linked" | "independent"
+          issuance_reason: string | null
+          issuance_reason_legacy_exempt: boolean
           storage_path: string | null
           user_id: string | null
           course_id: string | null
@@ -699,6 +705,9 @@ export interface Database {
           id?: string
           verification_code: string
           certificate_number?: string
+          certificate_type?: "course_linked" | "independent"
+          issuance_reason?: string | null
+          issuance_reason_legacy_exempt?: boolean
           storage_path?: string | null
           user_id?: string | null
           course_id?: string | null
@@ -719,6 +728,9 @@ export interface Database {
           id?: string
           verification_code?: string
           certificate_number?: string
+          certificate_type?: "course_linked" | "independent"
+          issuance_reason?: string | null
+          issuance_reason_legacy_exempt?: boolean
           storage_path?: string | null
           user_id?: string | null
           course_id?: string | null
@@ -1501,6 +1513,19 @@ export interface Database {
           p_lease_timeout_interval?: string
         }
         Returns: number
+      }
+      issue_independent_certificate_with_audit: {
+        Args: {
+          p_actor_id: string
+          p_user_id: string
+          p_recipient_name: string
+          p_course_title: string
+          p_issuance_reason: string
+          p_grade: string
+          p_issue_date: string
+          p_verification_code: string
+        }
+        Returns: Database["public"]["Tables"]["certificates"]["Row"]
       }
     }
     Enums: {

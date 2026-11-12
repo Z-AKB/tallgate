@@ -19,9 +19,13 @@ export type EnrollmentWithCourse = Tables["course_enrollments"]["Row"] & {
   courses: Pick<Tables["courses"]["Row"], "title"> | null
 }
 
+export type AdminCertificateType = "course_linked" | "independent"
+
 export type AdminCertificate = {
   id: string
   certificate_number: string
+  certificate_type: AdminCertificateType
+  issuance_reason: string | null
   verification_code: string
   recipient_name: string
   course_title: string
@@ -95,6 +99,9 @@ export function toCertificate(row: CertificateRow): AdminCertificate {
   return {
     id: row.id,
     certificate_number: row.certificate_number,
+    certificate_type:
+      row.certificate_type === "independent" ? "independent" : "course_linked",
+    issuance_reason: row.issuance_reason ?? null,
     verification_code: row.verification_code,
     recipient_name: row.recipient_name,
     course_title: row.course_title,

@@ -1,12 +1,22 @@
 "use server"
 
+import "server-only"
+
 import { requireUser } from "@/lib/auth/guards"
 import { createClient } from "@/lib/supabase/server"
 import { checkCourseCompletion } from "@/lib/assessments/completion"
+import type { CompletionResult } from "@/lib/assessments/completion"
+import { getLessonContent } from "@/lib/learning/getLessonContent"
 import { logError } from "@/lib/logging/logger"
 
 export type LessonProgressResult =
-  | { ok: true; completed: boolean; courseCompleted: boolean }
+  | {
+      ok: true
+      completed: boolean
+      courseCompleted: boolean
+      certificateIssued: boolean
+      certificateStatus: CompletionResult["certificateStatus"]
+    }
   | { ok: false; error: string }
 
 function failure(error: string): LessonProgressResult {
@@ -45,6 +55,20 @@ export async function completeLesson(lessonId: string): Promise<LessonProgressRe
     return failure("You are not enrolled in this course.")
   }
 
+  // Completing a lesson is a privileged write: verify the same access rules
+  // that gate the lesson player before recording progress. This prevents a
+  // direct server-action call for a lesson the learner cannot open.
+  let access
+  try {
+    access = await getLessonContent(lessonId)
+  } catch (error) {
+    logError("lesson_progress.access_check_failed", error, { lessonId })
+    return failure("The lesson could not be updated.")
+  }
+  if (access.access !== "granted") {
+    return failure("You do not have access to this lesson.")
+  }
+
   const { error: progressError } = await supabase.from("lesson_progress").upsert(
     {
       user_id: user.id,
@@ -62,14 +86,24 @@ export async function completeLesson(lessonId: string): Promise<LessonProgressRe
   }
 
   let courseCompleted = false
+  let certificateIssued = false
+  let certificateStatus: CompletionResult["certificateStatus"] = "none"
   try {
     const completion = await checkCourseCompletion(user.id, courseId)
     courseCompleted = completion.isComplete
+    certificateIssued = completion.certificateIssued
+    certificateStatus = completion.certificateStatus
   } catch (error) {
     logError("lesson_progress.completion_failed", error, { courseId })
   }
 
-  return { ok: true, completed: true, courseCompleted }
+  return {
+    ok: true,
+    completed: true,
+    courseCompleted,
+    certificateIssued,
+    certificateStatus,
+  }
 }
 
 export async function saveLessonWatchProgress(
@@ -99,6 +133,22 @@ export async function saveLessonWatchProgress(
     return failure("The lesson could not be found.")
   }
 
+  // Watch progress is still persisted through RLS, but require an active
+  // enrollment explicitly so an unenrolled session cannot write progress.
+  const { data: enrollment } = await supabase
+    .from("course_enrollments")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("course_id", courseId)
+    .in("status", ["active", "completed"])
+    .maybeSingle()
+
+  if (!enrollment) {
+    return failure("You are not enrolled in this course.")
+  }
+
+  // Watch time never marks a lesson complete; completion is an explicit
+  // learner action so no invented viewing threshold can grant a certificate.
   const { error: progressError } = await supabase.from("lesson_progress").upsert(
     {
       user_id: user.id,
@@ -115,5 +165,11 @@ export async function saveLessonWatchProgress(
     return failure("Your progress could not be saved.")
   }
 
-  return { ok: true, completed: false, courseCompleted: false }
+  return {
+    ok: true,
+    completed: false,
+    courseCompleted: false,
+    certificateIssued: false,
+    certificateStatus: "none",
+  }
 }

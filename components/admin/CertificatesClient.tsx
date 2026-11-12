@@ -3,7 +3,7 @@
 import React, { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { AdminCertificate } from "@/lib/data/adminRowMappers"
+import { AdminCertificate, type AdminCertificateType } from "@/lib/data/adminRowMappers"
 import { formatCertificateIssueDate } from "@/lib/certificates/date"
 import Pagination, { ADMIN_PAGE_SIZE } from "@/components/admin/Pagination"
 import {
@@ -21,18 +21,22 @@ import { HiMail } from "react-icons/hi"
 export default function CertificatesClient({
   initialCertificates,
   learners,
+  courses,
   dataWarning,
   loadFailed = false,
   prefilledRecipient,
   prefilledCourse,
+  prefilledCourseId,
   initialIssueDate,
 }: {
   initialCertificates: AdminCertificate[]
   learners: Array<{ id: string; full_name: string; email: string }>
+  courses: Array<{ id: string; title: string }>
   dataWarning: string
   loadFailed?: boolean
   prefilledRecipient?: string
   prefilledCourse?: string
+  prefilledCourseId?: string
   initialIssueDate: string
 }) {
   const [certificates, setCertificates] = useState<AdminCertificate[]>(initialCertificates)
@@ -49,7 +53,10 @@ export default function CertificatesClient({
   const [selectedLearner, setSelectedLearner] = useState<
     { id: string; full_name: string; email: string } | null
   >(null)
-  const [courseTitle, setCourseTitle] = useState(prefilledCourse || "")
+  const [certificateType, setCertificateType] = useState<AdminCertificateType>("course_linked")
+  const [selectedCourseId, setSelectedCourseId] = useState(prefilledCourseId || "")
+  const [certificateTitle, setCertificateTitle] = useState(prefilledCourse || "")
+  const [issuanceReason, setIssuanceReason] = useState("")
   const [grade, setGrade] = useState("Distinction")
   const [issueDate, setIssueDate] = useState(initialIssueDate)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -84,8 +91,20 @@ export default function CertificatesClient({
 
   const handleIssueCertificate = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedLearner || !courseTitle.trim()) {
-      setRequestError("Select an existing learner account and enter a course title.")
+    if (!selectedLearner) {
+      setRequestError("Select an existing learner account.")
+      return
+    }
+    if (certificateType === "course_linked" && !selectedCourseId) {
+      setRequestError("Select the completed course this certificate is linked to.")
+      return
+    }
+    if (certificateType === "independent" && !certificateTitle.trim()) {
+      setRequestError("Enter a certificate title for independent manual issuance.")
+      return
+    }
+    if (certificateType === "independent" && !issuanceReason.trim()) {
+      setRequestError("A reason is required for independent manual certificates.")
       return
     }
 
@@ -98,12 +117,23 @@ export default function CertificatesClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "issue_certificate",
-          payload: {
-            user_id: selectedLearner.id,
-            course_title: courseTitle,
-            grade,
-            issue_date: issueDate,
-          },
+          payload:
+            certificateType === "course_linked"
+              ? {
+                  user_id: selectedLearner.id,
+                  certificate_type: "course_linked",
+                  course_id: selectedCourseId,
+                  grade,
+                  issue_date: issueDate,
+                }
+              : {
+                  user_id: selectedLearner.id,
+                  certificate_type: "independent",
+                  course_title: certificateTitle.trim(),
+                  reason: issuanceReason.trim(),
+                  grade,
+                  issue_date: issueDate,
+                },
         }),
       })
       const result = (await response.json()) as {
@@ -116,20 +146,28 @@ export default function CertificatesClient({
       }
 
       const issuedCertificate = result.certificate
-      if (!response.ok || !issuedCertificate || !result.verification_url || !result.qr_code) {
+      if (!response.ok || !issuedCertificate || !result.verification_url) {
         throw new Error(result.error || "Certificate could not be issued.")
       }
 
-      setCertificates((previous) => [issuedCertificate, ...previous])
+      setCertificates((previous) => {
+        if (previous.some((item) => item.id === issuedCertificate.id)) {
+          return previous.map((item) =>
+            item.id === issuedCertificate.id ? issuedCertificate : item
+          )
+        }
+        return [issuedCertificate, ...previous]
+      })
       setIssueResult({
         verificationUrl: result.verification_url,
-        qrCode: result.qr_code,
+        qrCode: result.qr_code ?? "",
         downloadUrl: result.download_url ?? "",
       })
       setIsSubmitting(false)
       setIsModalOpen(false)
       setLearnerQuery("")
       setSelectedLearner(null)
+      setIssuanceReason("")
     } catch (error) {
       console.error("Error issuing certificate:", error)
       setRequestError(
@@ -223,17 +261,23 @@ export default function CertificatesClient({
       )}
       {issueResult && (
         <div className="flex flex-col items-center gap-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-center sm:flex-row sm:text-left">
-          <Image
-            src={issueResult.qrCode}
-            alt="Certificate verification QR code"
-            width={128}
-            height={128}
-            unoptimized
-            className="h-32 w-32"
-          />
+          {issueResult.qrCode && (
+            <Image
+              src={issueResult.qrCode}
+              alt="Certificate verification QR code"
+              width={128}
+              height={128}
+              unoptimized
+              className="h-32 w-32"
+            />
+          )}
           <div className="space-y-2">
             <h2 className="font-bold text-emerald-900">Certificate issued successfully</h2>
-            <p className="text-xs text-emerald-800">Scan the QR code or open the verification link.</p>
+            <p className="text-xs text-emerald-800">
+              {issueResult.qrCode
+                ? "Scan the QR code or open the verification link."
+                : "Open the verification link to confirm the certificate."}
+            </p>
             <Link
               href={issueResult.verificationUrl}
               target="_blank"
@@ -319,6 +363,7 @@ export default function CertificatesClient({
                     <th className="px-6 py-4">Verification Code</th>
                     <th className="px-6 py-4">Recipient</th>
                     <th className="px-6 py-4">Course Program</th>
+                    <th className="px-6 py-4">Type</th>
                     <th className="px-6 py-4">Issue Date</th>
                     <th className="px-6 py-4">Grade</th>
                     <th className="px-6 py-4">Status</th>
@@ -347,6 +392,19 @@ export default function CertificatesClient({
 
                       <td className="px-6 py-4">
                         <span className="font-semibold text-slate-800">{cert.course_title}</span>
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <span
+                          title={cert.issuance_reason ?? undefined}
+                          className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                            cert.certificate_type === "independent"
+                              ? "border-amber-200 bg-amber-50 text-amber-800"
+                              : "border-indigo-200 bg-indigo-50 text-indigo-800"
+                          }`}
+                        >
+                          {cert.certificate_type === "independent" ? "Independent" : "Course-linked"}
+                        </span>
                       </td>
 
                       <td className="px-6 py-4 text-slate-500 text-[11px]">
@@ -536,20 +594,112 @@ export default function CertificatesClient({
                 )}
               </div>
 
-              <div>
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1">
-                  Course Program:
-                  <span className="ml-1 font-normal text-slate-500">(required)</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Course or programme title"
-                  value={courseTitle}
-                  onChange={(e) => setCourseTitle(e.target.value)}
-                  className="w-full p-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-brand-primary focus:outline-none"
-                />
-              </div>
+              <fieldset>
+                <legend className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                  Certificate Type
+                </legend>
+                <div className="grid grid-cols-2 gap-2" role="group" aria-label="Certificate type">
+                  <button
+                    type="button"
+                    aria-pressed={certificateType === "course_linked"}
+                    onClick={() => setCertificateType("course_linked")}
+                    className={`rounded-xl border px-3 py-2 text-xs font-bold transition-colors ${
+                      certificateType === "course_linked"
+                        ? "border-brand-primary bg-indigo-50 text-brand-primary"
+                        : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    Course-linked
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={certificateType === "independent"}
+                    onClick={() => setCertificateType("independent")}
+                    className={`rounded-xl border px-3 py-2 text-xs font-bold transition-colors ${
+                      certificateType === "independent"
+                        ? "border-brand-primary bg-indigo-50 text-brand-primary"
+                        : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    Independent manual
+                  </button>
+                </div>
+              </fieldset>
+
+              {certificateType === "course_linked" ? (
+                <div>
+                  <label
+                    htmlFor="certificate-course"
+                    className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1"
+                  >
+                    Completed Course:
+                    <span className="ml-1 font-normal text-slate-500">(required)</span>
+                  </label>
+                  <select
+                    id="certificate-course"
+                    required
+                    value={selectedCourseId}
+                    onChange={(e) => setSelectedCourseId(e.target.value)}
+                    className="w-full p-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-brand-primary focus:outline-none"
+                  >
+                    <option value="">Select a course</option>
+                    {courses.map((course) => (
+                      <option key={course.id} value={course.id}>
+                        {course.title}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1.5 text-[11px] text-slate-500">
+                    Issuance is allowed only after the server verifies an active enrollment and
+                    completion of all required activities. Learner-reported progress is never used.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <label
+                      htmlFor="certificate-title"
+                      className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1"
+                    >
+                      Certificate Title:
+                      <span className="ml-1 font-normal text-slate-500">(required)</span>
+                    </label>
+                    <input
+                      id="certificate-title"
+                      type="text"
+                      required
+                      maxLength={200}
+                      placeholder="Award or programme title"
+                      value={certificateTitle}
+                      onChange={(e) => setCertificateTitle(e.target.value)}
+                      className="w-full p-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-brand-primary focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="certificate-reason"
+                      className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1"
+                    >
+                      Issuance Reason:
+                      <span className="ml-1 font-normal text-slate-500">(required, audited)</span>
+                    </label>
+                    <textarea
+                      id="certificate-reason"
+                      required
+                      maxLength={500}
+                      rows={3}
+                      placeholder="Explain why this certificate is being issued outside a course."
+                      value={issuanceReason}
+                      onChange={(e) => setIssuanceReason(e.target.value)}
+                      className="w-full p-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-brand-primary focus:outline-none"
+                    />
+                    <p className="mt-1 text-[11px] text-slate-500">
+                      {issuanceReason.length}/500 · Stored on the certificate and in the admin audit log.
+                    </p>
+                  </div>
+                </>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>

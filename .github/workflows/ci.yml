@@ -15,14 +15,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 22
+      - name: Setup Node.js 22.13.0
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '22.13.0'
           cache: 'npm'
 
-      - name: Install npm 10.9.0
-        run: npm install -g npm@10.9.0
+      - name: Install npm 10.9.4
+        run: npm install -g npm@10.9.4
 
       - name: Verify npm version
         run: npm --version

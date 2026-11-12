@@ -3,6 +3,7 @@ import Link from "next/link"
 import { createClient } from "@/lib/database/server"
 import { getLessonContent, type LessonAccessResult } from "@/lib/learning/getLessonContent"
 import { logError } from "@/lib/logging/logger"
+import LessonCompleteButton from "./LessonCompleteButton"
 import {
   HiOutlineArrowLeft,
   HiOutlineLockClosed,
@@ -11,6 +12,7 @@ import {
   HiOutlineClock,
   HiOutlineExclamationCircle,
   HiOutlineAcademicCap,
+  HiOutlineCheckCircle,
 } from "react-icons/hi"
 
 export const metadata = {
@@ -26,7 +28,8 @@ interface LessonPlayerPageProps {
     lessonId?: string
     lesson?: string
   }>
-}interface ModuleWithLessons {
+}
+interface ModuleWithLessons {
   id: string
   title: string
   sort_order: number
@@ -62,7 +65,6 @@ export default async function LessonPlayerPage({
   const supabase = await createClient()
   let courseContentError = ""
 
-  // 1. Fetch course details from database
   const { data: dbCourse, error: courseError } = await supabase
     .from("courses")
     .select("id, slug, title, overview")
@@ -74,7 +76,6 @@ export default async function LessonPlayerPage({
     courseContentError = "Course details could not be loaded. Please try again later."
   }
 
-  // Course content now comes exclusively from the database catalogue.
   if (!dbCourse) {
     notFound()
   }
@@ -82,7 +83,6 @@ export default async function LessonPlayerPage({
   const courseTitle = dbCourse.title
   const courseOverview = dbCourse.overview
 
-  // 2. Fetch modules & lessons hierarchy
   let modules: ModuleWithLessons[] = []
 
   if (dbCourse?.id) {
@@ -131,29 +131,68 @@ export default async function LessonPlayerPage({
     }
   }
 
-  // Flatten all lessons across all modules
   const allLessons = modules.flatMap((m) => m.lessons)
   const requestedLessonId =
     resolvedSearchParams?.lessonId || resolvedSearchParams?.lesson
 
-  // Determine active lesson
   const activeLesson =
     allLessons.find((l) => l.id === requestedLessonId) ||
     allLessons[0] ||
     null
 
-  // 3. Perform access check via getLessonContent if active lesson exists
   let accessResult: LessonAccessResult | null = null
+  let activeLessonCompleted = false
 
   if (activeLesson) {
     accessResult = await getLessonContent(activeLesson.id)
+
+    if (accessResult.access === "granted") {
+      const { data: auth } = await supabase.auth.getUser()
+      if (auth.user) {
+        const { data: progress, error: progressError } = await supabase
+          .from("lesson_progress")
+          .select("is_completed")
+          .eq("user_id", auth.user.id)
+          .eq("lesson_id", activeLesson.id)
+          .maybeSingle()
+
+        if (progressError) {
+          logError("lesson_player.progress_load_failed", progressError, {
+            lessonId: activeLesson.id,
+            slug,
+          })
+        } else {
+          activeLessonCompleted = Boolean(progress?.is_completed)
+        }
+      }
+    }
+  }
+
+  const completedLessonIds = new Set<string>()
+  if (allLessons.length > 0) {
+    const { data: auth } = await supabase.auth.getUser()
+    if (auth.user) {
+      const { data: progressRows, error: progressRowsError } = await supabase
+        .from("lesson_progress")
+        .select("lesson_id, is_completed")
+        .eq("user_id", auth.user.id)
+        .in("lesson_id", allLessons.map((lesson) => lesson.id))
+        .eq("is_completed", true)
+
+      if (progressRowsError) {
+        logError("lesson_player.progress_list_load_failed", progressRowsError, { slug })
+      } else {
+        for (const row of progressRows ?? []) {
+          if (row.lesson_id) completedLessonIds.add(row.lesson_id)
+        }
+      }
+    }
   }
 
   const courseOverviewUrl = `/learning-hub/${slug}`
 
   return (
     <div className="site-shell min-h-screen text-slate-100 bg-[#09091a]">
-      {/* Top Navigation Bar */}
       <header className="border-b border-white/10 bg-slate-950/80 backdrop-blur sticky top-0 z-30 px-4 py-3 sm:px-6">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-4 min-w-0">
@@ -190,7 +229,6 @@ export default async function LessonPlayerPage({
         </div>
       </header>
 
-      {/* Main Learning Hub Layout */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 lg:py-8">
         {courseContentError && (
           <p role="alert" className="mb-5 rounded-xl border border-amber-500/30 bg-amber-950/40 p-4 text-sm text-amber-100">
@@ -198,10 +236,8 @@ export default async function LessonPlayerPage({
           </p>
         )}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
-          {/* Main Content Area (Player / Text / Access Denied) */}
           <section className="lg:col-span-8 space-y-6">
             <div className="card-flat bg-slate-900/60 border border-white/10 rounded-2xl overflow-hidden p-0 shadow-2xl">
-              {/* If no lesson exists */}
               {!activeLesson && (
                 <div className="p-12 text-center space-y-4">
                   <HiOutlineExclamationCircle className="w-12 h-12 text-amber-400 mx-auto" />
@@ -215,7 +251,6 @@ export default async function LessonPlayerPage({
                 </div>
               )}
 
-              {/* ACCESS GRANTED: VIDEO */}
               {activeLesson && accessResult?.access === "granted" && accessResult.contentType === "video" && (
                 <div className="space-y-4">
                   <div className="relative aspect-video w-full bg-black flex items-center justify-center">
@@ -245,7 +280,7 @@ export default async function LessonPlayerPage({
                     )}
                   </div>
 
-                  <div className="p-6 space-y-3">
+                  <div className="p-6 space-y-4">
                     <div className="flex items-center gap-2">
                       <span className="badge-primary text-[11px]">Video Lesson</span>
                       {activeLesson.is_preview && (
@@ -259,11 +294,17 @@ export default async function LessonPlayerPage({
                     <h2 className="text-xl font-bold text-white tracking-tight">
                       {activeLesson.title}
                     </h2>
+                    <div className="border-t border-white/10 pt-4">
+                      <LessonCompleteButton
+                        key={activeLesson.id}
+                        lessonId={activeLesson.id}
+                        initialCompleted={activeLessonCompleted}
+                      />
+                    </div>
                   </div>
                 </div>
               )}
 
-              {/* ACCESS GRANTED: TEXT */}
               {activeLesson && accessResult?.access === "granted" && accessResult.contentType === "text" && (
                 <div className="p-6 sm:p-8 space-y-6">
                   <div className="flex items-center gap-2 border-b border-white/10 pb-4">
@@ -286,10 +327,17 @@ export default async function LessonPlayerPage({
                       <p className="text-slate-400 italic">No text content available for this lesson.</p>
                     )}
                   </div>
+
+                  <div className="border-t border-white/10 pt-4">
+                    <LessonCompleteButton
+                      key={activeLesson.id}
+                      lessonId={activeLesson.id}
+                      initialCompleted={activeLessonCompleted}
+                    />
+                  </div>
                 </div>
               )}
 
-              {/* ACCESS GRANTED: PDF/PPTX DOWNLOAD */}
               {activeLesson && accessResult?.access === "granted" && accessResult.contentType === "document" && (
                 <div className="p-6 sm:p-8 space-y-5">
                   <div className="flex items-center gap-2 border-b border-white/10 pb-4">
@@ -316,10 +364,17 @@ export default async function LessonPlayerPage({
                     <HiOutlineDocumentText className="w-4 h-4" />
                     Download {accessResult.fileName.toLowerCase().endsWith(".pptx") ? "PPTX" : "PDF"}
                   </a>
+
+                  <div className="border-t border-white/10 pt-4">
+                    <LessonCompleteButton
+                      key={activeLesson.id}
+                      lessonId={activeLesson.id}
+                      initialCompleted={activeLessonCompleted}
+                    />
+                  </div>
                 </div>
               )}
 
-              {/* ACCESS DENIED: ENROLL TO ACCESS */}
               {activeLesson && accessResult?.access === "denied" && (
                 <div className="p-8 sm:p-12 text-center space-y-6">
                   <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mx-auto text-indigo-400 shadow-inner">
@@ -356,7 +411,6 @@ export default async function LessonPlayerPage({
               )}
             </div>
 
-            {/* Course Information Banner */}
             <div className="card-flat bg-white/[0.02] border border-white/10 p-6 rounded-2xl space-y-3">
               <div className="flex items-center gap-2 text-indigo-400 text-xs font-bold uppercase tracking-wider">
                 <HiOutlineAcademicCap className="w-4 h-4" />
@@ -371,7 +425,6 @@ export default async function LessonPlayerPage({
             </div>
           </section>
 
-          {/* Curriculum Sidebar */}
           <aside className="lg:col-span-4 space-y-4">
             <div className="card-flat bg-slate-900/60 border border-white/10 rounded-2xl p-5 space-y-4 sticky top-20">
               <div className="flex items-center justify-between border-b border-white/10 pb-3">
@@ -394,6 +447,7 @@ export default async function LessonPlayerPage({
                       {mod.lessons.map((lesson) => {
                         const isActive = activeLesson?.id === lesson.id
                         const isVideo = lesson.content_type === "video"
+                        const isCompleted = completedLessonIds.has(lesson.id)
 
                         return (
                           <Link
@@ -406,7 +460,9 @@ export default async function LessonPlayerPage({
                             }`}
                           >
                             <div className="mt-0.5 flex-shrink-0">
-                              {lesson.is_preview ? (
+                              {isCompleted ? (
+                                <HiOutlineCheckCircle className="w-4 h-4 text-emerald-400" />
+                              ) : lesson.is_preview ? (
                                 isVideo ? (
                                   <HiOutlinePlay className="w-4 h-4 text-emerald-400" />
                                 ) : (
@@ -425,6 +481,11 @@ export default async function LessonPlayerPage({
                                 {lesson.is_preview && (
                                   <span className="px-1.5 py-0.2 bg-emerald-500/20 text-emerald-300 rounded text-[10px]">
                                     Preview
+                                  </span>
+                                )}
+                                {isCompleted && (
+                                  <span className="px-1.5 py-0.2 bg-emerald-500/20 text-emerald-300 rounded text-[10px]">
+                                    Completed
                                   </span>
                                 )}
                               </div>
