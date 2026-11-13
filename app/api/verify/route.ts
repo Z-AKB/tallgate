@@ -1,11 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createPublicClient, isSupabaseConfigured } from "@/lib/supabase/server"
-import {
-  checkRateLimit,
-  rateLimitResponse,
-  rateLimitUnavailableResponse,
-  RateLimitUnavailableError,
-} from "@/lib/api/rateLimit"
 import { logError } from "@/lib/logging/logger"
 
 function noStore(body: unknown, status: number) {
@@ -13,6 +7,23 @@ function noStore(body: unknown, status: number) {
     status,
     headers: { "Cache-Control": "no-store" },
   })
+}
+
+// Concurrency protection: bounded simultaneous verification operations.
+// Prevents resource exhaustion without creating persistent rate-limit
+// records for arbitrary verification codes. Does not depend on client IP
+// detection or forwarding headers.
+const MAX_CONCURRENT_VERIFICATIONS = 20
+let activeVerificationCount = 0
+
+function tryAcquireVerificationSlot(): boolean {
+  if (activeVerificationCount >= MAX_CONCURRENT_VERIFICATIONS) return false
+  activeVerificationCount++
+  return true
+}
+
+function releaseVerificationSlot(): void {
+  activeVerificationCount = Math.max(0, activeVerificationCount - 1)
 }
 
 export async function GET(req: NextRequest) {
@@ -34,17 +45,20 @@ export async function GET(req: NextRequest) {
     )
   }
 
-  try {
-    if (!(await checkRateLimit(req, "verification", 30, 900))) {
-      const response = rateLimitResponse(900)
-      response.headers.set("Cache-Control", "no-store")
-      return response
-    }
+  if (!tryAcquireVerificationSlot()) {
+    return noStore(
+      { error: "Too many concurrent verification requests. Please try again." },
+      503
+    )
+  }
 
+  try {
     const supabase = createPublicClient()
-    const { data, error } = await supabase.rpc("verify_certificate", {
-      p_verification_code: code,
-    })
+    const { data, error } = await supabase
+      .rpc("verify_certificate", {
+        p_verification_code: code,
+      })
+      .abortSignal(AbortSignal.timeout(10000))
 
     if (error) {
       logError("verify.lookup_failed", error)
@@ -75,15 +89,12 @@ export async function GET(req: NextRequest) {
       200
     )
   } catch (error) {
-    if (error instanceof RateLimitUnavailableError) {
-      const response = rateLimitUnavailableResponse()
-      response.headers.set("Cache-Control", "no-store")
-      return response
-    }
     logError("verify.request_failed", error)
     return noStore(
       { error: "Certificate verification is temporarily unavailable." },
       503
     )
+  } finally {
+    releaseVerificationSlot()
   }
 }
